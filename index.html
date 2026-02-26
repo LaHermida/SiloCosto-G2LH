@@ -447,13 +447,20 @@ function calcDepTabla(pi, cn, ti) {
     if(ciclos === 1) {
       cosechaWeight = cn === 1 ? 1 : 0;
     } else {
-      // 40-40-20 normalized across cosechas
+      // Normalizar pesos sumando el cultivo de cada cosecha (promedio de tablas del predio)
       let pesoTotal = 0;
       for(let c=1;c<=3;c++) {
-        const cv = getTablaData(pi,c,ti).cultivo||'maiz';
-        pesoTotal += CULTIVOS[cv]?.pct||40;
+        // Usar el cultivo mayoritario del predio en esa cosecha (primera tabla como referencia si no hay más)
+        let pesoCosecha = 0;
+        for(let t=0;t<predio.tablas.length;t++) {
+          const cv = getTablaData(pi,c,t).cultivo||'maiz';
+          pesoCosecha += CULTIVOS[cv]?.pct||40;
+        }
+        pesoTotal += pesoCosecha / predio.tablas.length;
       }
-      cosechaWeight = (CULTIVOS[cultivo]?.pct||40) / pesoTotal;
+      // Peso de esta tabla en esta cosecha
+      const miPeso = CULTIVOS[cultivo]?.pct||40;
+      cosechaWeight = miPeso / pesoTotal;
     }
 
     // Alcance
