@@ -178,6 +178,7 @@ tr:hover td { background:var(--cream); }
     <button class="hnav" onclick="goSec('tablas')">Tablas</button>
     <button class="hnav" onclick="goSec('articulos')">Artículos</button>
     <button class="hnav" onclick="goSec('depreciaciones')">Depreciaciones</button>
+    <button class="hnav" onclick="goSec('gastos')">Gastos</button>
     <button class="hnav" onclick="goSec('registro')">Registro</button>
     <button class="hnav" onclick="goSec('monitor')">Monitor</button>
     <button class="hnav" onclick="goSec('reportes')">Reportes</button>
@@ -200,6 +201,7 @@ tr:hover td { background:var(--cream); }
   <span class="sb-label">Accesos</span>
   <div class="sb-item" onclick="goSec('articulos')"><span class="sb-icon">📦</span>Artículos</div>
   <div class="sb-item" onclick="goSec('depreciaciones')"><span class="sb-icon">⚙️</span>Depreciaciones</div>
+  <div class="sb-item" onclick="goSec('gastos')"><span class="sb-icon">💰</span>Gastos Gral.</div>
   <div class="sb-item" onclick="goSec('registro')"><span class="sb-icon">✏️</span>Registro</div>
   <div class="sb-item" onclick="goSec('monitor')"><span class="sb-icon">📡</span>Monitor</div>
   <div class="sb-item" onclick="goSec('reportes')"><span class="sb-icon">📄</span>PDF</div>
@@ -279,6 +281,13 @@ tr:hover td { background:var(--cream); }
     <div id="dep-content"></div>
   </section>
 
+  <!-- GASTOS GENERALES -->
+  <section id="sec-gastos" class="page">
+    <div class="pg-title">Gastos Generales</div>
+    <div class="pg-sub">// Diesel, Luz, Nómina y más — se asignan por mes y se prorratean por ha entre predios y tablas</div>
+    <div id="gastos-content"></div>
+  </section>
+
   <!-- REGISTRO -->
   <section id="sec-registro" class="page">
     <div class="pg-title">Registro de Consumos</div>
@@ -352,7 +361,9 @@ function defaultState() {
       { 1:{}, 2:{}, 3:{} },
       { 1:{}, 2:{}, 3:{} },
       { 1:{}, 2:{}, 3:{} }
-    ]
+    ],
+    // gastosGenerales = [{id, mes, anio, categoria, monto, prediosIdx:[0,1,2], fecha}]
+    gastosGenerales: []
   };
 }
 
@@ -488,7 +499,7 @@ function calcConsumosTabla(pi, cn, ti) {
 }
 
 function calcTotalTabla(pi, cn, ti) {
-  return calcDepTabla(pi,cn,ti) + calcConsumosTabla(pi,cn,ti);
+  return calcDepTabla(pi,cn,ti) + calcConsumosTabla(pi,cn,ti) + calcGastosGeneralesTabla(pi,cn,ti);
 }
 
 function calcCPK(pi, cn, ti) {
@@ -533,6 +544,7 @@ function render(sec) {
   if(sec==='tablas') renderTablas();
   if(sec==='articulos') renderArticulos();
   if(sec==='depreciaciones') renderDep();
+  if(sec==='gastos') renderGastos();
   if(sec==='registro') renderReg();
   if(sec==='monitor') renderMon();
   if(sec==='reportes') renderRep();
@@ -1083,6 +1095,7 @@ function renderMon() {
       const td = getTablaData(pi,cn,ti);
       const dep = calcDepTabla(pi,cn,ti);
       const vars = calcConsumosTabla(pi,cn,ti);
+      const gasGen = calcGastosGeneralesTabla(pi,cn,ti);
       const kilos = parseFloat(td.kilos)||0;
       const cpk = calcCPK(pi,cn,ti);
       const cpkms = calcCPKMS(pi,cn,ti);
@@ -1092,8 +1105,9 @@ function renderMon() {
         <td>${cultivoBadge(td.cultivo||'maiz')}</td>
         <td class="mono tr">${haDisplay} ha</td>
         <td class="mono tr">${fmt(vars)}</td>
+        <td class="mono tr">${fmt(gasGen)}</td>
         <td class="mono tr">${fmt(dep)}</td>
-        <td class="mono tr">${fmt(vars+dep)}</td>
+        <td class="mono tr">${fmt(vars+gasGen+dep)}</td>
         <td class="mono tr">${kilos?fmtN(kilos,0)+' kg':'—'}</td>
         <td class="mono tr amber">${cpk!==null?'$'+cpk.toFixed(2):'—'}</td>
         <td class="mono tr green">${cpkms!==null?'$'+cpkms.toFixed(2):'—'}</td>
@@ -1101,13 +1115,14 @@ function renderMon() {
     }).join('');
 
     // Totals row
-    let totVars=0,totDep=0,totKilos=0;
+    let totVars=0,totDep=0,totGasGen=0,totKilos=0;
     for(let ti=0;ti<p.tablas.length;ti++) {
       totVars+=calcConsumosTabla(pi,cn,ti);
       totDep+=calcDepTabla(pi,cn,ti);
+      totGasGen+=calcGastosGeneralesTabla(pi,cn,ti);
       totKilos+=parseFloat(getTablaData(pi,cn,ti).kilos)||0;
     }
-    const totCPK = totKilos?(totVars+totDep)/totKilos:null;
+    const totCPK = totKilos?(totVars+totGasGen+totDep)/totKilos:null;
 
     const monMeta = getCosechaMeta(pi,cn);
     html += `<div class="card">
@@ -1118,13 +1133,14 @@ function renderMon() {
         </div>
       </div>
       <div class="tbl-wrap"><table>
-        <thead><tr><th>Tabla</th><th>Cultivo</th><th>Ha</th><th>Consumos</th><th>Deprec.</th><th>Total</th><th>Kilos</th><th>$/kg silo</th><th>$/kg MS</th></tr></thead>
+        <thead><tr><th>Tabla</th><th>Cultivo</th><th>Ha</th><th>Mat. Cultivo</th><th>Gastos Gral.</th><th>Deprec.</th><th>Total</th><th>Kilos</th><th>$/kg silo</th><th>$/kg MS</th></tr></thead>
         <tbody>${tablaRows}
           <tr style="background:var(--soil);color:var(--straw)">
             <td colspan="3"><strong>TOTAL PREDIO</strong></td>
             <td class="mono tr"><strong>${fmt(totVars)}</strong></td>
+            <td class="mono tr"><strong>${fmt(totGasGen)}</strong></td>
             <td class="mono tr"><strong>${fmt(totDep)}</strong></td>
-            <td class="mono tr"><strong>${fmt(totVars+totDep)}</strong></td>
+            <td class="mono tr"><strong>${fmt(totVars+totGasGen+totDep)}</strong></td>
             <td class="mono tr"><strong>${totKilos?fmtN(totKilos,0)+' kg':'—'}</strong></td>
             <td class="mono tr" style="color:var(--straw)"><strong>${totCPK?'$'+totCPK.toFixed(2):'—'}</strong></td>
             <td></td>
@@ -1191,6 +1207,12 @@ function renderRepContent() {
         else catTotals['Otro']+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
       });
     }
+    // Add gastos generales per category
+    (S.gastosGenerales||[]).filter(g=>getCosechaFromMes(g.mes)===cn).forEach(g=>{
+      const montoPredio = getGastoParaPredio(g, pi);
+      if(catTotals[g.categoria]!==undefined) catTotals[g.categoria]+=montoPredio;
+      else catTotals['Otro']+=montoPredio;
+    });
     totCost = Object.values(catTotals).reduce((s,v)=>s+v,0) + totalDep;
     const cpk = totKilos?totCost/totKilos:null;
     const cpkms = totKgMS?totCost/totKgMS:null;
@@ -1261,6 +1283,12 @@ function renderRepContent() {
     (td.consumos||[]).forEach(c=>{
       if(catTotals[c.categoria]!==undefined) catTotals[c.categoria]+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
       else catTotals['Otro']+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
+    });
+    // Add gastos generales per category for this tabla
+    (S.gastosGenerales||[]).filter(g=>getCosechaFromMes(g.mes)===cn).forEach(g=>{
+      const montoTabla = getGastoParaTabla(g, pi, ti);
+      if(catTotals[g.categoria]!==undefined) catTotals[g.categoria]+=montoTabla;
+      else catTotals['Otro']+=montoTabla;
     });
 
     let catRows = cats.map(cat=>`<tr>
@@ -1386,6 +1414,187 @@ function printReporteTabla(pi, cn, ti) {
   <br><button onclick="window.print()" style="padding:10px 24px;background:#1a1208;color:#faf6ed;border:none;cursor:pointer">🖨 Imprimir / PDF</button>
   </body></html>`);
   win.document.close();
+}
+
+// ══════════════════════════════════════════════
+// GASTOS GENERALES
+// ══════════════════════════════════════════════
+
+// Calendario: mes (1-12) → cosecha
+const MES_COSECHA = {
+  12:1, 1:1, 2:1,        // Dic-Feb → Cosecha 1
+  3:2, 4:2, 5:2, 6:2, 7:2,  // Mar-Jul → Cosecha 2
+  8:3, 9:3, 10:3, 11:3   // Ago-Nov → Cosecha 3
+};
+
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+               'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+const CATS_GENERALES = [
+  'Diesel','Luz','Nómina y gastos admin','Maquinaria',
+  'Reparaciones Riego','Ensilada','Materiales de ensilada',
+  'Sirre y Desmonte','Otro'
+];
+
+function getCosechaFromMes(mes) {
+  return MES_COSECHA[parseInt(mes)] || 1;
+}
+
+// Get total ha sembradas for a predio in a cosecha
+function getHaSembradasPredio(pi, cn) {
+  const p = S.predios[pi];
+  return p.tablas.reduce((s,t,ti)=>{
+    const td = getTablaData(pi,cn,ti);
+    return s + (parseFloat(td.haSembradas) || t.ha || 0);
+  }, 0);
+}
+
+// Get gasto amount assigned to a specific predio+cosecha
+function getGastoParaPredio(gasto, pi) {
+  const cn = getCosechaFromMes(gasto.mes);
+  const prediosIdx = gasto.prediosIdx || [];
+  if(!prediosIdx.includes(pi)) return 0;
+  // Prorate by haSembradas among selected predios
+  const totalHaSel = prediosIdx.reduce((s,idx)=>s+getHaSembradasPredio(idx,cn), 0);
+  const miHa = getHaSembradasPredio(pi, cn);
+  if(!totalHaSel) return 0;
+  return (parseFloat(gasto.monto)||0) * (miHa / totalHaSel);
+}
+
+// Get gasto amount assigned to a specific tabla
+function getGastoParaTabla(gasto, pi, ti) {
+  const montoPredio = getGastoParaPredio(gasto, pi);
+  if(!montoPredio) return 0;
+  const cn = getCosechaFromMes(gasto.mes);
+  const p = S.predios[pi];
+  const totalHaPredio = getHaSembradasPredio(pi, cn);
+  const td = getTablaData(pi, cn, ti);
+  const tablaHa = parseFloat(td.haSembradas) || p.tablas[ti]?.ha || 0;
+  if(!totalHaPredio) return 0;
+  return montoPredio * (tablaHa / totalHaPredio);
+}
+
+// Sum all gastos generales for a predio+cosecha+tabla
+function calcGastosGeneralesTabla(pi, cn, ti) {
+  if(!S.gastosGenerales) return 0;
+  return S.gastosGenerales
+    .filter(g => getCosechaFromMes(g.mes) === cn)
+    .reduce((s,g) => s + getGastoParaTabla(g, pi, ti), 0);
+}
+
+function renderGastos() {
+  if(!S.gastosGenerales) S.gastosGenerales = [];
+  const curYear = new Date().getFullYear();
+
+  // Group by cosecha for summary
+  const resumen = {1:0, 2:0, 3:0};
+  S.gastosGenerales.forEach(g => {
+    resumen[getCosechaFromMes(g.mes)] += parseFloat(g.monto)||0;
+  });
+
+  const predioChecks = S.predios.map((p,i)=>`
+    <label class="check-row">
+      <input type="checkbox" class="gasto-predio-check" value="${i}" checked/>
+      ${p.emoji} ${p.nombre} (${getHaSembradasPredio(i,1).toFixed(1)} ha C1)
+    </label>`).join('');
+
+  const rows = S.gastosGenerales.map((g,i)=>{
+    const cn = getCosechaFromMes(g.mes);
+    const predNombres = (g.prediosIdx||[]).map(pi=>S.predios[pi]?.emoji+' '+S.predios[pi]?.nombre).join(', ');
+    return `<tr>
+      <td class="mono">${MESES[g.mes-1]} ${g.anio}</td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:10px;background:#e8f5e8;color:var(--green);padding:2px 6px">C${cn}</span></td>
+      <td>${g.categoria}</td>
+      <td style="font-size:12px;color:var(--muted)">${predNombres}</td>
+      <td class="mono tr amber">${fmt(g.monto)}</td>
+      <td><button class="btn btn-d" onclick="delGasto(${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('gastos-content').innerHTML = `
+    <div class="stats-row">
+      <div class="stat c1" style="padding:14px">
+        <div class="stat-lbl">Cosecha 1 (Dic-Feb)</div>
+        <div class="stat-val" style="font-size:20px">${fmt(resumen[1])}</div>
+        <div class="stat-unit">total gastos generales</div>
+      </div>
+      <div class="stat c2" style="padding:14px">
+        <div class="stat-lbl">Cosecha 2 (Mar-Jul)</div>
+        <div class="stat-val" style="font-size:20px">${fmt(resumen[2])}</div>
+        <div class="stat-unit">total gastos generales</div>
+      </div>
+      <div class="stat c3" style="padding:14px">
+        <div class="stat-lbl">Cosecha 3 (Ago-Nov)</div>
+        <div class="stat-val" style="font-size:20px">${fmt(resumen[3])}</div>
+        <div class="stat-unit">total gastos generales</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">➕ Registrar gasto general</div>
+      <div class="fg4">
+        <div class="field">
+          <label>Mes</label>
+          <select id="g-mes">
+            ${MESES.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Año</label>
+          <input type="number" id="g-anio" value="${curYear}" min="2020" max="2100"/>
+        </div>
+        <div class="field">
+          <label>Categoría</label>
+          <select id="g-cat">
+            ${CATS_GENERALES.map(c=>`<option>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Monto ($)</label>
+          <input type="number" id="g-monto" placeholder="0"/>
+        </div>
+      </div>
+      <div style="margin-top:14px;padding:14px;background:var(--cream);border:1px solid var(--border)">
+        <label style="display:block;margin-bottom:8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Aplica a estos predios:</label>
+        ${predioChecks}
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-p" onclick="addGasto()">Registrar gasto</button>
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">Se asigna automáticamente a la cosecha según el mes · Se prorratea por ha sembradas</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">📋 Gastos registrados <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">(${S.gastosGenerales.length} registros)</span></div>
+      ${rows ? `<div class="tbl-wrap"><table>
+        <thead><tr><th>Mes</th><th>Cosecha</th><th>Categoría</th><th>Predios</th><th>Monto</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>` : '<div class="empty"><div class="empty-icon">💰</div><div>Sin gastos registrados aún</div></div>'}
+    </div>`;
+}
+
+function addGasto() {
+  const mes = parseInt(document.getElementById('g-mes').value);
+  const anio = parseInt(document.getElementById('g-anio').value);
+  const categoria = document.getElementById('g-cat').value;
+  const monto = parseFloat(document.getElementById('g-monto').value);
+  if(!monto) { toast('⚠️ Ingresa el monto',true); return; }
+
+  const prediosIdx = [];
+  document.querySelectorAll('.gasto-predio-check:checked').forEach(cb=>prediosIdx.push(parseInt(cb.value)));
+  if(!prediosIdx.length) { toast('⚠️ Selecciona al menos un predio',true); return; }
+
+  if(!S.gastosGenerales) S.gastosGenerales = [];
+  S.gastosGenerales.push({ id:uid(), mes, anio, categoria, monto, prediosIdx, fecha:today() });
+  save();
+  document.getElementById('g-monto').value='';
+  renderGastos();
+  toast(`✓ Gasto registrado → Cosecha ${getCosechaFromMes(mes)}`);
+}
+
+function delGasto(i) {
+  S.gastosGenerales.splice(i,1);
+  save(); renderGastos(); toast('✓ Eliminado');
 }
 
 // TOAST
