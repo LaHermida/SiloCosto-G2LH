@@ -324,6 +324,29 @@ tr:hover td { background:var(--cream); }
 // ══════════════════════════════════════════════
 const SK = 'silocosto_g2_v1';
 let _saveTimeout = null;
+const SB_URL = 'https://qlgctjnrndzhvqondjvz.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsZ2N0am5ybmR6aHZxb25kanZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjQzNjgsImV4cCI6MjA4Nzc0MDM2OH0._4KqKFG0N_zrS2ovwxpvi5SzQpQcPMK71wGZ3N3Cilo';
+
+async function sbGet(key) {
+  const r = await fetch(`${SB_URL}/rest/v1/kv_store?key=eq.${key}&select=value`, {
+    headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+  });
+  const data = await r.json();
+  return data.length ? data[0].value : null;
+}
+
+async function sbSet(key, value) {
+  await fetch(`${SB_URL}/rest/v1/kv_store`, {
+    method: 'POST',
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': `Bearer ${SB_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates'
+    },
+    body: JSON.stringify({ key, value, updated_at: new Date().toISOString() })
+  });
+}
 
 const PREDIOS_DEFAULT = [
   {
@@ -377,8 +400,8 @@ let _loaded = false;
 
 async function loadState() {
   try {
-    const r = await window.storage.get(SK);
-    if(r && r.value) S = JSON.parse(r.value);
+    const r = await sbGet(SK);
+    if(r) S = JSON.parse(r);
   } catch(e){ S = defaultState(); }
   _loaded = true;
   render(curSec);
@@ -388,7 +411,7 @@ async function loadState() {
 function save() {
   if(_saveTimeout) clearTimeout(_saveTimeout);
   _saveTimeout = setTimeout(async ()=>{
-    try { await window.storage.set(SK, JSON.stringify(S)); } catch(e){}
+    try { await sbSet(SK, JSON.stringify(S)); } catch(e){ console.error('Save error',e); }
   }, 600);
 }
 function uid() { return Math.random().toString(36).slice(2,9); }
