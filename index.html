@@ -504,7 +504,7 @@ function fmtN(n,d=2) {
 
 const CULTIVOS = {
   maiz:  { label:'Maíz',  icon:'🌽', css:'cultivo-maiz',  pct:40 },
-  trigo: { label:'Trigo', icon:'🌾', css:'cultivo-trigo', pct:20 },
+  trigo: { label:'Triticale', icon:'🌾', css:'cultivo-trigo', pct:20 },
   sorgo: { label:'Sorgo', icon:'🌿', css:'cultivo-sorgo', pct:40 },
   higo:  { label:'Higo',  icon:'🍃', css:'cultivo-otro',  pct:40 },
   otro:  { label:'Otro',  icon:'🌱', css:'cultivo-otro',  pct:40 }
@@ -907,7 +907,7 @@ function renderDepContent() {
         <div class="result">
           <div><div class="res-lbl">Total anual depreciaciones</div><div class="res-val">${fmt(totalAnual)}</div></div>
           <div><div class="res-lbl">Distribución</div><div class="res-sub" style="font-size:13px;color:var(--straw)">
-            ${p.ciclos===1?'100% en ciclo único':'🌽 Maíz 40% · 🌿 Sorgo 40% · 🌾 Trigo 20%'}<br>
+            ${p.ciclos===1?'100% en ciclo único':'🌽 Maíz 40% · 🌿 Sorgo 40% · 🌾 Triticale 20%'}<br>
             Prorrateado por hectárea entre tablas
           </div></div>
         </div>
