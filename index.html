@@ -530,7 +530,20 @@ function getCosechaMeta(pi, cn) {
 }
 
 function toggleCosechaClosed(pi, cn) {
+  // Only admin can close/reopen
+  if(!currentUser || currentUser.rol !== 'admin') {
+    toast('⚠️ Solo el administrador puede cerrar o reabrir cosechas', true);
+    return;
+  }
   const meta = getCosechaMeta(pi, cn);
+  const accion = meta.closed ? 'reabrir' : 'cerrar';
+  const pass = prompt(`Ingresa tu contraseña para ${accion} esta cosecha:`);
+  if(pass === null) return; // cancelled
+  const u = USERS[currentUser.nombre];
+  if(!u || pass !== u.pass) {
+    toast('⚠️ Contraseña incorrecta', true);
+    return;
+  }
   meta.closed = !meta.closed;
   meta.closedDate = meta.closed ? today() : null;
   save();
@@ -1749,15 +1762,23 @@ function renderGastos() {
       ${p.emoji} ${p.nombre}
     </label>`).join('');
 
-  // Grid: categorias × cosechas
-  const cosechaHeaders = [1,2,3].map(cn=>`<th style="text-align:center;min-width:130px">Cosecha ${cn}<br><span style="font-weight:400;font-size:9px">${cn===1?'Dic-Feb':cn===2?'Mar-Jul':'Ago-Nov'}</span></th>`).join('');
+  // Grid: categorias × cosechas (all 3 columns but only open ones editable)
+  const cosechaNames = {1:'C1 Triticale · Dic-Feb', 2:'C2 Maíz · Mar-Jul', 3:'C3 Maíz/Sorgo · Ago-Nov'};
+  const cosechaHeaders = [1,2,3].map(cn=>{
+    const anyOpen = S.predios.some((p,pi)=>!getCosechaMeta(pi,cn).closed);
+    return `<th style="text-align:center;min-width:130px;${!anyOpen?'opacity:0.4':''}">C${cn}<br><span style="font-weight:400;font-size:9px">${cn===1?'Dic-Feb':cn===2?'Mar-Jul':'Ago-Nov'}</span>${!anyOpen?'<br><span style="font-size:9px;color:#7a1f1f">🔒 Cerrada</span>':''}</th>`;
+  }).join('');
 
   const gridRows = CATS_GENERALES.map((cat,ci)=>{
     const cells = [1,2,3].map(cn=>{
+      const anyOpen = S.predios.some((p,pi)=>!getCosechaMeta(pi,cn).closed);
       const val = gastosGridDraft[ci]?.[cn] || '';
+      const baseStyle = 'width:110px;padding:5px;text-align:right;border:1px solid #d4c0a0;font-size:12px';
+      const disabledStyle = baseStyle + ';opacity:0.4;background:#eee';
       return `<td style="padding:4px"><input type="number" min="0" step="1" placeholder="—"
         value="${val}"
-        style="width:110px;padding:5px;text-align:right;border:1px solid var(--border);font-family:'DM Mono',monospace;font-size:12px"
+        ${!anyOpen ? 'disabled' : ''}
+        style="${!anyOpen ? disabledStyle : baseStyle}"
         onchange="updateGastosDraft(${ci},${cn},this.value)"
         /></td>`;
     }).join('');
@@ -1809,6 +1830,18 @@ function renderGastos() {
             <label>Año</label>
             <input type="number" id="g-anio" value="${curYear}" min="2020" max="2100" style="width:90px"/>
           </div>
+          <div class="field" style="margin:0">
+            <label>Cosecha</label>
+            <select id="g-cosecha">
+              ${[1,2,3].map(cn => {
+                // Check if any predio has this cosecha open
+                const anyOpen = S.predios.some((p,pi)=>!getCosechaMeta(pi,cn).closed);
+                const meta = getCosechaMeta(0,cn);
+                const label = cn===1?'C1 · Triticale':cn===2?'C2 · Maíz':'C3 · Maíz/Sorgo';
+                return `<option value="${cn}" ${!anyOpen?'disabled':''}>Cosecha ${cn} — ${label}${!anyOpen?' (cerrada)':''}</option>`;
+              }).join('')}
+            </select>
+          </div>
         </div>
       </div>
       <div style="overflow-x:auto">
@@ -1854,12 +1887,15 @@ function capturarGastos() {
       const monto = parseFloat(montoStr);
       if(!monto || monto <= 0) continue;
       const cn = parseInt(cnStr);
+      // Check cosecha is open
+      const anyOpen = S.predios.some((p,pi)=>!getCosechaMeta(pi,cn).closed);
+      if(!anyOpen) continue;
       S.gastosGenerales.push({ id:uid(), cosecha:cn, anio, categoria, monto, prediosIdx, fecha:today() });
       total++;
     }
   }
 
-  if(!total) { toast('⚠️ No hay montos para capturar',true); return; }
+  if(!total) { toast('⚠️ No hay montos para capturar (o cosechas cerradas)',true); return; }
   gastosGridDraft = {};
   gastosGridPrediosIdx = prediosIdx;
   save();
