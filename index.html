@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SiloCosto Pro — Grupo 2</title>
+<title>LaborCosto Pro — Grupo 2</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;700;900&family=Epilogue:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -178,8 +178,8 @@ tr:hover td { background:var(--cream); }
 <div class="shell">
 <header>
   <div>
-    <span class="logo">Silo<em>Costo</em></span>
-    <span class="logo-tag">PRO · GRUPO 2</span>
+    <span class="logo">Labor<em>Costo</em> LH</span>
+    <span class="logo-tag">LH</span>
   <span id="save-indicator" style="font-family:'DM Mono',monospace;font-size:10px;color:#806040;margin-left:14px">☁️ Nube</span>
   <span id="user-tag" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--straw);margin-left:14px"></span>
   </div>
@@ -331,8 +331,8 @@ tr:hover td { background:var(--cream); }
 <!-- LOGIN OVERLAY -->
 <div class="login-overlay" id="login-overlay">
   <div class="login-box">
-    <div class="login-title">Silo<span style="color:var(--gold)">Costo</span></div>
-    <div class="login-sub">PRO · GRUPO 2 · La Hermida</div>
+    <div class="login-title">Labor<span style="color:var(--gold)">Costo</span> LH</div>
+    <div class="login-sub">LH · La Hermida</div>
     <div class="login-error" id="login-error">Usuario o contraseña incorrectos</div>
     <div class="login-field">
       <label>Usuario</label>
@@ -566,25 +566,55 @@ function calcDepTabla(pi, cn, ti) {
     // Determine this tabla's share of the annual cost
     let tablaPct = tablaHa / totalHa; // pro-rata by ha
 
+    // Cosecha de inicio — si esta cosecha es anterior a la de inicio, no aplica
+    const cosechaInicio = dep.cosechaInicio || 1;
+    // Check if this cosecha/year combo is before the start
+    // Simple check: if anioInicio is set and current cosecha year < anioInicio, skip
+    // We use meta year for each cosecha
+    const metaCn = getCosechaMeta(pi, cn);
+    const metaYear = metaCn.year || new Date().getFullYear();
+    if(dep.anioInicio && metaYear < dep.anioInicio) continue;
+    if(dep.anioInicio && metaYear === dep.anioInicio && cn < cosechaInicio) continue;
+    if(dep.anioFin && metaYear > dep.anioFin) continue;
+
+    // Cultivos filter — check if this tabla's cultivo matches what dep applies to
+    const aplicaCultivos = dep.aplicaCultivos || 'todos';
+    const esPrincipal = cultivo === 'maiz' || cultivo === 'sorgo';
+    const esTriticale = cultivo === 'trigo';
+    if(aplicaCultivos === 'principales' && !esPrincipal) continue;
+    if(aplicaCultivos === 'triticale' && !esTriticale) continue;
+
     // Cosecha weight
     let cosechaWeight = 1;
     if(ciclos === 1) {
       cosechaWeight = cn === 1 ? 1 : 0;
     } else {
-      // Normalizar pesos sumando el cultivo de cada cosecha (promedio de tablas del predio)
+      // Solo sumar cosechas que aplican según aplicaCultivos
       let pesoTotal = 0;
       for(let c=1;c<=3;c++) {
-        // Usar el cultivo mayoritario del predio en esa cosecha (primera tabla como referencia si no hay más)
+        // Skip cosechas before cosechaInicio in anioInicio year
+        const metaC = getCosechaMeta(pi,c);
+        const yearC = metaC.year || new Date().getFullYear();
+        if(dep.anioInicio && yearC < dep.anioInicio) continue;
+        if(dep.anioInicio && yearC === dep.anioInicio && c < cosechaInicio) continue;
+        if(dep.anioFin && yearC > dep.anioFin) continue;
+
         let pesoCosecha = 0;
+        let tablasCounted = 0;
         for(let t=0;t<predio.tablas.length;t++) {
           const cv = getTablaData(pi,c,t).cultivo||'maiz';
+          const esPrincipalC = cv==='maiz'||cv==='sorgo';
+          const esTriticaleC = cv==='trigo';
+          if(aplicaCultivos==='principales' && !esPrincipalC) continue;
+          if(aplicaCultivos==='triticale' && !esTriticaleC) continue;
           pesoCosecha += CULTIVOS[cv]?.pct||40;
+          tablasCounted++;
         }
-        pesoTotal += pesoCosecha / predio.tablas.length;
+        if(tablasCounted>0) pesoTotal += pesoCosecha / tablasCounted;
       }
       // Peso de esta tabla en esta cosecha
       const miPeso = CULTIVOS[cultivo]?.pct||40;
-      cosechaWeight = miPeso / pesoTotal;
+      cosechaWeight = pesoTotal > 0 ? miPeso / pesoTotal : 0;
     }
 
     // Alcance
@@ -881,6 +911,8 @@ function renderDepContent() {
     const anioStr = d.anioInicio ? `${d.anioInicio} → ${aFin}` : '—';
     const anioColor = d.anioInicio ? (vigente ? 'var(--green)' : 'var(--red)') : 'var(--muted)';
     const anioMark = d.anioInicio ? (vigente ? ' ✓' : ' vencida') : '';
+    const cultivosLabel = d.aplicaCultivos==='principales'?'🌽🌿 Principales':d.aplicaCultivos==='triticale'?'🌾 Triticale':'Todos';
+    const cosIniLabel = d.cosechaInicio && d.cosechaInicio>1 ? ` · desde C${d.cosechaInicio}` : '';
     return `<tr>
       <td><strong>${d.nombre}</strong></td>
       <td>${d.tipo_activo}</td>
@@ -888,7 +920,8 @@ function renderDepContent() {
       <td style="font-size:12px;color:var(--muted)">${tablas}</td>
       <td class="mono tr">${fmt(d.valorActivo)}</td>
       <td class="mono tr">${d.vidaUtil} años</td>
-      <td class="mono" style="font-size:11px;color:${anioColor}">${anioStr}${anioMark}</td>
+      <td class="mono" style="font-size:11px;color:${anioColor}">${anioStr}${anioMark}${cosIniLabel}</td>
+      <td style="font-size:11px;color:var(--muted)">${cultivosLabel}</td>
       <td class="mono tr amber">${fmt(d.costoAnual)}</td>
       <td><button class="btn btn-d" onclick="delDep(${i})">✕</button></td>
     </tr>`;
@@ -901,7 +934,7 @@ function renderDepContent() {
       </div>
       ${deps.length ? `
         <div class="tbl-wrap"><table>
-          <thead><tr><th>Activo</th><th>Tipo</th><th>Alcance</th><th>Tablas</th><th>Valor</th><th>Vida útil</th><th>Período</th><th>Costo anual</th><th></th></tr></thead>
+          <thead><tr><th>Activo</th><th>Tipo</th><th>Alcance</th><th>Tablas</th><th>Valor</th><th>Vida útil</th><th>Período</th><th>Cultivos</th><th>Costo anual</th><th></th></tr></thead>
           <tbody>${depRows}</tbody>
         </table></div>
         <div class="result">
@@ -947,6 +980,22 @@ function renderDepContent() {
           <label>Año de inicio</label>
           <input type="number" id="dep-anio" placeholder="2024" min="2000" max="2100"/>
         </div>
+        <div class="field">
+          <label>Cosecha de inicio</label>
+          <select id="dep-cosecha-inicio">
+            <option value="1">Cosecha 1 (Dic)</option>
+            <option value="2">Cosecha 2 (Mar)</option>
+            <option value="3">Cosecha 3 (Ago)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Aplica a cultivos</label>
+          <select id="dep-cultivos">
+            <option value="todos">Todos (40-40-20)</option>
+            <option value="principales">Solo principales (Maíz/Sorgo)</option>
+            <option value="triticale">Solo Triticale</option>
+          </select>
+        </div>
       </div>
       <div id="dep-tablas-sel" style="display:none;margin-top:12px;padding:14px;background:var(--cream);border:1px solid var(--border)">
         <label style="margin-bottom:8px;display:block">Selecciona las tablas donde aplica esta depreciación:</label>
@@ -979,10 +1028,12 @@ function addDep() {
 
   const anioInicio = parseInt(document.getElementById('dep-anio').value) || new Date().getFullYear();
   const anioFin = anioInicio + Math.floor(vida);
+  const cosechaInicio = parseInt(document.getElementById('dep-cosecha-inicio').value) || 1;
+  const aplicaCultivos = document.getElementById('dep-cultivos').value;
   S.depreciaciones[curPredioDep].push({
     id:uid(), nombre:nom, tipo_activo:tipo, alcance,
     tablasIdx, valorActivo:val, vidaUtil:vida, costoAnual:val/vida,
-    anioInicio, anioFin
+    anioInicio, anioFin, cosechaInicio, aplicaCultivos
   });
   save(); renderDep(); toast('✓ Activo agregado');
 }
