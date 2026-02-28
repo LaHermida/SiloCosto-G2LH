@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LaborCosto Pro — Grupo 2</title>
+<title>SiloCosto Pro — Grupo 2</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;700;900&family=Epilogue:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -178,7 +178,7 @@ tr:hover td { background:var(--cream); }
 <div class="shell">
 <header>
   <div>
-    <span class="logo">Labor<em>Costo</em> LH</span>
+    <span class="logo">Silo<em>Costo</em> LH</span>
     <span class="logo-tag">LH</span>
   <span id="save-indicator" style="font-family:'DM Mono',monospace;font-size:10px;color:#806040;margin-left:14px">☁️ Nube</span>
   <span id="user-tag" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--straw);margin-left:14px"></span>
@@ -331,7 +331,7 @@ tr:hover td { background:var(--cream); }
 <!-- LOGIN OVERLAY -->
 <div class="login-overlay" id="login-overlay">
   <div class="login-box">
-    <div class="login-title">Labor<span style="color:var(--gold)">Costo</span> LH</div>
+    <div class="login-title">Silo<span style="color:var(--gold)">Costo</span> LH</div>
     <div class="login-sub">LH · La Hermida</div>
     <div class="login-error" id="login-error">Usuario o contraseña incorrectos</div>
     <div class="login-field">
@@ -1744,6 +1744,7 @@ function calcGastosGeneralesTabla(pi, cn, ti) {
 
 let gastosGridDraft = {}; // {catIdx: {cn: monto}}
 let gastosGridPrediosIdx = [];
+let gastosGridCn = 1;
 
 function renderGastos() {
   if(!S.gastosGenerales) S.gastosGenerales = [];
@@ -1762,27 +1763,22 @@ function renderGastos() {
       ${p.emoji} ${p.nombre}
     </label>`).join('');
 
-  // Grid: categorias × cosechas (all 3 columns but only open ones editable)
-  const cosechaNames = {1:'C1 Triticale · Dic-Feb', 2:'C2 Maíz · Mar-Jul', 3:'C3 Maíz/Sorgo · Ago-Nov'};
-  const cosechaHeaders = [1,2,3].map(cn=>{
-    const anyOpen = S.predios.some((p,pi)=>!getCosechaMeta(pi,cn).closed);
-    return `<th style="text-align:center;min-width:130px;${!anyOpen?'opacity:0.4':''}">C${cn}<br><span style="font-weight:400;font-size:9px">${cn===1?'Dic-Feb':cn===2?'Mar-Jul':'Ago-Nov'}</span>${!anyOpen?'<br><span style="font-size:9px;color:#7a1f1f">🔒 Cerrada</span>':''}</th>`;
-  }).join('');
+  // Grid: categorias × cosecha seleccionada
+  const selectedCn = gastosGridCn || 1;
+  const cnLabel = selectedCn===1?'Triticale · Dic-Feb':selectedCn===2?'Maíz · Mar-Jul':'Maíz/Sorgo · Ago-Nov';
+  const cosechaHeaders = `<th style="text-align:center;min-width:160px">C${selectedCn} — ${cnLabel}</th>`;
 
   const gridRows = CATS_GENERALES.map((cat,ci)=>{
-    const cells = [1,2,3].map(cn=>{
-      const anyOpen = S.predios.some((p,pi)=>!getCosechaMeta(pi,cn).closed);
-      const val = gastosGridDraft[ci]?.[cn] || '';
-      const baseStyle = 'width:110px;padding:5px;text-align:right;border:1px solid #d4c0a0;font-size:12px';
-      const disabledStyle = baseStyle + ';opacity:0.4;background:#eee';
-      return `<td style="padding:4px"><input type="number" min="0" step="1" placeholder="—"
+    const val = gastosGridDraft[ci]?.[selectedCn] || '';
+    const baseStyle = 'width:130px;padding:5px;text-align:right;border:1px solid #d4c0a0;font-size:13px';
+    return `<tr>
+      <td style="padding:8px 12px;white-space:nowrap"><strong>${cat}</strong></td>
+      <td style="padding:4px"><input type="number" min="0" step="1" placeholder="—"
         value="${val}"
-        ${!anyOpen ? 'disabled' : ''}
-        style="${!anyOpen ? disabledStyle : baseStyle}"
-        onchange="updateGastosDraft(${ci},${cn},this.value)"
-        /></td>`;
-    }).join('');
-    return `<tr><td style="padding:8px 12px;white-space:nowrap"><strong>${cat}</strong></td>${cells}</tr>`;
+        style="${baseStyle}"
+        onchange="updateGastosDraft(${ci},${selectedCn},this.value)"
+        /></td>
+    </tr>`;
   }).join('');
 
   // Existing records table
@@ -1832,13 +1828,13 @@ function renderGastos() {
           </div>
           <div class="field" style="margin:0">
             <label>Cosecha</label>
-            <select id="g-cosecha">
+            <select id="g-cosecha" onchange="gastosGridCn=parseInt(this.value);gastosGridDraft={};renderGastos()">
               ${[1,2,3].map(cn => {
-                // Check if any predio has this cosecha open
                 const anyOpen = S.predios.some((p,pi)=>!getCosechaMeta(pi,cn).closed);
-                const meta = getCosechaMeta(0,cn);
-                const label = cn===1?'C1 · Triticale':cn===2?'C2 · Maíz':'C3 · Maíz/Sorgo';
-                return `<option value="${cn}" ${!anyOpen?'disabled':''}>Cosecha ${cn} — ${label}${!anyOpen?' (cerrada)':''}</option>`;
+                const label = cn===1?'C1 · Triticale · Dic-Feb':cn===2?'C2 · Maíz · Mar-Jul':'C3 · Maíz/Sorgo · Ago-Nov';
+                return `<option value="${cn}" ${gastosGridCn===cn?'selected':''} ${!anyOpen?'disabled':''}>
+                  ${label}${!anyOpen?' 🔒':''}
+                </option>`;
               }).join('')}
             </select>
           </div>
@@ -1880,19 +1876,18 @@ function capturarGastos() {
   let total = 0;
   if(!S.gastosGenerales) S.gastosGenerales = [];
 
+  const cn = gastosGridCn || 1;
+  const anyOpen = S.predios.some((p,pi)=>!getCosechaMeta(pi,cn).closed);
+  if(!anyOpen) { toast('⚠️ Esta cosecha está cerrada',true); return; }
+
   for(const [ciStr, cosechas] of Object.entries(gastosGridDraft)) {
     const ci = parseInt(ciStr);
     const categoria = CATS_GENERALES[ci];
-    for(const [cnStr, montoStr] of Object.entries(cosechas)) {
-      const monto = parseFloat(montoStr);
-      if(!monto || monto <= 0) continue;
-      const cn = parseInt(cnStr);
-      // Check cosecha is open
-      const anyOpen = S.predios.some((p,pi)=>!getCosechaMeta(pi,cn).closed);
-      if(!anyOpen) continue;
-      S.gastosGenerales.push({ id:uid(), cosecha:cn, anio, categoria, monto, prediosIdx, fecha:today() });
-      total++;
-    }
+    const montoStr = cosechas[cn];
+    const monto = parseFloat(montoStr);
+    if(!monto || monto <= 0) continue;
+    S.gastosGenerales.push({ id:uid(), cosecha:cn, anio, categoria, monto, prediosIdx, fecha:today() });
+    total++;
   }
 
   if(!total) { toast('⚠️ No hay montos para capturar (o cosechas cerradas)',true); return; }
