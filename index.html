@@ -342,7 +342,10 @@ tr:hover td { background:var(--cream); }
       <label>Contraseña</label>
       <input type="password" id="login-pass" placeholder="••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
     </div>
-    <button class="btn btn-p" style="width:100%;margin-top:8px;padding:12px" onclick="doLogin()">Entrar</button>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px;color:var(--muted);cursor:pointer">
+      <input type="checkbox" id="login-remember" style="width:16px;height:16px"/> Recordarme
+    </label>
+    <button class="btn btn-p" style="width:100%;margin-top:4px;padding:12px" onclick="doLogin()">Entrar</button>
   </div>
 </div>
 
@@ -360,16 +363,31 @@ let currentUser = null;
 function doLogin() {
   const user = document.getElementById('login-user').value.trim();
   const pass = document.getElementById('login-pass').value;
+  const remember = document.getElementById('login-remember')?.checked;
   const u = USERS[user];
   if(u && u.pass === pass) {
     currentUser = { nombre: user, rol: u.rol };
+    if(remember) {
+      try { localStorage.setItem('silocosto_remember', user); } catch(e){}
+    } else {
+      try { localStorage.removeItem('silocosto_remember'); } catch(e){}
+    }
     document.getElementById('login-overlay').style.display = 'none';
-    // Show/hide nav items based on role
     applyRoleUI();
     toast(`✓ Bienvenido ${user.split('@')[0]}`);
   } else {
     document.getElementById('login-error').style.display = 'block';
   }
+}
+
+function checkRemembered() {
+  try {
+    const saved = localStorage.getItem('silocosto_remember');
+    if(saved && USERS[saved]) {
+      document.getElementById('login-user').value = saved;
+      document.getElementById('login-remember').checked = true;
+    }
+  } catch(e){}
 }
 
 function applyRoleUI() {
@@ -1816,12 +1834,12 @@ function renderGastos() {
         const dDiesel = gastosGridDraft[`d_${pi}_${eq.id}`] || '';
         const dRep    = gastosGridDraft[`r_${pi}_${eq.id}`] || '';
         return `<tr>
-          <td style="padding:8px 14px;white-space:nowrap">${p.emoji} <strong>${eq.nombre}</strong> <span style="font-size:10px;color:var(--muted)">(${p.nombre})</span></td>
-          <td style="padding:4px"><input type="number" min="0" step="1" placeholder="—" value="${dDiesel}"
-            style="width:140px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+          <td style="padding:8px 14px;max-width:200px;overflow:hidden;text-overflow:ellipsis">${p.emoji} <strong>${eq.nombre}</strong><br><span style="font-size:10px;color:var(--muted)">${p.nombre}</span></td>
+          <td style="padding:8px 14px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dDiesel}"
+            style="width:120px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
             onchange="gastosGridDraft['d_${pi}_${eq.id}']=this.value"/></td>
-          <td style="padding:4px"><input type="number" min="0" step="1" placeholder="—" value="${dRep}"
-            style="width:140px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+          <td style="padding:8px 14px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dRep}"
+            style="width:120px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
             onchange="gastosGridDraft['r_${pi}_${eq.id}']=this.value"/></td>
         </tr>`;
       }).join('');
@@ -2315,6 +2333,7 @@ function toast(msg,warn=false) {
 
 // INIT
 curTablaRep=-1;
+checkRemembered();
 loadState();
 </script>
 </body>
