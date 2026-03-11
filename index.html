@@ -1418,14 +1418,15 @@ function renderMon() {
         <thead><tr><th>Tabla</th><th>Cultivo</th><th>Ha</th><th>Mat. Cultivo</th><th>Gastos Gral.</th><th>Deprec.</th><th>Total</th><th>Kilos</th><th>$/kg silo</th><th>$/kg MS</th></tr></thead>
         <tbody>${tablaRows}
           <tr style="background:var(--soil);color:var(--straw)">
-            <td colspan="3"><strong>TOTAL PREDIO</strong></td>
+            <td colspan="2"><strong>TOTAL PREDIO</strong></td>
+            <td></td>
             <td class="mono tr"><strong>${fmt(totVars)}</strong></td>
             <td class="mono tr"><strong>${fmt(totGasGen)}</strong></td>
             <td class="mono tr"><strong>${fmt(totDep)}</strong></td>
             <td class="mono tr"><strong>${fmt(totVars+totGasGen+totDep)}</strong></td>
             <td class="mono tr"><strong>${totKilos?fmtN(totKilos,0)+' kg':'—'}</strong></td>
-            <td class="mono tr" style="color:var(--straw)"><strong>${totCPK?'$'+totCPK.toFixed(2):'—'}</strong></td>
-            <td></td>
+            <td class="mono tr" style="color:var(--gold)"><strong>${totCPK?'$'+totCPK.toFixed(2):'—'}</strong></td>
+            <td class="mono tr" style="color:var(--green)"><strong>${(()=>{let totKgMS=0;for(let ti=0;ti<p.tablas.length;ti++){const td2=getTablaData(pi,cn,ti);totKgMS+=(parseFloat(td2.kilos)||0)*((parseFloat(td2.pctMS)||0)/100);}const tot=totVars+totGasGen+totDep;return totKgMS?'$'+(tot/totKgMS).toFixed(2):'—'})()}</strong></td>
           </tr>
         </tbody>
       </table></div>
@@ -1623,10 +1624,12 @@ function renderRepContent() {
 function printReportePredio(pi, cn) {
   const p = S.predios[pi];
   const totalHa = p.tablas.reduce((s,t)=>s+t.ha,0);
-  const cats = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz','Ensilada','Materiales de ensilada','Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
+  const cats = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz','Ensilada','Materiales de ensilada','Nómina y gastos admin','Diesel','Sirre y Desmonte','Camiones','Otro'];
+  const catOrder = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz','Ensilada','Materiales de ensilada','Nómina y gastos admin','Diesel','Depreciación','Sirre y Desmonte'];
   let catTotals={};
   cats.forEach(c=>catTotals[c]=0);
   let totalDep=0, totKilos=0, totKgMS=0;
+  // Sum consumos por tabla
   for(let ti=0;ti<p.tablas.length;ti++) {
     const td=getTablaData(pi,cn,ti);
     totalDep+=calcDepTabla(pi,cn,ti);
@@ -1637,21 +1640,32 @@ function printReportePredio(pi, cn) {
       else catTotals['Otro']+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
     });
   }
+  // Sum gastos generales for this predio+cosecha
+  (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===cn&&(g.prediosIdx||[]).includes(pi)).forEach(g=>{
+    const cat = g.categoria||'Otro';
+    if(catTotals[cat]!==undefined) catTotals[cat]+=parseFloat(g.monto)||0;
+    else catTotals['Otro']+=parseFloat(g.monto)||0;
+  });
   const totCost=Object.values(catTotals).reduce((s,v)=>s+v,0)+totalDep;
   const cpk=totKilos?totCost/totKilos:null;
   const cpkms=totKgMS?totCost/totKgMS:null;
   const fmtPDF = n => n?'$ '+Number(n).toLocaleString('es-CL',{minimumFractionDigits:2,maximumFractionDigits:2}):'$ —';
+  // Only show cats with values
+  const activeCats = cats.filter(c=>catTotals[c]>0);
 
   const win=window.open('','_blank');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte ${p.nombre} C${cn}</title>
-  <style>body{font-family:Arial,sans-serif;font-size:12px;margin:30px}h1{font-size:18px;text-align:center}h2{font-size:12px;text-align:center;color:#666;font-weight:normal;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#1a1208;color:#faf6ed;padding:8px;font-size:10px;text-align:left}td{padding:8px;border-bottom:1px solid #ddd}.tr{text-align:right}.tot{background:#1a1208;color:#faf6ed;font-weight:bold}.sec{background:#2a1c0c;color:#faf6ed;text-align:center;padding:8px;font-weight:bold;margin:14px 0 6px}@media print{button{display:none}}</style>
+  <style>body{font-family:Arial,sans-serif;font-size:12px;margin:30px}h1{font-size:18px;text-align:center}h2{font-size:12px;text-align:center;color:#666;font-weight:normal;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#1a1208;color:#faf6ed;padding:8px;font-size:10px;text-align:left}td{padding:8px;border-bottom:1px solid #ddd}.tr{text-align:right}.tot{background:#1a1208;color:#faf6ed;font-weight:bold}.sec{background:#2a1c0c;color:#faf6ed;text-align:center;padding:8px;font-weight:bold;margin:14px 0 6px}.zero{color:#bbb}@media print{button{display:none}}</style>
   </head><body>
   <h1>GASTOS TOTALES — ${p.nombre}</h1>
   <h2>Cosecha ${cn} · ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha · ${today()}</h2>
-  <table><thead><tr><th>Categoría</th><th>Tipo</th><th class="tr">$/Ha</th><th class="tr">Gasto Total</th></tr></thead><tbody>
-  ${cats.map(cat=>`<tr><td>${cat}</td><td>Variable</td><td class="tr">${catTotals[cat]?fmtPDF(catTotals[cat]/totalHa):'$ —'}</td><td class="tr">${catTotals[cat]?fmtPDF(catTotals[cat]):'$ —'}</td></tr>`).join('')}
-  <tr><td>Depreciación</td><td>Constante</td><td class="tr">${fmtPDF(totalDep/totalHa)}</td><td class="tr">${fmtPDF(totalDep)}</td></tr>
-  <tr class="tot"><td colspan="2">TOTAL</td><td class="tr">${fmtPDF(totCost/totalHa)}</td><td class="tr">${fmtPDF(totCost)}</td></tr>
+  <table><thead><tr><th>Categoría</th><th class="tr">$/Ha</th><th class="tr">Gasto Total</th></tr></thead><tbody>
+  ${catOrder.map(cat=>{
+    if(cat==='Depreciación') return totalDep>0?`<tr><td>Depreciación</td><td class="tr">${fmtPDF(totalDep/totalHa)}</td><td class="tr">${fmtPDF(totalDep)}</td></tr>`:'';
+    return catTotals[cat]>0?`<tr><td>${cat}</td><td class="tr">${fmtPDF(catTotals[cat]/totalHa)}</td><td class="tr">${fmtPDF(catTotals[cat])}</td></tr>`:'';
+  }).join('')}
+  ${activeCats.filter(c=>!catOrder.includes(c)).map(cat=>`<tr><td>${cat}</td><td class="tr">${fmtPDF(catTotals[cat]/totalHa)}</td><td class="tr">${fmtPDF(catTotals[cat])}</td></tr>`).join('')}
+  <tr class="tot"><td>TOTAL</td><td class="tr">${fmtPDF(totCost/totalHa)}</td><td class="tr">${fmtPDF(totCost)}</td></tr>
   </tbody></table>
   <div class="sec">COSTO POR KILO</div>
   <table><thead><tr><th>Kilos silo</th><th>Kg MS</th><th>Total</th><th>$/ha</th><th>$/kg silo</th><th>$/kg MS</th></tr></thead>
@@ -1719,12 +1733,13 @@ const CATS_GENERALES = [
 
 // Tabs del grid de gastos
 const GASTOS_TABS = [
-  { id:'equipos',  label:'🚜 Diesel / Reparaciones', rol:'colaborador' },
-  { id:'luz',      label:'💡 Luz',                   rol:'colaborador' },
-  { id:'ensilada', label:'🌽 Ensilada',               rol:'admin' },
-  { id:'nomina',   label:'👷 Nómina',                 rol:'admin' },
-  { id:'camiones', label:'🚛 Camiones',               rol:'admin' },
-  { id:'otros',    label:'📦 Otros',                  rol:'admin' },
+  { id:'equipos',     label:'🚜 Diesel / Reparaciones', rol:'colaborador' },
+  { id:'luz',         label:'💡 Luz',                   rol:'colaborador' },
+  { id:'ensilada',    label:'🌽 Ensilada',               rol:'admin' },
+  { id:'mat_ensilada',label:'🧪 Mat. Ensilada',          rol:'colaborador' },
+  { id:'nomina',      label:'👷 Nómina',                 rol:'admin' },
+  { id:'camiones',    label:'🚛 Camiones',               rol:'admin' },
+  { id:'otros',       label:'📦 Otros',                  rol:'admin' },
 ];
 
 // Keep for backward compat with old data that had mes field
@@ -1989,6 +2004,38 @@ function renderGastos() {
         <tbody>${rows}</tbody>
       </table>`;
 
+  } else if(gastosTab === 'mat_ensilada') {
+    // Material de ensilada: articulos del catalogo categoria Materiales de ensilada
+    const artsEnsilada = S.articulos.filter(a=>a.categoria==='Materiales de ensilada');
+    if(!artsEnsilada.length) {
+      tabContent = `<div class="empty" style="padding:24px"><div class="empty-icon">🧪</div><div>No hay artículos de "Materiales de ensilada" en el catálogo.<br>El admin debe agregarlos primero.</div></div>`;
+    } else {
+      const matRows = artsEnsilada.map(art=>{
+        const precio = getCurrentPrice(art.id);
+        const cantVal = gastosGridDraft[`me_cant_${art.id}`] || '';
+        return `<tr>
+          <td style="padding:8px 14px"><strong>${art.nombre}</strong></td>
+          <td style="padding:4px;text-align:center;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${fmt(precio)}/${art.unidad}</td>
+          <td style="padding:4px"><input type="number" min="0" step="0.01" placeholder="—" value="${cantVal}"
+            style="width:120px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+            onchange="gastosGridDraft['me_cant_${art.id}']=this.value"/></td>
+          <td style="padding:8px 14px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">
+            ${cantVal && precio ? fmt(parseFloat(cantVal)*precio) : '—'}
+          </td>
+        </tr>`;
+      }).join('');
+      tabContent = `
+        <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px">
+          <thead><tr>
+            <th style="text-align:left;min-width:180px">Artículo</th>
+            <th style="text-align:center;min-width:120px">Precio</th>
+            <th style="text-align:right;min-width:120px">Cantidad</th>
+            <th style="text-align:right;min-width:120px">Total</th>
+          </tr></thead>
+          <tbody>${matRows}</tbody>
+        </table>`;
+    }
+
   } else if(gastosTab === 'camiones') {
     const val = gastosGridDraft['camiones'] || '';
     tabContent = `
@@ -2189,6 +2236,17 @@ function capturarGastos() {
     ACTIVIDADES.filter(a=>a!=='Sistema de riego').forEach((act,ai)=>{
       const monto = parseFloat(gastosGridDraft[`nom_${ai}`]);
       if(monto>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina y gastos admin',actividad:act,monto,prediosIdx,fecha:today()}); total++; }
+    });
+
+  } else if(gastosTab === 'mat_ensilada') {
+    const artsEnsilada = S.articulos.filter(a=>a.categoria==='Materiales de ensilada');
+    artsEnsilada.forEach(art=>{
+      const cant = parseFloat(gastosGridDraft[`me_cant_${art.id}`]);
+      if(!cant||cant<=0) return;
+      const precio = getCurrentPrice(art.id) || 0;
+      const monto = cant * precio;
+      S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Materiales de ensilada',equipo:art.nombre,litros:cant,precioPorLitro:precio,monto,prediosIdx,fecha:today()});
+      total++;
     });
 
   } else if(gastosTab === 'camiones') {
