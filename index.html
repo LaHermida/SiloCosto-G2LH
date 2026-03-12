@@ -529,7 +529,7 @@ const CULTIVOS = {
   trigo:   { label:'Triticale', icon:'🌾', css:'cultivo-trigo',   pct:20 },
   sorgo:   { label:'Sorgo',     icon:'🌿', css:'cultivo-sorgo',   pct:40 },
   higo:    { label:'Higo',      icon:'🍃', css:'cultivo-otro',    pct:40 },
-  alfalfa: { label:'Alfalfa',   icon:'🟢', css:'cultivo-alfalfa', pct:40, anual:true },
+  alfalfa: { label:'Alfalfa',   icon:'🟢', css:'cultivo-alfalfa', pct:33, anual:true },
   otro:    { label:'Otro',      icon:'🌱', css:'cultivo-otro',    pct:40 }
 };
 
@@ -1175,17 +1175,22 @@ function renderRegContent() {
         </div>
         ${(td.cultivo||'maiz')==='alfalfa' ? `
         <div class="field">
+          <label>Ha sembradas este ciclo</label>
+          <input type="number" value="${td.haSembradas||''}" placeholder="${p.tablas[ti].ha} (total)" step="0.01" onchange="saveTablaField('haSembradas',this.value)" style="border-color:var(--gold)"/>
+          <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted)">Máx: ${p.tablas[ti].ha} ha</span>
+        </div>
+        <div class="field">
           <label>Kilos henificados</label>
           <input type="number" value="${td.kilos||''}" placeholder="0" onchange="saveTablaField('kilos',this.value)"/>
         </div>
         <div class="field">
-          <label>Precio venta ($/kg)</label>
-          <input type="number" value="${td.precioVenta||''}" placeholder="0.00" step="0.01" onchange="saveTablaField('precioVenta',this.value)" style="border-color:var(--green)"/>
+          <label>% Materia seca</label>
+          <input type="number" value="${td.pctMS||''}" placeholder="0" step="0.01" onchange="saveTablaField('pctMS',this.value)"/>
         </div>
         <div class="field" style="justify-content:flex-end;padding-top:18px">
           <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">
-            Ha: <strong style="color:var(--amber)">${p.tablas[ti].ha} ha</strong><br>
-            Ingreso: <strong style="color:var(--green)">${(td.kilos&&td.precioVenta)?fmt(td.kilos*td.precioVenta):'—'}</strong><br>
+            Ha activas: <strong style="color:var(--amber)">${td.haSembradas||p.tablas[ti].ha} ha</strong><br>
+            kg MS: <strong style="color:var(--amber)">${kgMS?fmtN(kgMS,0):'—'}</strong><br>
             Deprec.: <strong style="color:var(--gold)">${fmt(dep)}</strong>
           </span>
         </div>` : `
