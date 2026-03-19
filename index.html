@@ -2120,6 +2120,57 @@ function renderGastos() {
 
     // Maquila section - per predio, price per ton, select tablas
     // ── Maquila y Camiones: tabla limpia por predio/tabla con check + $/ton ──
+    // ── Maquila: tabla estilo Excel, precio por predio (excl Los Higos), filas = tablas ──
+    // Predios que ensilan (excluir Los Higos = el que tiene 1 tabla tipicamente)
+    const prediosMaquilaIdx = S.predios.map((p,pi)=>({p,pi})).filter(({p})=>p.nombre!=='Los Higos'&&!(p.tablas.length===1&&p.tablas[0]?.nombre?.toLowerCase().includes('higo')));
+    // Find max tablas count across maquila predios
+    const maxTablasMaq = Math.max(...prediosMaquilaIdx.map(({p})=>p.tablas.length), 0);
+    // Header: Predio | costo | predio2 | costo2...
+    const maqHeaderCols = prediosMaquilaIdx.map(({p,pi})=>`<th style="padding:7px 10px;text-align:center;background:#2a5425;color:#faf6ed">${p.emoji} ${p.nombre}</th><th style="padding:7px 10px;text-align:center;background:#1a3a18;color:#d4c0a0;font-size:10px">X$</th>`).join('');
+    // Price row per predio
+    const maqPriceRow = prediosMaquilaIdx.map(({p,pi})=>{
+      const ppt = gastosGridDraft[`maq_ppt_${pi}`] || '';
+      return `<td colspan="2" style="padding:4px 8px;text-align:center">
+        <input type="number" min="0" step="0.01" placeholder="$/ton" value="${ppt}"
+          style="width:100px;padding:4px 7px;text-align:center;border:1px solid #d4c0a0;font-size:13px;background:#fffbe8"
+          onchange="gastosGridDraft['maq_ppt_${pi}']=this.value;renderGastos()"/>
+      </td>`;
+    }).join('');
+    // Rows per tabla
+    const allTablaNames = [];
+    let tiMax = 0;
+    prediosMaquilaIdx.forEach(({p})=>{ if(p.tablas.length>tiMax) tiMax=p.tablas.length; });
+    const maqTablaRows = Array.from({length:tiMax},(_,ti)=>{
+      const cells = prediosMaquilaIdx.map(({p,pi})=>{
+        if(ti>=p.tablas.length) return `<td colspan="2"></td>`;
+        const t = p.tablas[ti];
+        const key = `maq_t_${pi}_${ti}`;
+        const isChecked = gastosGridDraft[key] !== '0' && gastosGridDraft[key] !== false && gastosGridDraft[key] !== undefined;
+        const ppt = parseFloat(gastosGridDraft[`maq_ppt_${pi}`])||0;
+        const kilos = parseFloat(getTablaData(pi,selectedCn,ti).kilos)||0;
+        const total = isChecked && ppt ? (kilos/1000)*ppt : 0;
+        return `<td style="padding:5px 10px;text-align:center">
+            <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;font-size:12px">
+              <input type="checkbox" ${isChecked?'checked':''} style="width:14px;height:14px"
+                onchange="gastosGridDraft['${key}']=this.checked?'1':'0';renderGastos()"/>
+              ${t.nombre}
+            </label>
+          </td>
+          <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:${total?'var(--amber)':'var(--muted)'}">${total?fmt(total):'—'}</td>`;
+      }).join('');
+      return `<tr style="border-bottom:1px solid var(--border)">${cells}</tr>`;
+    }).join('');
+
+    const maquilaSections = prediosMaquilaIdx.length ? `<div style="overflow-x:auto">
+      <table style="border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--soil);color:var(--straw)"><th style="padding:7px 12px;text-align:left;min-width:60px"></th>${maqHeaderCols}</tr>
+          <tr style="background:#f5efe0"><td style="padding:5px 12px;font-size:11px;color:var(--muted)">$/Ton</td>${maqPriceRow}</tr>
+        </thead>
+        <tbody>${maqTablaRows}</tbody>
+      </table></div>` : '<div style="color:var(--muted);font-size:12px">Sin predios de ensilada configurados</div>';
+
+    // ── Camiones: tabla por tabla con check + $/ton (se queda igual) ──
     function buildTonTable(prefix) {
       const allRows = [];
       S.predios.forEach((p,pi)=>{
@@ -2159,8 +2210,38 @@ function renderGastos() {
           <tbody>${allRows.join('')}</tbody>
         </table></div>`;
     }
-    const maquilaSections = buildTonTable('maq');
     const camionesSections = buildTonTable('cam');
+
+    // ── Pizca: solo Los Higos ──
+    const losHigosIdx = S.predios.findIndex(p=>p.nombre==='Los Higos'||(p.tablas.length===1&&p.tablas[0]?.nombre?.toLowerCase().includes('higo')));
+    const pizcaVal = gastosGridDraft['pizca_monto'] || '';
+    const pizcaSection = losHigosIdx>=0 ? (()=>{
+      const pHigos = S.predios[losHigosIdx];
+      const pizcaRows = pHigos.tablas.map((t,ti)=>{
+        const key = `pizca_t_${losHigosIdx}_${ti}`;
+        const keyPpt = `pizca_ppt_${losHigosIdx}_${ti}`;
+        const isChecked = gastosGridDraft[key] !== '0' && gastosGridDraft[key] !== false && gastosGridDraft[key] !== undefined;
+        const ppt = gastosGridDraft[keyPpt] || '';
+        const kilos = parseFloat(getTablaData(losHigosIdx,selectedCn,ti).kilos)||0;
+        const total = isChecked && ppt ? (kilos/1000)*parseFloat(ppt) : 0;
+        return `<tr style="${!isChecked?'opacity:0.45':''}">
+          <td style="padding:6px 12px;font-weight:600">${t.nombre}</td>
+          <td style="padding:6px 10px;text-align:center"><input type="checkbox" ${isChecked?'checked':''} style="width:16px;height:16px" onchange="gastosGridDraft['${key}']=this.checked?'1':'0';renderGastos()"/></td>
+          <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="0.01" placeholder="$/ton" value="${ppt}" style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['${keyPpt}']=this.value;renderGastos()"/></td>
+          <td style="padding:6px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${total?fmt(total):'—'}</td>
+        </tr>`;
+      }).join('');
+      return `<div style="overflow-x:auto;margin-bottom:4px">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:#3a2a0a;color:#faf6ed">
+            <th style="padding:7px 12px;text-align:left">Tabla</th>
+            <th style="padding:7px 10px;text-align:center">✓</th>
+            <th style="padding:7px 12px;text-align:right">$/Tonelada</th>
+            <th style="padding:7px 12px;text-align:right">Total</th>
+          </tr></thead>
+          <tbody>${pizcaRows}</tbody>
+        </table></div>`;
+    })() : '';
 
     const matRows = artsEnsilada.map(art=>{
       const precio = getCurrentPrice(art.id);
@@ -2255,9 +2336,10 @@ function renderGastos() {
         </tr></thead>
         <tbody>${maqEqRows}</tbody>
       </table></div>` : `<div style="color:var(--muted);font-size:12px;margin-bottom:16px">Sin equipos — agrega tractores o cosechadoras arriba</div>`}
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌽 Maquila — precio por tonelada × tablas seleccionadas</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌽 Maquila — precio por predio ($/ton)</div>
       ${maquilaSections}
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">🚛 Camiones — precio por tonelada × tablas seleccionadas</div>
+      ${losHigosIdx>=0?`<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">🍂 Pizca — Los Higos ($/ton)</div>${pizcaSection}`:''}
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">🚛 Camiones — precio por tabla ($/ton)</div>
       ${camionesSections}
       <div style="margin-top:16px">
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina ensilada</div>
@@ -2751,6 +2833,34 @@ function capturarGastos() {
         total++;
       });
     });
+    // Maquila por predio (precio uniforme por predio)
+    S.predios.forEach((p,pi)=>{
+      if(p.nombre==='Los Higos') return; // Los Higos usa Pizca
+      const ppt = parseFloat(gastosGridDraft[`maq_ppt_${pi}`]);
+      if(!ppt||ppt<=0) return;
+      p.tablas.forEach((t,ti)=>{
+        const key = `maq_t_${pi}_${ti}`;
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined) return;
+        const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
+        if(!kilos) return;
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Ensilada',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()});
+        total++;
+      });
+    });
+    // Pizca: Los Higos
+    const losHigosPi = S.predios.findIndex(p=>p.nombre==='Los Higos');
+    if(losHigosPi>=0) {
+      const pHigos = S.predios[losHigosPi];
+      pHigos.tablas.forEach((t,ti)=>{
+        const key = `pizca_t_${losHigosPi}_${ti}`;
+        const ppt = parseFloat(gastosGridDraft[`pizca_ppt_${losHigosPi}_${ti}`]);
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined||!ppt) return;
+        const kilos = parseFloat(getTablaData(losHigosPi,cn,ti).kilos)||0;
+        if(!kilos) return;
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Pizca',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[losHigosPi],fecha:today()});
+        total++;
+      });
+    }
     // Camiones por tonelada por tabla
     S.predios.forEach((p,pi)=>{
       p.tablas.forEach((t,ti)=>{
