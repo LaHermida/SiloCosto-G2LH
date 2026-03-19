@@ -2134,6 +2134,9 @@ function renderGastos() {
     const histRows = histEnsilada.map(g=>`<tr style="font-size:12px">
       <td style="padding:5px 10px">${g.categoria}${g.equipo?' · '+g.equipo:''}</td>
       <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
+      <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--muted)">
+        ${g.litros ? fmtN(g.litros,2)+' '+(g.categoria==='Materiales de ensilada'?'uds':'L') : '—'}
+      </td>
       <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
     </tr>`).join('');
 
@@ -2168,9 +2171,15 @@ function renderGastos() {
       <div style="border-top:2px solid var(--border);padding-top:12px">
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase">📊 Acumulado ensilada C${selectedCn}</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="font-size:10px;color:var(--muted)">
+            <th style="padding:4px 10px;text-align:left">Concepto</th>
+            <th style="padding:4px 10px;text-align:left">Predio</th>
+            <th style="padding:4px 10px;text-align:right">Cantidad</th>
+            <th style="padding:4px 10px;text-align:right">Monto</th>
+          </tr></thead>
           <tbody>${histRows}</tbody>
           <tfoot><tr style="background:var(--soil);color:var(--cream)">
-            <td colspan="2" style="padding:8px 12px;font-weight:700">TOTAL</td>
+            <td colspan="3" style="padding:8px 12px;font-weight:700">TOTAL</td>
             <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmt(totalAcum)}</td>
           </tr></tfoot>
         </table>
