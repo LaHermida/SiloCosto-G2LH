@@ -1681,8 +1681,8 @@ function renderRepContent() {
 function printReportePredio(pi, cn) {
   const p = S.predios[pi];
   const totalHa = p.tablas.reduce((s,t)=>s+t.ha,0);
-  const cats = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz','Ensilada','Materiales de ensilada','Nómina y gastos admin','Diesel','Sirre y Desmonte','Camiones','Otro'];
-  const catOrder = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz','Ensilada','Materiales de ensilada','Nómina y gastos admin','Diesel','Depreciación','Sirre y Desmonte'];
+  const cats = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz','Ensilada','Materiales de ensilada','Empacado','Pizca','Nómina y gastos admin','Diesel','Sirre y Desmonte','Camiones','Otro'];
+  const catOrder = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz','Ensilada','Materiales de ensilada','Empacado','Pizca','Nómina y gastos admin','Diesel','Depreciación','Sirre y Desmonte'];
   let catTotals={};
   cats.forEach(c=>catTotals[c]=0);
   let totalDep=0, totKilos=0, totKgMS=0;
@@ -1974,8 +1974,9 @@ function renderGastos() {
         </tr>`;
       }).join('');
 
-      // ── Sección 2: Diesel ──
-      const dieselRows = todosEquipos.map(({pi,p,eq})=>{
+      // ── Sección 2: Diesel (solo tractores, no implementos) ──
+      const dieselEquipos = todosEquipos.filter(({eq})=>eq.tipo!=='implemento');
+      const dieselRows = dieselEquipos.map(({pi,p,eq})=>{
         const dDiesel = gastosGridDraft[`d_${pi}_${eq.id}`] || '';
         const histDiesel = S.gastosGenerales.filter(g=>getGastoCosecha(g)===selectedCn&&g.equipo===eq.nombre&&(g.prediosIdx||[]).includes(pi)&&g.categoria==='Diesel');
         const totLitros = histDiesel.reduce((s,g)=>s+(parseFloat(g.litros||0)),0);
@@ -2178,7 +2179,7 @@ function renderGastos() {
           const kilos = parseFloat(getTablaData(pi,selectedCn,ti).kilos)||0;
           const total = isChecked && ppt ? (kilos/1000)*ppt : 0;
           return `<td style="padding:5px 10px;border-left:2px solid var(--border);${!isChecked?'opacity:0.45':''}">
-              <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px">
+              <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#1a1208;font-weight:500">
                 <input type="checkbox" ${isChecked?'checked':''} style="width:14px;height:14px"
                   onchange="gastosGridDraft['${key}']=this.checked?'1':'0';renderGastos()"/>
                 ${t.nombre}
@@ -2213,6 +2214,14 @@ function renderGastos() {
     const losHigosIdx = S.predios.findIndex(p=>p.nombre==='Los Higos');
     const pizcaSection = losHigosIdx>=0
       ? buildGridTable([{p:S.predios[losHigosIdx], pi:losHigosIdx}], 'pizca', '#3a2a0a')
+      : '';
+
+    // Empacado: predios que tienen al menos una tabla de alfalfa
+    const prediosAlfalfa = S.predios.map((p,pi)=>({p,pi})).filter(({p,pi})=>
+      p.tablas.some((_,ti)=>(getTablaData(pi,selectedCn,ti).cultivo||'maiz')==='alfalfa')
+    );
+    const empacadoSection = prediosAlfalfa.length
+      ? buildGridTable(prediosAlfalfa, 'emp', '#1a3a18')
       : '';
 
     const matRows = artsEnsilada.map(art=>{
@@ -2303,6 +2312,7 @@ function renderGastos() {
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌽 Maquila — precio por predio ($/ton)</div>
       ${maquilaSections}
       ${losHigosIdx>=0?`<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">🍂 Pizca — Los Higos ($/ton)</div>${pizcaSection}`:''}
+      ${empacadoSection?`<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">📦 Empacado — Alfalfa ($/ton)</div>${empacadoSection}`:''}
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">🚛 Camiones — precio por tabla ($/ton)</div>
       ${camionesSections}
       <div style="margin-top:16px">
@@ -2840,6 +2850,19 @@ function capturarGastos() {
         total++;
       });
     }
+    // Empacado: tablas con alfalfa
+    S.predios.forEach((p,pi)=>{
+      p.tablas.forEach((t,ti)=>{
+        if((getTablaData(pi,cn,ti).cultivo||'maiz')!=='alfalfa') return;
+        const key = `emp_t_${pi}_${ti}`;
+        const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}_${ti}`]);
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined||!ppt) return;
+        const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
+        if(!kilos) return;
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Empacado',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()});
+        total++;
+      });
+    });
     // Camiones por tonelada por tabla
     S.predios.forEach((p,pi)=>{
       p.tablas.forEach((t,ti)=>{
