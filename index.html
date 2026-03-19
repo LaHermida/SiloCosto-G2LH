@@ -1286,6 +1286,45 @@ function renderRegContent() {
     });
   }
 
+  // ── Tabla de consumos del período (independiente) ──
+  const allConsumos = [];
+  for(let ti2=0;ti2<p.tablas.length;ti2++) {
+    const td2 = getTablaData(pi,cn,ti2);
+    (td2.consumos||[]).forEach((c,ci)=>{
+      allConsumos.push({...c, ti2, ci, tablaNombre:p.tablas[ti2].nombre});
+    });
+  }
+  if(allConsumos.length) {
+    const histEl = document.createElement('div');
+    histEl.className = 'card';
+    const histRows = allConsumos.map((c,idx)=>`<tr>
+      <td style="font-size:11px;color:var(--muted)">${c.fecha||''}</td>
+      <td style="font-size:11px;color:var(--muted)">${c.tablaNombre}</td>
+      <td><strong>${c.nombre}</strong></td>
+      <td style="font-size:12px;color:var(--muted)">${c.categoria}</td>
+      <td class="mono tr">${fmtN(c.cantidad,2)} ${c.unidad}</td>
+      <td class="mono tr">${fmt(c.precioSnapshot)}/${c.unidad}</td>
+      <td class="mono tr amber">${fmt(c.cantidad*c.precioSnapshot)}</td>
+      <td>${!isClosed?`<button class="btn btn-d" onclick="delConsumoGlobal(${c.ti2},${c.ci})">✕</button>`:''}</td>
+    </tr>`).join('');
+    const totConsumos = allConsumos.reduce((s,c)=>s+c.cantidad*c.precioSnapshot,0);
+    histEl.innerHTML = `
+      <div class="card-head">📋 Consumos registrados — ${p.nombre} · Cosecha ${cn}</div>
+      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr>
+          <th>Fecha</th><th>Tabla</th><th>Artículo</th><th>Categoría</th>
+          <th class="tr">Cantidad</th><th class="tr">Precio</th><th class="tr">Total</th><th></th>
+        </tr></thead>
+        <tbody>${histRows}</tbody>
+        <tfoot><tr style="background:var(--soil);color:var(--straw)">
+          <td colspan="6" style="padding:8px 14px;font-weight:700">TOTAL MATERIAL DE CULTIVO</td>
+          <td class="mono tr" style="padding:8px 14px;font-weight:700">${fmt(totConsumos)}</td>
+          <td></td>
+        </tr></tfoot>
+      </table></div>`;
+    document.getElementById('reg-content').appendChild(histEl);
+  }
+
   // precio preview
   const sel = document.getElementById('reg-art');
   if(sel) {
@@ -1297,6 +1336,12 @@ function renderRegContent() {
     sel.addEventListener('change', updatePreview);
     updatePreview();
   }
+}
+
+function delConsumoGlobal(ti2, ci) {
+  const td = getTablaData(curPredioReg, curCosechaReg, ti2);
+  td.consumos.splice(ci, 1);
+  save(); renderRegContent(); toast('✓ Eliminado');
 }
 
 function saveTablaField(field, val) {
