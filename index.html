@@ -705,7 +705,7 @@ function calcDepAnualTotal(pi) {
 let curSec = 'dashboard';
 let curPredioTab=0, curPredioDep=0, curPredioReg=0, curPredioMon=0, curPredioRep=0;
 let curCosechaReg=1, curCosechaRep=1;
-let curTablaReg=0, curTablaRep=0;
+let curTablaReg=0, curTablaRep=-1;
 
 function goSec(sec) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -1393,7 +1393,7 @@ function delConsumo(i) {
 // ══════════════════════════════════════════════
 function renderRep() {
   document.getElementById('rep-ptabs').innerHTML = S.predios.map((p,i)=>
-    `<button class="ptab ${i===curPredioRep?'active':''}" onclick="curPredioRep=${i};curCosechaRep=1;curTablaRep=0;renderRep()">${p.emoji} ${p.nombre}</button>`
+    `<button class="ptab ${i===curPredioRep?'active':''}" onclick="curPredioRep=${i};curCosechaRep=1;curTablaRep=-1;renderRep()">${p.emoji} ${p.nombre}</button>`
   ).join('');
   const pi = curPredioRep;
   const p = S.predios[pi];
@@ -1406,12 +1406,12 @@ function renderRep() {
     ...cosechas.map(c=>{
       const m=getCosechaMeta(pi,c);
       const tag=m.closed?'🔒 ':'✓ ';
-      return `<button class="ctab ${c===curCosechaRep&&curTablaRep===-1?'active':''}" onclick="curCosechaRep=${c};curTablaRep=-1;renderRepContent()">${tag}C${c} ${m.year} (Predio)</button>`;
+      return `<button class="ctab ${c===curCosechaRep&&curTablaRep===-1?'active':''}" onclick="curCosechaRep=${c};curTablaRep=-1;renderRep()">${tag}C${c} ${m.year} (Predio)</button>`;
     }),
     ...cosechas.map(c=>{
       const m=getCosechaMeta(pi,c);
       const tag=m.closed?'🔒 ':'✓ ';
-      return `<button class="ctab ${c===curCosechaRep&&curTablaRep>=0?'active':''}" onclick="curCosechaRep=${c};curTablaRep=0;renderRepContent()">${tag}C${c} ${m.year} (x Tabla)</button>`;
+      return `<button class="ctab ${c===curCosechaRep&&curTablaRep>=0?'active':''}" onclick="curCosechaRep=${c};curTablaRep=0;renderRep()">${tag}C${c} ${m.year} (x Tabla)</button>`;
     })
   ].join('');
 
