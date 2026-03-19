@@ -125,7 +125,7 @@ tr:hover td { background:var(--cream); }
 .ctab.active { background:var(--soil); color:var(--straw); border-color:var(--soil); }
 
 /* TABLA SELECTOR */
-.tabla-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:8px; margin:12px 0; }
+.tabla-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px; margin:12px 0; }
 .tabla-card { border:2px solid var(--border); padding:10px 14px; cursor:pointer; transition:all 0.15s; text-align:center; background:var(--cream); }
 .tabla-card:hover { border-color:var(--gold); }
 .tabla-card.selected { border-color:var(--gold); background:rgba(208,140,40,0.1); }
@@ -1168,9 +1168,10 @@ function renderRegContent() {
         <div>
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Kilos</div>
           <input type="number" value="${d.kilos||''}" placeholder="0"
-            style="width:100%;padding:2px 4px;font-size:11px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#d4c0a0'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'};text-align:center"
+            style="width:100%;padding:2px 4px;font-size:12px;font-weight:600;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#d4c0a0'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--gold)':'var(--amber)'};text-align:center"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'kilos',this.value)"/>
+        ${d.kilos ? `<div style="font-size:9px;text-align:center;opacity:0.7;margin-top:1px">${fmtN(parseFloat(d.kilos),0)} kg</div>` : ''}
         </div>
         <div>
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">% MS</div>
@@ -1223,55 +1224,11 @@ function renderRegContent() {
         </div>
       </div>
       <div class="tabla-grid">${tablaGrid}</div>
-    </div>
-
-    <div class="card">
-      <div class="card-head">📑 ${p.tablas[ti].nombre} · Cosecha ${cn} — Material de cultivo</div>
-      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr>
-          <th style="text-align:left">Artículo</th>
-          <th style="text-align:left">Categoría</th>
-          <th style="text-align:right">Cantidad</th>
-          <th style="text-align:right">Precio</th>
-          <th style="text-align:right">Total</th>
-          <th></th>
-        </tr></thead>
-        <tbody>
-          ${consRows}
-          ${!isClosed && S.articulos.length ? `<tr style="background:#f9f5ee">
-            <td style="padding:4px 8px">
-              <select id="reg-art" style="width:100%;padding:4px;font-size:13px" onchange="(()=>{const a=S.articulos.find(x=>x.id===this.value);document.getElementById('reg-precio-lbl').textContent=a?'$'+getCurrentPrice(a.id)+'/'+a.unidad:'';})()">
-                ${artOpts}
-              </select>
-            </td>
-            <td style="padding:4px 8px;font-size:11px;color:var(--muted)" id="reg-precio-lbl">⚡ precio al guardar</td>
-            <td style="padding:4px 8px">
-              <input type="number" id="reg-cant" placeholder="0.00" step="0.01" style="width:120px;padding:4px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px"/>
-            </td>
-            <td></td>
-            <td></td>
-            <td style="padding:4px 8px">
-              <button class="btn btn-p" style="font-size:12px;padding:4px 12px" onclick="addConsumo()">+ Agregar</button>
-            </td>
-          </tr>` : ''}
-        </tbody>
-      </table></div>
-      <div class="result">
-        <div><div class="res-lbl">Consumos</div><div class="res-val">${fmt(vars)}</div></div>
-        <div><div class="res-lbl">Gastos Gral.</div><div class="res-val">${fmt(calcGastosGeneralesTabla(pi,cn,ti))}</div></div>
-        <div><div class="res-lbl">Deprec. tabla</div><div class="res-val">${fmt(dep)}</div></div>
-        <div><div class="res-lbl">Total tabla</div><div class="res-val">${fmt(dep+vars+calcGastosGeneralesTabla(pi,cn,ti))}</div></div>
-        <div>
-          <div class="res-lbl">$/kg silo</div>
-          <div class="res-val">${cpk!==null?'$'+cpk.toFixed(2):'—'}</div>
-          <div class="res-sub">$/kg MS: ${cpkms!==null?'$'+cpkms.toFixed(2):'—'}</div>
-        </div>
-      </div>
     </div>`;
 
-  // ── GRID MATERIAL CULTIVO ──
+  // ── GRID MATERIAL CULTIVO (always shown, independent of tabla selection) ──
   const artsCultivo = S.articulos.filter(a=>a.categoria==='Material de cultivo');
-  if(artsCultivo.length && !isClosed) {
+  if(artsCultivo.length) {
     const tablaHeaders = p.tablas.map((t,ti2)=>`<th style="text-align:center;min-width:90px">${t.nombre}<br><span style="font-weight:400;font-size:9px">${t.ha} ha</span></th>`).join('');
     const gridRows = artsCultivo.map(art=>{
       const precio = getCurrentPrice(art.id);
