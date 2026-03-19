@@ -1722,13 +1722,13 @@ function printReportePredio(pi, cn) {
   </head><body>
   <h1>GASTOS TOTALES — ${p.nombre}</h1>
   <h2>Cosecha ${cn} · ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha · ${today()}</h2>
-  <table><thead><tr><th>Categoría</th><th class="tr">$/Ha</th><th class="tr">Gasto Total</th></tr></thead><tbody>
+  <table><thead><tr><th>Categoría</th><th class="tr">$/Ha</th><th class="tr">Gasto Total</th><th class="tr">kg/ha</th></tr></thead><tbody>
   ${catOrder.map(cat=>{
-    if(cat==='Depreciación') return totalDep>0?`<tr><td>Depreciación</td><td class="tr">${fmtPDF(totalDep/totalHa)}</td><td class="tr">${fmtPDF(totalDep)}</td></tr>`:'';
-    return catTotals[cat]>0?`<tr><td>${cat}</td><td class="tr">${fmtPDF(catTotals[cat]/totalHa)}</td><td class="tr">${fmtPDF(catTotals[cat])}</td></tr>`:'';
+    if(cat==='Depreciación') return totalDep>0?`<tr><td>Depreciación</td><td class="tr">${fmtPDF(totalDep/totalHa)}</td><td class="tr">${fmtPDF(totalDep)}</td><td></td></tr>`:'';
+    return catTotals[cat]>0?`<tr><td>${cat}</td><td class="tr">${fmtPDF(catTotals[cat]/totalHa)}</td><td class="tr">${fmtPDF(catTotals[cat])}</td><td></td></tr>`:'';
   }).join('')}
-  ${activeCats.filter(c=>!catOrder.includes(c)).map(cat=>`<tr><td>${cat}</td><td class="tr">${fmtPDF(catTotals[cat]/totalHa)}</td><td class="tr">${fmtPDF(catTotals[cat])}</td></tr>`).join('')}
-  <tr class="tot"><td>TOTAL</td><td class="tr">${fmtPDF(totCost/totalHa)}</td><td class="tr">${fmtPDF(totCost)}</td></tr>
+  ${activeCats.filter(c=>!catOrder.includes(c)).map(cat=>`<tr><td>${cat}</td><td class="tr">${fmtPDF(catTotals[cat]/totalHa)}</td><td class="tr">${fmtPDF(catTotals[cat])}</td><td></td></tr>`).join('')}
+  <tr class="tot"><td>TOTAL</td><td class="tr">${fmtPDF(totCost/totalHa)}</td><td class="tr">${fmtPDF(totCost)}</td><td class="tr">${totKilos?fmtPDF(totKilos/totalHa):''}</td></tr>
   </tbody></table>
   <div class="sec">COSTO POR KILO</div>
   <table><thead><tr><th>Kilos silo</th><th>Kg MS</th><th>Total</th><th>$/ha</th><th>$/kg silo</th><th>$/kg MS</th></tr></thead>
@@ -1889,7 +1889,7 @@ function buildGridTable(prediosList, prefix, headerColor='#1a1208') {
       const key = `${prefix}_t_${pi}_${ti}`;
       const isChecked = gastosGridDraft[key] !== '0' && gastosGridDraft[key] !== false && gastosGridDraft[key] !== undefined;
       const ppt = parseFloat(gastosGridDraft[`${prefix}_ppt_${pi}`])||0;
-      const kilos = parseFloat(getTablaData(pi,selectedCn,ti).kilos)||0;
+      const kilos = parseFloat(getTablaData(pi,gastosGridCn||1,ti).kilos)||0;
       const total = isChecked && ppt ? (kilos/1000)*ppt : 0;
       return `<td style="padding:5px 10px;border-left:2px solid var(--border);${!isChecked?'opacity:0.45':''}">
           <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#1a1208;font-weight:500">
@@ -1916,11 +1916,12 @@ function buildGridTable(prediosList, prefix, headerColor='#1a1208') {
 
 // Helper: build grid table filtering tablas by cultivo list
 function buildGridTableFiltered(prediosList, prefix, headerColor, cultivoFilter) {
+  const cn = gastosGridCn || 1;
   // For each predio, only show tablas matching the cultivo filter
   const filteredList = prediosList.map(({p,pi})=>({
-    p: {...p, tablas: p.tablas.filter((_,ti)=>cultivoFilter.includes(getTablaData(pi,selectedCn,ti).cultivo||'maiz'))},
+    p: {...p, tablas: p.tablas.filter((_,ti)=>cultivoFilter.includes(getTablaData(pi,cn,ti).cultivo||'maiz'))},
     pi,
-    origTablaIdx: p.tablas.map((t,ti)=>cultivoFilter.includes(getTablaData(pi,selectedCn,ti).cultivo||'maiz')?ti:null).filter(ti=>ti!==null)
+    origTablaIdx: p.tablas.map((t,ti)=>cultivoFilter.includes(getTablaData(pi,cn,ti).cultivo||'maiz')?ti:null).filter(ti=>ti!==null)
   })).filter(({p})=>p.tablas.length>0);
   if(!filteredList.length) return '<div style="color:var(--muted);font-size:12px;padding:8px">Sin tablas con este cultivo en la cosecha seleccionada</div>';
 
@@ -1946,7 +1947,7 @@ function buildGridTableFiltered(prediosList, prefix, headerColor, cultivoFilter)
       const key = `${prefix}_t_${pi}_${ti}`;
       const isChecked = gastosGridDraft[key]!=='0'&&gastosGridDraft[key]!==false&&gastosGridDraft[key]!==undefined;
       const ppt = parseFloat(gastosGridDraft[`${prefix}_ppt_${pi}`])||0;
-      const kilos = parseFloat(getTablaData(pi,selectedCn,ti).kilos)||0;
+      const kilos = parseFloat(getTablaData(pi,gastosGridCn||1,ti).kilos)||0;
       const total = isChecked && ppt ? (kilos/1000)*ppt : 0;
       return `<td style="padding:5px 10px;border-left:2px solid var(--border);${!isChecked?'opacity:0.45':''}">
           <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#1a1208;font-weight:500">
