@@ -130,11 +130,12 @@ tr:hover td { background:var(--cream); }
 .tabla-card:hover { border-color:var(--gold); }
 .tabla-card.selected { border-color:var(--gold); background:rgba(208,140,40,0.1); }
 .tabla-card.active-reg { border-color:var(--green); background:var(--soil); color:var(--straw); }
-.tabla-card.active-reg .tabla-name { color:var(--straw); }
-.tabla-card.active-reg .tabla-ha { color:var(--amber); }
 .tabla-card.sin-siembra { opacity:0.55; border-style:dashed; }
 .tabla-name { font-weight:700; font-size:13px; color:var(--soil); }
 .tabla-ha { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); margin-top:2px; }
+.tabla-card.active-reg .tabla-name { color:var(--straw) !important; }
+.tabla-card.active-reg .tabla-ha { color:var(--amber) !important; }
+.tabla-card.active-reg span { color:var(--straw) !important; }
 .tabla-cultivo { font-size:10px; margin-top:4px; padding:2px 6px; display:inline-block; }
 .cultivo-maiz { background:#e8f5e8; color:var(--green); }
 .cultivo-trigo { background:#fef3e2; color:var(--amber); }
@@ -1491,7 +1492,7 @@ function renderRepContent() {
           <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700">GASTOS TOTALES — ${p.nombre}</div>
           <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);margin-top:4px">Cosecha ${cn} · Año ${getCosechaMeta(pi,cn).year} · ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha ${getCosechaMeta(pi,cn).closed?'· 🔒 CERRADA':'· ✓ Abierta'}</div>
         </div>
-        <div class="tbl-wrap"><table style="table-layout:fixed;width:100%">
+        ${cultivosPresentes.length <= 1 ? `<div class="tbl-wrap"><table style="table-layout:fixed;width:100%">
           <colgroup><col style="width:220px"/><col style="width:100px"/><col style="width:160px"/><col style="width:160px"/><col style="width:160px"/></colgroup>
           <thead><tr><th style="text-align:left">Categoría</th><th style="text-align:left">Tipo</th><th class="tr">$/Ha</th><th class="tr">Gasto Total</th><th class="tr">kg/ha</th></tr></thead>
           <tbody>${catRows}
@@ -1502,8 +1503,8 @@ function renderRepContent() {
               <td class="mono tr"><strong>${totKilos&&totalHa?fmtN(totKilos/totalHa,0)+' kg':'—'}</strong></td>
             </tr>
           </tbody>
-        </table></div>
-        <div style="margin-top:14px;padding:20px;background:var(--soil)">
+        </table></div>` : ''}
+        ${cultivosPresentes.length <= 1 ? `<div style="margin-top:14px;padding:20px;background:var(--soil)">
           <div style="text-align:center;color:var(--straw);font-family:'Fraunces',serif;font-size:15px;font-weight:700;margin-bottom:16px">COSTO POR KILO</div>
           <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:32px;padding:0 20px">
             <div style="text-align:center">
@@ -1527,9 +1528,11 @@ function renderRepContent() {
               <div style="font-family:'Fraunces',serif;font-size:42px;font-weight:700;color:var(--gold);line-height:1">${cpkms?'$'+cpkms.toFixed(2):'—'}</div>
             </div>
           </div>
-        </div>
-      </div>
-      ${cultivosPresentes.length > 1 ? cultivosPresentes.map(cv => {
+        </div>` : ''}
+      </div>`;
+    // Per-cultivo cards
+    if(cultivosPresentes.length > 1) {
+      document.getElementById('rep-content').innerHTML += cultivosPresentes.map(cv => {
         const cvInfo = CULTIVOS[cv]||CULTIVOS.otro;
         const d = buildCvTotals(cv);
         const cvCpk = d.kilos?d.cost/d.kilos:null;
@@ -1566,7 +1569,8 @@ function renderRepContent() {
             </div>
           </div>
         </div>`;
-      }).join('') : ''}`;
+      }).join('');
+    }
   } else {
     // Per-tabla report — show tabla selector then detail
     const tablaGrid = p.tablas.map((t,ti)=>`
