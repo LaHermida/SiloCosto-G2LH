@@ -187,13 +187,13 @@ tr:hover td { background:var(--cream); }
   </div>
   <nav class="header-nav">
     <button class="hnav active" onclick="goSec('dashboard')">Dashboard</button>
-    <button class="hnav" onclick="goSec('tablas')">Tablas</button>
-    <button class="hnav" onclick="goSec('articulos')">Artículos</button>
-    <button class="hnav" onclick="goSec('depreciaciones')">Depreciaciones</button>
-    <button class="hnav" onclick="goSec('gastos')">Gastos</button>
     <button class="hnav" onclick="goSec('registro')">Registro</button>
     <button class="hnav" onclick="goSec('monitor')">Monitor</button>
     <button class="hnav" onclick="goSec('reportes')">Reportes</button>
+    <button class="hnav" onclick="goSec('gastos')">Gastos</button>
+    <button class="hnav" onclick="goSec('tablas')">Tablas</button>
+    <button class="hnav" onclick="goSec('articulos')">Artículos</button>
+    <button class="hnav" onclick="goSec('depreciaciones')">Depreciaciones</button>
   </nav>
 </header>
 
@@ -1243,34 +1243,36 @@ function renderRegContent() {
       </div>`}
     </div>
 
-    ${!isClosed ? `<div class="card">
-      <div class="card-head">➕ Registrar consumo en ${p.tablas[ti].nombre}</div>
-      ${S.articulos.length ? `
-        <div class="fg3">
-          <div class="field">
-            <label>Artículo</label>
-            <select id="reg-art">${artOpts}</select>
-          </div>
-          <div class="field">
-            <label>Cantidad</label>
-            <input type="number" id="reg-cant" placeholder="0.00" step="0.01"/>
-          </div>
-          <div class="field" style="justify-content:flex-end;padding-top:18px">
-            <span id="reg-precio-preview" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)"></span>
-          </div>
-        </div>
-        <div class="btn-row">
-          <button class="btn btn-p" onclick="addConsumo()">Registrar consumo</button>
-          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">⚡ Precio se fotografia al guardar</span>
-        </div>
-      ` : '<div style="color:var(--muted);font-size:13px">Primero agrega artículos en la sección "Artículos"</div>'}
-    </div>` : ''}
-
     <div class="card">
-      <div class="card-head">📑 Consumos de ${p.tablas[ti].nombre} · Cosecha ${cn}</div>
-      <div class="tbl-wrap"><table>
-        <thead><tr><th>Fecha</th><th>Artículo</th><th>Categoría</th><th>Cantidad</th><th>Precio</th><th>Total</th><th></th></tr></thead>
-        <tbody>${consRows}</tbody>
+      <div class="card-head">📑 ${p.tablas[ti].nombre} · Cosecha ${cn} — Material de cultivo</div>
+      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr>
+          <th style="text-align:left">Artículo</th>
+          <th style="text-align:left">Categoría</th>
+          <th style="text-align:right">Cantidad</th>
+          <th style="text-align:right">Precio</th>
+          <th style="text-align:right">Total</th>
+          <th></th>
+        </tr></thead>
+        <tbody>
+          ${consRows}
+          ${!isClosed && S.articulos.length ? `<tr style="background:#f9f5ee">
+            <td style="padding:4px 8px">
+              <select id="reg-art" style="width:100%;padding:4px;font-size:13px" onchange="(()=>{const a=S.articulos.find(x=>x.id===this.value);document.getElementById('reg-precio-lbl').textContent=a?'$'+getCurrentPrice(a.id)+'/'+a.unidad:'';})()">
+                ${artOpts}
+              </select>
+            </td>
+            <td style="padding:4px 8px;font-size:11px;color:var(--muted)" id="reg-precio-lbl">⚡ precio al guardar</td>
+            <td style="padding:4px 8px">
+              <input type="number" id="reg-cant" placeholder="0.00" step="0.01" style="width:120px;padding:4px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px"/>
+            </td>
+            <td></td>
+            <td></td>
+            <td style="padding:4px 8px">
+              <button class="btn btn-p" style="font-size:12px;padding:4px 12px" onclick="addConsumo()">+ Agregar</button>
+            </td>
+          </tr>` : ''}
+        </tbody>
       </table></div>
       <div class="result">
         <div><div class="res-lbl">Consumos</div><div class="res-val">${fmt(vars)}</div></div>
@@ -1560,10 +1562,10 @@ function renderRepContent() {
     let catRows = cats.map(cat=>{
       const tot=catTotals[cat]||0;
       return `<tr><td>${cat}</td><td><span style="background:#e8f5e8;color:var(--green);padding:2px 6px;font-size:10px">Variable</span></td>
-        <td class="mono tr">${tot?fmt(tot/totalHa):'$ —'}</td><td class="mono tr">${tot?fmt(tot):'$ —'}</td></tr>`;
+        <td class="mono tr">${tot?fmt(tot/totalHa):'$ —'}</td><td class="mono tr">${tot?fmt(tot):'$ —'}</td><td class="mono tr" style="color:var(--muted)">—</td></tr>`;
     }).join('');
     catRows += `<tr><td>Depreciación</td><td><span style="background:#fef3e2;color:var(--amber);padding:2px 6px;font-size:10px">Constante</span></td>
-      <td class="mono tr">${fmt(totalDep/totalHa)}</td><td class="mono tr">${fmt(totalDep)}</td></tr>`;
+      <td class="mono tr">${fmt(totalDep/totalHa)}</td><td class="mono tr">${fmt(totalDep)}</td><td class="mono tr" style="color:var(--muted)">—</td></tr>`;
 
     document.getElementById('rep-content').innerHTML = `
       <div class="card">
@@ -1574,29 +1576,42 @@ function renderRepContent() {
           <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700">GASTOS TOTALES — ${p.nombre}</div>
           <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);margin-top:4px">Cosecha ${cn} · Año ${getCosechaMeta(pi,cn).year} · ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha ${getCosechaMeta(pi,cn).closed?'· 🔒 CERRADA':'· ✓ Abierta'}</div>
         </div>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>Categoría</th><th>Tipo</th><th>$/Ha</th><th>Gasto Total</th></tr></thead>
+        <div class="tbl-wrap"><table style="table-layout:fixed;width:100%">
+          <colgroup><col style="width:220px"/><col style="width:100px"/><col style="width:160px"/><col style="width:160px"/><col style="width:160px"/></colgroup>
+          <thead><tr><th style="text-align:left">Categoría</th><th style="text-align:left">Tipo</th><th class="tr">$/Ha</th><th class="tr">Gasto Total</th><th class="tr">kg/ha</th></tr></thead>
           <tbody>${catRows}
             <tr style="background:var(--soil);color:var(--straw)">
               <td colspan="2"><strong>TOTAL</strong></td>
               <td class="mono tr"><strong>${fmt(totCost/totalHa)}</strong></td>
               <td class="mono tr"><strong>${fmt(totCost)}</strong></td>
+              <td class="mono tr"><strong>${totKilos&&totalHa?fmtN(totKilos/totalHa,0)+' kg':'—'}</strong></td>
             </tr>
           </tbody>
         </table></div>
-        <div style="margin-top:14px;padding:14px;background:var(--soil)">
-          <div style="text-align:center;color:var(--straw);font-family:'Fraunces',serif;font-size:15px;font-weight:700;margin-bottom:10px">COSTO POR KILO</div>
-          <div class="tbl-wrap"><table>
-            <thead><tr><th>Kilos silo</th><th>Kg MS</th><th>Total</th><th>$/ha</th><th>$/kg silo</th><th>$/kg MS</th></tr></thead>
-            <tbody><tr style="color:var(--straw)">
-              <td class="mono">${totKilos?fmtN(totKilos,0):'—'}</td>
-              <td class="mono">${totKgMS?fmtN(totKgMS,0):'—'}</td>
-              <td class="mono">${fmt(totCost)}</td>
-              <td class="mono">${fmt(totCost/totalHa)}</td>
-              <td class="mono amber"><strong>${cpk?'$'+cpk.toFixed(2):'—'}</strong></td>
-              <td class="mono green"><strong>${cpkms?'$'+cpkms.toFixed(2):'—'}</strong></td>
-            </tr></tbody>
-          </table></div>
+        <div style="margin-top:14px;padding:20px;background:var(--soil)">
+          <div style="text-align:center;color:var(--straw);font-family:'Fraunces',serif;font-size:15px;font-weight:700;margin-bottom:16px">COSTO POR KILO</div>
+          <div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap">
+            <div style="text-align:center">
+              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Kilos silo</div>
+              <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:var(--straw)">${totKilos?fmtN(totKilos,0):'—'}</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">kg MS</div>
+              <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:var(--straw)">${totKgMS?fmtN(totKgMS,0):'—'}</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">$/ha</div>
+              <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:var(--straw)">${fmt(totCost/totalHa)}</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-family:'DM Mono',monospace;font-size:10px;color:#4caf50;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">$/kg silo</div>
+              <div style="font-family:'Fraunces',serif;font-size:36px;font-weight:700;color:#4caf50">${cpk?'$'+cpk.toFixed(2):'—'}</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">$/kg MS</div>
+              <div style="font-family:'Fraunces',serif;font-size:36px;font-weight:700;color:var(--gold)">${cpkms?'$'+cpkms.toFixed(2):'—'}</div>
+            </div>
+          </div>
         </div>
       </div>`;
   } else {
