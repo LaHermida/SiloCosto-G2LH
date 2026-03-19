@@ -495,6 +495,7 @@ async function loadState() {
   } catch(e){ S = defaultState(); }
   // Ensure equiposEnsilada exists
   if(!S.equiposEnsilada) S.equiposEnsilada = [];
+  if(!S.equiposEmpaque) S.equiposEmpaque = [];
   // Recover deleted tractors: Tractor 3, Tractor 6, Tractor 7, Implementos LH
   // These were in La Hermida (pi=0)
   // Recover all deleted tractors back to S.equipos (Tractores tab)
@@ -544,13 +545,18 @@ function fmtN(n,d=2) {
 }
 
 const CULTIVOS = {
-  maiz:    { label:'Maíz',      icon:'🌽', css:'cultivo-maiz',    pct:40 },
-  trigo:   { label:'Triticale', icon:'🌾', css:'cultivo-trigo',   pct:20 },
-  sorgo:   { label:'Sorgo',     icon:'🌿', css:'cultivo-sorgo',   pct:40 },
-  higo:    { label:'Higo',      icon:'🍃', css:'cultivo-otro',    pct:40 },
-  alfalfa: { label:'Alfalfa',   icon:'🟢', css:'cultivo-alfalfa', pct:33, anual:true },
-  otro:    { label:'Otro',      icon:'🌱', css:'cultivo-otro',    pct:40 }
+  maiz:           { label:'Maíz',           icon:'🌽', css:'cultivo-maiz',    pct:40 },
+  trigo:          { label:'Triticale',      icon:'🌾', css:'cultivo-trigo',   pct:20 },
+  sorgo:          { label:'Sorgo',          icon:'🌿', css:'cultivo-sorgo',   pct:40 },
+  higo:           { label:'Higo',           icon:'🍃', css:'cultivo-otro',    pct:40 },
+  alfalfa:        { label:'Alfalfa',        icon:'🟢', css:'cultivo-alfalfa', pct:33, anual:true, empaque:true },
+  triticale_heno: { label:'Triticale Heno', icon:'🌾', css:'cultivo-trigo',   pct:20, empaque:true },
+  otro:           { label:'Otro',           icon:'🌱', css:'cultivo-otro',    pct:40 }
 };
+
+// Cultivos que van a ensilada vs empaque
+const CULTIVOS_ENSILADA = ['maiz','sorgo','trigo','higo','otro'];
+const CULTIVOS_EMPAQUE  = ['alfalfa','triticale_heno'];
 
 function cultivoBadge(c) {
   const cv = CULTIVOS[c] || CULTIVOS.otro;
@@ -1793,9 +1799,10 @@ const GASTOS_TABS = [
   { id:'tractores',   label:'🚜 Tractores',    rol:'colaborador' },
   { id:'luz',         label:'💡 Luz',           rol:'colaborador' },
   { id:'ensilada',    label:'🌽 Ensilada',      rol:'admin' },
+  { id:'empaque',     label:'📦 Empaque',       rol:'admin' },
   { id:'nomina',      label:'👷 Nómina',        rol:'admin' },
   { id:'reparaciones',label:'🔧 Reparaciones',  rol:'admin' },
-  { id:'otros',       label:'📦 Otros',         rol:'admin' },
+  { id:'otros',       label:'🗂 Otros',         rol:'admin' },
 ];
 
 // Keep for backward compat with old data that had mes field
@@ -2201,14 +2208,66 @@ function renderGastos() {
         </table></div>`;
     }
 
-    // Maquila: todos los predios excepto Los Higos
-    const prediosMaquilaIdx = S.predios.map((p,pi)=>({p,pi})).filter(({p})=>p.nombre!=='Los Higos');
-    const maquilaSections = prediosMaquilaIdx.length
-      ? buildGridTable(prediosMaquilaIdx, 'maq', '#2a5425')
-      : '<div style="color:var(--muted);font-size:12px">Sin predios configurados</div>';
+    // Helper: build grid table filtering tablas by cultivo list
+    function buildGridTableFiltered(prediosList, prefix, headerColor, cultivoFilter) {
+      // For each predio, only show tablas matching the cultivo filter
+      const filteredList = prediosList.map(({p,pi})=>({
+        p: {...p, tablas: p.tablas.filter((_,ti)=>cultivoFilter.includes(getTablaData(pi,selectedCn,ti).cultivo||'maiz'))},
+        pi,
+        origTablaIdx: p.tablas.map((t,ti)=>cultivoFilter.includes(getTablaData(pi,selectedCn,ti).cultivo||'maiz')?ti:null).filter(ti=>ti!==null)
+      })).filter(({p})=>p.tablas.length>0);
+      if(!filteredList.length) return '<div style="color:var(--muted);font-size:12px;padding:8px">Sin tablas con este cultivo en la cosecha seleccionada</div>';
 
-    // Camiones: todos los predios (misma cuadrícula)
-    const camionesSections = buildGridTable(S.predios.map((p,pi)=>({p,pi})), 'cam', '#1a1208');
+      let tiMax = 0;
+      filteredList.forEach(({p})=>{ if(p.tablas.length>tiMax) tiMax=p.tablas.length; });
+      const headerRow1 = filteredList.map(({p})=>
+        `<th colspan="2" style="padding:6px 10px;text-align:center;background:${headerColor};color:#faf6ed;font-size:12px;border-left:2px solid rgba(255,255,255,0.15)">${p.emoji} ${p.nombre}</th>`
+      ).join('');
+      const headerRow2 = filteredList.map(({p,pi})=>{
+        const ppt = gastosGridDraft[`${prefix}_ppt_${pi}`] || '';
+        return `<th style="padding:4px 6px;background:#f5efe0;border-left:2px solid var(--border);text-align:center">
+            <input type="number" min="0" step="0.01" placeholder="$/ton" value="${ppt}"
+              style="width:85px;padding:3px 6px;text-align:center;border:1px solid #d4c0a0;font-size:12px;background:#fffbe8"
+              onchange="gastosGridDraft['${prefix}_ppt_${pi}']=this.value;renderGastos()"/>
+          </th>
+          <th style="padding:4px 8px;background:#f5efe0;font-size:10px;color:var(--muted);text-align:center;white-space:nowrap">$ Total</th>`;
+      }).join('');
+      const tablaRows = Array.from({length:tiMax},(_,rowIdx)=>{
+        const cells = filteredList.map(({p,pi,origTablaIdx})=>{
+          if(rowIdx>=origTablaIdx.length) return `<td style="border-left:2px solid var(--border)"></td><td></td>`;
+          const ti = origTablaIdx[rowIdx];
+          const t = S.predios[pi].tablas[ti];
+          const key = `${prefix}_t_${pi}_${ti}`;
+          const isChecked = gastosGridDraft[key]!=='0'&&gastosGridDraft[key]!==false&&gastosGridDraft[key]!==undefined;
+          const ppt = parseFloat(gastosGridDraft[`${prefix}_ppt_${pi}`])||0;
+          const kilos = parseFloat(getTablaData(pi,selectedCn,ti).kilos)||0;
+          const total = isChecked && ppt ? (kilos/1000)*ppt : 0;
+          return `<td style="padding:5px 10px;border-left:2px solid var(--border);${!isChecked?'opacity:0.45':''}">
+              <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#1a1208;font-weight:500">
+                <input type="checkbox" ${isChecked?'checked':''} style="width:14px;height:14px"
+                  onchange="gastosGridDraft['${key}']=this.checked?'1':'0';renderGastos()"/>
+                ${t.nombre}
+              </label>
+            </td>
+            <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:${total?'var(--amber)':'var(--muted)'}">
+              ${total?fmt(total):'—'}
+            </td>`;
+        }).join('');
+        return `<tr style="border-bottom:1px solid var(--border)">${cells}</tr>`;
+      }).join('');
+      return `<div style="overflow-x:auto;margin-bottom:4px">
+        <table style="border-collapse:collapse;font-size:13px">
+          <thead><tr>${headerRow1}</tr><tr>${headerRow2}</tr></thead>
+          <tbody>${tablaRows}</tbody>
+        </table></div>`;
+    }
+
+    // Maquila: predios con tablas de cultivo ensilable (no Los Higos, no empaque)
+    const prediosMaquilaIdx = S.predios.map((p,pi)=>({p,pi}));
+    const maquilaSections = buildGridTableFiltered(prediosMaquilaIdx, 'maq', '#2a5425', CULTIVOS_ENSILADA);
+
+    // Camiones ensilada: solo tablas ensilables
+    const camionesSections = buildGridTableFiltered(S.predios.map((p,pi)=>({p,pi})), 'cam', '#1a1208', CULTIVOS_ENSILADA);
 
     // Pizca: solo Los Higos
     const losHigosIdx = S.predios.findIndex(p=>p.nombre==='Los Higos');
@@ -2216,13 +2275,8 @@ function renderGastos() {
       ? buildGridTable([{p:S.predios[losHigosIdx], pi:losHigosIdx}], 'pizca', '#3a2a0a')
       : '';
 
-    // Empacado: predios que tienen al menos una tabla de alfalfa
-    const prediosAlfalfa = S.predios.map((p,pi)=>({p,pi})).filter(({p,pi})=>
-      p.tablas.some((_,ti)=>(getTablaData(pi,selectedCn,ti).cultivo||'maiz')==='alfalfa')
-    );
-    const empacadoSection = prediosAlfalfa.length
-      ? buildGridTable(prediosAlfalfa, 'emp', '#1a3a18')
-      : '';
+    // Empacado: tablas con cultivo empaque (alfalfa, triticale_heno)
+    const empacadoSection = buildGridTableFiltered(S.predios.map((p,pi)=>({p,pi})), 'emp', '#1a3a18', CULTIVOS_EMPAQUE);
 
     const matRows = artsEnsilada.map(art=>{
       const precio = getCurrentPrice(art.id);
@@ -2254,6 +2308,7 @@ function renderGastos() {
 
     // Sección maquinaria ensilada: lista propia S.equiposEnsilada
     if(!S.equiposEnsilada) S.equiposEnsilada = [];
+  if(!S.equiposEmpaque) S.equiposEmpaque = [];
     const equiposEnsilada = S.equiposEnsilada.map(eq=>({eq, pi:null, p:null}));
 
     // Config para agregar equipos de ensilada
@@ -2312,7 +2367,7 @@ function renderGastos() {
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌽 Maquila — precio por predio ($/ton)</div>
       ${maquilaSections}
       ${losHigosIdx>=0?`<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">🍂 Pizca — Los Higos ($/ton)</div>${pizcaSection}`:''}
-      ${empacadoSection?`<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">📦 Empacado — Alfalfa ($/ton)</div>${empacadoSection}`:''}
+
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">🚛 Camiones — precio por tabla ($/ton)</div>
       ${camionesSections}
       <div style="margin-top:16px">
@@ -2340,6 +2395,106 @@ function renderGastos() {
           <tbody>${histRows}</tbody>
         </table>
       </div>` : ''}`;
+
+  } else if(gastosTab === 'empaque') {
+    // Empaque: Alfalfa + Triticale Heno
+    // Diesel (tractores), Camiones, Nómina, Empacado
+    const precioDieselEmp = S.precioDiesel?.[selectedCn] || '';
+    const precioDieselBadgeEmp = precioDieselEmp
+      ? `<span style="font-size:11px;color:var(--muted);background:#fff8e8;padding:3px 8px;border:1px solid #d4c0a0">💧 $${precioDieselEmp}/L</span>`
+      : `<span style="font-size:11px;color:#999;font-style:italic">💧 precio diesel pendiente</span>`;
+
+    // Equipos de empaque — misma lista S.equiposEnsilada (se puede reusar o crear nueva)
+    if(!S.equiposEmpaque) S.equiposEmpaque = [];
+    const configEqEmp = isAdmin ? `
+      <div style="padding:8px 12px;background:var(--cream);border:1px solid var(--border);margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar equipo:</span>
+        <input type="text" id="emp-eq-nombre" placeholder="Ej: Empacadora 1..." style="padding:5px;width:180px;font-size:13px"/>
+        <select id="emp-eq-tipo" style="padding:5px"><option value="tractor">Tractor</option><option value="empacadora">Empacadora</option></select>
+        <button class="btn btn-s" onclick="addEquipoEmpaque()">+ Agregar</button>
+      </div>` : '';
+
+    const empEqRows = S.equiposEmpaque.map(eq=>{
+      const dDiesel = gastosGridDraft[`empdiesel_${eq.id}`] || '';
+      const dServ   = gastosGridDraft[`empserv_${eq.id}`] || '';
+      const dRep    = gastosGridDraft[`emprep_${eq.id}`] || '';
+      const hist = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.equipo===eq.nombre&&['Diesel Empaque','Maquinaria Empaque'].includes(g.categoria));
+      const totEq = hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      return `<tr>
+        <td style="padding:7px 12px;font-weight:600">${eq.nombre}</td>
+        <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${eq.tipo}</td>
+        ${eq.tipo!=='empacadora'?`<td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="0.1" placeholder="—" value="${dDiesel}"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+          onchange="gastosGridDraft['empdiesel_${eq.id}']=this.value"/></td>`:'<td></td>'}
+        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dServ}"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+          onchange="gastosGridDraft['empserv_${eq.id}']=this.value"/></td>
+        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dRep}"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+          onchange="gastosGridDraft['emprep_${eq.id}']=this.value"/></td>
+        <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber);font-size:12px">${totEq?fmt(totEq):'—'}</td>
+        <td style="padding:4px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delEquipoEmpaque('${eq.id}')">✕</button>`:''}</td>
+      </tr>`;
+    }).join('');
+
+    // Nómina empaque
+    const predioOptsEmp = S.predios.map((p,i)=>`<option value="${i}" ${(gastosGridDraft['emp_nom_pi']||'0')==String(i)?'selected':''}>${p.emoji} ${p.nombre}</option>`).join('');
+    const mesActualEmp = parseInt(gastosGridDraft['emp_nom_mes']||new Date().getMonth()+1);
+    const montoNomEmp = gastosGridDraft['emp_nom_monto'] || '';
+    const c1pctEmp = gastosGridDraft['emp_nom_c1pct'] || '';
+    const c2pctEmp = gastosGridDraft['emp_nom_c2pct'] || '';
+    const c3pctEmp = gastosGridDraft['emp_nom_c3pct'] || '';
+
+    // Camiones empaque (tablas con alfalfa/triticale_heno)
+    const camEmpSection = buildGridTableFiltered(S.predios.map((p,pi)=>({p,pi})), 'camp', '#3a2a0a', CULTIVOS_EMPAQUE);
+    // Empacado ($/ton)
+    const empacadoEmpSection = buildGridTableFiltered(S.predios.map((p,pi)=>({p,pi})), 'emp', '#1a3a18', CULTIVOS_EMPAQUE);
+
+    tabContent = `
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🚜 Maquinaria empaque ${precioDieselBadgeEmp}</div>
+      ${configEqEmp}
+      ${S.equiposEmpaque.length ? `<div style="overflow-x:auto;margin-bottom:16px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:var(--soil);color:var(--straw)">
+          <th style="padding:7px 12px;text-align:left">Equipo</th>
+          <th style="padding:7px 10px;text-align:left">Tipo</th>
+          <th style="padding:7px 12px;text-align:right">Diesel (L)</th>
+          <th style="padding:7px 12px;text-align:right">Servicio ($)</th>
+          <th style="padding:7px 12px;text-align:right">Reparación ($)</th>
+          <th style="padding:7px 12px;text-align:right">Acum. C${selectedCn}</th>
+          <th></th>
+        </tr></thead>
+        <tbody>${empEqRows}</tbody>
+      </table></div>` : `<div style="color:var(--muted);font-size:12px;margin-bottom:16px">Sin equipos — agrega arriba</div>`}
+
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📦 Empacado — precio por tonelada</div>
+      ${empacadoEmpSection}
+
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">🚛 Camiones empaque — precio por tonelada</div>
+      ${camEmpSection}
+
+      <div style="margin-top:16px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina empaque</div>
+        <div style="overflow-x:auto;margin-bottom:8px">
+        <table style="border-collapse:collapse;font-size:13px;min-width:500px">
+          <thead><tr style="background:var(--soil);color:var(--straw)">
+            <th style="padding:7px 12px;text-align:left">Predio</th>
+            <th style="padding:7px 12px;text-align:left">Mes</th>
+            <th style="padding:7px 12px;text-align:right">Cantidad $</th>
+            <th style="padding:7px 10px;text-align:center">C1 %</th>
+            <th style="padding:7px 10px;text-align:center">C2 %</th>
+            <th style="padding:7px 10px;text-align:center">C3 %</th>
+          </tr></thead>
+          <tbody><tr>
+            <td style="padding:4px 8px"><select style="padding:5px;font-size:13px" onchange="gastosGridDraft['emp_nom_pi']=this.value">${predioOptsEmp}</select></td>
+            <td style="padding:4px 8px"><select style="padding:5px" onchange="gastosGridDraft['emp_nom_mes']=this.value">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActualEmp===i+1?'selected':''}>${m}</option>`).join('')}</select></td>
+            <td style="padding:4px 8px"><input type="number" min="0" step="1" placeholder="—" value="${montoNomEmp}" style="width:130px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['emp_nom_monto']=this.value"/></td>
+            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c1pctEmp}" style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['emp_nom_c1pct']=this.value"/></td>
+            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c2pctEmp}" style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['emp_nom_c2pct']=this.value"/></td>
+            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c3pctEmp}" style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['emp_nom_c3pct']=this.value"/></td>
+          </tr></tbody>
+        </table></div>
+      </div>`;
 
   } else if(gastosTab === 'nomina') {
     // Formato tipo Excel: Mes | $ | C1% | C2% | C3%
@@ -2490,6 +2645,58 @@ function renderGastos() {
           <tbody>${acumRowsRep}</tbody>
           <tfoot><tr style="background:var(--soil);color:var(--cream)"><td colspan="2" style="padding:8px 12px;font-weight:700">TOTAL</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmt(totRep)}</td><td></td></tr></tfoot>
         </table></div>`:''}`;
+
+  } else if(gastosTab === 'empaque') {
+    const precioDieselCnEmp = (S.precioDiesel && S.precioDiesel[cn]) || 0;
+    // Maquinaria empaque
+    (S.equiposEmpaque||[]).forEach(eq=>{
+      const litros = parseFloat(gastosGridDraft[`empdiesel_${eq.id}`]);
+      const serv   = parseFloat(gastosGridDraft[`empserv_${eq.id}`]);
+      const rep    = parseFloat(gastosGridDraft[`emprep_${eq.id}`]);
+      if(litros>0) {
+        const monto = precioDieselCnEmp ? litros*precioDieselCnEmp : litros;
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel Empaque',equipo:eq.nombre,litros,precioPorLitro:precioDieselCnEmp,monto,prediosIdx,fecha:today()}); total++;
+      }
+      if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,fecha:today()}); total++; }
+      if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,fecha:today()}); total++; }
+    });
+    // Empacado por tabla
+    S.predios.forEach((p,pi)=>{
+      p.tablas.forEach((t,ti)=>{
+        if(!CULTIVOS_EMPAQUE.includes(getTablaData(pi,cn,ti).cultivo||'maiz')) return;
+        const key = `emp_t_${pi}_${ti}`;
+        const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}_${ti}`]||gastosGridDraft[`emp_ppt_${pi}`]);
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined||!ppt) return;
+        const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
+        if(!kilos) return;
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Empacado',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
+      });
+    });
+    // Camiones empaque
+    S.predios.forEach((p,pi)=>{
+      p.tablas.forEach((t,ti)=>{
+        if(!CULTIVOS_EMPAQUE.includes(getTablaData(pi,cn,ti).cultivo||'maiz')) return;
+        const key = `camp_t_${pi}_${ti}`;
+        const ppt = parseFloat(gastosGridDraft[`camp_ppt_${pi}`]);
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined||!ppt) return;
+        const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
+        if(!kilos) return;
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Camiones Empaque',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
+      });
+    });
+    // Nómina empaque
+    const montoNomEmpCap = parseFloat(gastosGridDraft['emp_nom_monto']);
+    if(montoNomEmpCap>0) {
+      const nomPiEmp = parseInt(gastosGridDraft['emp_nom_pi']||0);
+      const mesEmp = parseInt(gastosGridDraft['emp_nom_mes']||new Date().getMonth()+1);
+      const c1p = (parseFloat(gastosGridDraft['emp_nom_c1pct'])||0)/100;
+      const c2p = (parseFloat(gastosGridDraft['emp_nom_c2pct'])||0)/100;
+      const c3p = (parseFloat(gastosGridDraft['emp_nom_c3pct'])||0)/100;
+      if(c1p>0) { S.gastosGenerales.push({id:uid(),cosecha:1,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap*c1p,prediosIdx:[nomPiEmp],fecha:today()}); total++; }
+      if(c2p>0) { S.gastosGenerales.push({id:uid(),cosecha:2,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap*c2p,prediosIdx:[nomPiEmp],fecha:today()}); total++; }
+      if(c3p>0) { S.gastosGenerales.push({id:uid(),cosecha:3,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap*c3p,prediosIdx:[nomPiEmp],fecha:today()}); total++; }
+      if(!c1p&&!c2p&&!c3p) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap,prediosIdx:[nomPiEmp],fecha:today()}); total++; }
+    }
 
   } else if(gastosTab === 'otros') {
     const otroCats = ['Sirre y Desmonte','Otro'];
@@ -2654,11 +2861,29 @@ function recalcDieselCosecha(cn) {
   toast('✓ Diesel recalculado: ' + fmtN(precio,2) + '/L');
 }
 
+function addEquipoEmpaque() {
+  const nombre = document.getElementById('emp-eq-nombre')?.value.trim();
+  const tipo = document.getElementById('emp-eq-tipo')?.value || 'empacadora';
+  if(!nombre) { toast('⚠️ Ingresa el nombre',true); return; }
+  if(!S.equiposEmpaque) S.equiposEmpaque = [];
+  if(S.equiposEmpaque.find(e=>e.nombre===nombre)) { toast('⚠️ Ya existe',true); return; }
+  S.equiposEmpaque.push({id:uid(), nombre, tipo});
+  if(document.getElementById('emp-eq-nombre')) document.getElementById('emp-eq-nombre').value = '';
+  save(); renderGastos(); toast('✓ Equipo de empaque agregado');
+}
+
+function delEquipoEmpaque(eqId) {
+  if(!confirm('¿Eliminar equipo de empaque? Los gastos se conservan.')) return;
+  S.equiposEmpaque = (S.equiposEmpaque||[]).filter(e=>e.id!==eqId);
+  save(); renderGastos(); toast('✓ Eliminado');
+}
+
 function addEquipoEnsilada() {
   const nombre = document.getElementById('ens-eq-nombre')?.value.trim();
   const tipo = document.getElementById('ens-eq-tipo')?.value || 'tractor';
   if(!nombre) { toast('⚠️ Ingresa el nombre',true); return; }
   if(!S.equiposEnsilada) S.equiposEnsilada = [];
+  if(!S.equiposEmpaque) S.equiposEmpaque = [];
   if(S.equiposEnsilada.find(e=>e.nombre===nombre)) { toast('⚠️ Ya existe ese equipo',true); return; }
   S.equiposEnsilada.push({id:uid(), nombre, tipo});
   if(document.getElementById('ens-eq-nombre')) document.getElementById('ens-eq-nombre').value = '';
@@ -2929,6 +3154,58 @@ function capturarGastos() {
         total++;
       });
     });
+
+  } else if(gastosTab === 'empaque') {
+    const precioDieselCnEmp = (S.precioDiesel && S.precioDiesel[cn]) || 0;
+    // Maquinaria empaque
+    (S.equiposEmpaque||[]).forEach(eq=>{
+      const litros = parseFloat(gastosGridDraft[`empdiesel_${eq.id}`]);
+      const serv   = parseFloat(gastosGridDraft[`empserv_${eq.id}`]);
+      const rep    = parseFloat(gastosGridDraft[`emprep_${eq.id}`]);
+      if(litros>0) {
+        const monto = precioDieselCnEmp ? litros*precioDieselCnEmp : litros;
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel Empaque',equipo:eq.nombre,litros,precioPorLitro:precioDieselCnEmp,monto,prediosIdx,fecha:today()}); total++;
+      }
+      if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,fecha:today()}); total++; }
+      if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,fecha:today()}); total++; }
+    });
+    // Empacado por tabla
+    S.predios.forEach((p,pi)=>{
+      p.tablas.forEach((t,ti)=>{
+        if(!CULTIVOS_EMPAQUE.includes(getTablaData(pi,cn,ti).cultivo||'maiz')) return;
+        const key = `emp_t_${pi}_${ti}`;
+        const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}_${ti}`]||gastosGridDraft[`emp_ppt_${pi}`]);
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined||!ppt) return;
+        const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
+        if(!kilos) return;
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Empacado',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
+      });
+    });
+    // Camiones empaque
+    S.predios.forEach((p,pi)=>{
+      p.tablas.forEach((t,ti)=>{
+        if(!CULTIVOS_EMPAQUE.includes(getTablaData(pi,cn,ti).cultivo||'maiz')) return;
+        const key = `camp_t_${pi}_${ti}`;
+        const ppt = parseFloat(gastosGridDraft[`camp_ppt_${pi}`]);
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined||!ppt) return;
+        const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
+        if(!kilos) return;
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Camiones Empaque',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
+      });
+    });
+    // Nómina empaque
+    const montoNomEmpCap = parseFloat(gastosGridDraft['emp_nom_monto']);
+    if(montoNomEmpCap>0) {
+      const nomPiEmp = parseInt(gastosGridDraft['emp_nom_pi']||0);
+      const mesEmp = parseInt(gastosGridDraft['emp_nom_mes']||new Date().getMonth()+1);
+      const c1p = (parseFloat(gastosGridDraft['emp_nom_c1pct'])||0)/100;
+      const c2p = (parseFloat(gastosGridDraft['emp_nom_c2pct'])||0)/100;
+      const c3p = (parseFloat(gastosGridDraft['emp_nom_c3pct'])||0)/100;
+      if(c1p>0) { S.gastosGenerales.push({id:uid(),cosecha:1,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap*c1p,prediosIdx:[nomPiEmp],fecha:today()}); total++; }
+      if(c2p>0) { S.gastosGenerales.push({id:uid(),cosecha:2,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap*c2p,prediosIdx:[nomPiEmp],fecha:today()}); total++; }
+      if(c3p>0) { S.gastosGenerales.push({id:uid(),cosecha:3,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap*c3p,prediosIdx:[nomPiEmp],fecha:today()}); total++; }
+      if(!c1p&&!c2p&&!c3p) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap,prediosIdx:[nomPiEmp],fecha:today()}); total++; }
+    }
 
   } else if(gastosTab === 'otros') {
     ['Sirre y Desmonte','Otro'].forEach((cat,ci)=>{
