@@ -2186,63 +2186,125 @@ function renderGastos() {
       </div>` : ''}`;
 
   } else if(gastosTab === 'nomina') {
-    const mesSelector = `
-      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:#fff8e8;border:1px solid #d4c0a0">
-        <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">MES</div>
-          <select style="padding:5px" onchange="gastosGridDraft['mes']=this.value">${mesOpts}</select></div>
-        <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">COSECHA PRINCIPAL</div>
-          <select style="padding:5px" onchange="gastosGridDraft['cn_split_a']=this.value">${[1,2,3].map(c=>`<option value="${c}" ${parseInt(gastosGridDraft['cn_split_a']||selectedCn)===c?'selected':''}>C${c}</option>`).join('')}</select></div>
-        <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">% A ESA COSECHA</div>
-          <input type="number" min="1" max="100" value="${gastosGridDraft['cn_split_pct']||100}" style="width:70px;padding:5px;text-align:right;border:1px solid #d4c0a0"
-            onchange="gastosGridDraft['cn_split_pct']=this.value"/>%</div>
-        <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">2ª COSECHA (si aplica)</div>
-          <select style="padding:5px" onchange="gastosGridDraft['cn_split_b']=this.value">${[{v:'',l:'— Solo una —'},...[1,2,3].map(c=>({v:c,l:`C${c}`}))].map(o=>`<option value="${o.v}" ${(gastosGridDraft['cn_split_b']||'')==String(o.v)?'selected':''}>${o.l}</option>`).join('')}</select></div>
-      </div>`;
+    const mesActualNom = parseInt(gastosGridDraft['mes']||new Date().getMonth()+1);
+    const predioOptsNom = S.predios.map((p,i)=>`<option value="${i}" ${(gastosGridDraft['nom_pi']||'0')==String(i)?'selected':''}>${p.emoji} ${p.nombre}</option>`).join('');
     const actRows = ['Labor'].map((act,ai)=>{
       const val = gastosGridDraft[`nom_${ai}`] || '';
-      return `<div style="display:flex;align-items:center;gap:16px;padding:8px 0;border-bottom:1px solid var(--border)">
-        <span style="min-width:140px"><strong>${act}</strong></span>
-        <input type="number" min="0" step="1" placeholder="—" value="${val}"
-          style="width:160px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
-          onchange="gastosGridDraft['nom_${ai}']=this.value"/>
-      </div>`;
+      return `<tr>
+        <td style="padding:8px 12px;font-weight:600">${act}</td>
+        <td style="padding:4px 8px"><select style="padding:5px;font-size:13px" onchange="gastosGridDraft['nom_pi']=this.value">${predioOptsNom}</select></td>
+        <td style="padding:4px 8px"><select style="padding:5px" onchange="gastosGridDraft['mes']=this.value">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActualNom===i+1?'selected':''}>${m}</option>`).join('')}</select></td>
+        <td style="padding:4px 8px"><select style="padding:5px" onchange="gastosGridDraft['cn_split_a']=this.value">${[1,2,3].map(c=>`<option value="${c}" ${parseInt(gastosGridDraft['cn_split_a']||selectedCn)===c?'selected':''}>C${c}</option>`).join('')}</select></td>
+        <td style="padding:4px 8px"><input type="number" min="1" max="100" value="${gastosGridDraft['cn_split_pct']||100}" style="width:55px;padding:4px;text-align:right;border:1px solid #d4c0a0" onchange="gastosGridDraft['cn_split_pct']=this.value"/>%</td>
+        <td style="padding:4px 8px"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:140px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['nom_${ai}']=this.value"/></td>
+      </tr>`;
     }).join('');
-    tabContent = `${mesSelector}${actRows}`;
+    const histNom = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.categoria==='Nómina y gastos admin'&&g.actividad!=='Ensilada');
+    const totNom = histNom.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+    const acumRowsNom = histNom.map(g=>`<tr style="font-size:12px">
+      <td style="padding:5px 10px">${g.actividad||'Labor'}${g.mes?' · '+MESES[(parseInt(g.mes)||1)-1]:''}</td>
+      <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
+      <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
+      <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${S.gastosGenerales.indexOf(g)})">✕</button>`:''}</td>
+    </tr>`).join('');
+    tabContent = `
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px">
+        <thead><tr style="background:var(--soil);color:var(--straw)">
+          <th style="padding:7px 12px;text-align:left">Actividad</th>
+          <th style="padding:7px 12px;text-align:left">Predio</th>
+          <th style="padding:7px 12px;text-align:left">Mes</th>
+          <th style="padding:7px 12px;text-align:left">Cosecha</th>
+          <th style="padding:7px 12px;text-align:center">%</th>
+          <th style="padding:7px 12px;text-align:right">Monto ($)</th>
+        </tr></thead>
+        <tbody>${actRows}</tbody>
+      </table>
+      ${totNom>0?`<div style="margin-top:12px;border-top:2px solid var(--border);padding-top:12px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Acumulado Nómina C${selectedCn}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="font-size:10px;color:var(--muted)"><th style="padding:4px 10px;text-align:left">Concepto</th><th style="padding:4px 10px;text-align:left">Predio</th><th style="padding:4px 10px;text-align:right">Monto</th><th></th></tr></thead>
+          <tbody>${acumRowsNom}</tbody>
+          <tfoot><tr style="background:var(--soil);color:var(--cream)"><td colspan="2" style="padding:8px 12px;font-weight:700">TOTAL</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmt(totNom)}</td><td></td></tr></tfoot>
+        </table></div>`:''}`;
 
   } else if(gastosTab === 'reparaciones') {
-    const selPredios = gastosGridPrediosIdx.length ? gastosGridPrediosIdx : S.predios.map((_,i)=>i);
+    const predioOptsRep = S.predios.map((p,i)=>`<option value="${i}">${p.emoji} ${p.nombre}</option>`).join('');
     const repCats = ['Reparaciones Noria','Reparaciones Riego'];
     const repRows = repCats.map((cat,ci)=>{
       const val = gastosGridDraft[`rep_${ci}`] || '';
       const desc = gastosGridDraft[`rep_desc_${ci}`] || '';
-      return `<div style="display:flex;align-items:center;gap:16px;padding:10px 0;border-bottom:1px solid var(--border)">
-        <span style="min-width:180px"><strong>${cat}</strong></span>
-        <input type="text" placeholder="Descripción..." value="${desc}"
-          style="width:200px;padding:5px 8px;border:1px solid #d4c0a0;font-size:13px"
-          onchange="gastosGridDraft['rep_desc_${ci}']=this.value"/>
-        <input type="number" min="0" step="1" placeholder="—" value="${val}"
-          style="width:140px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
-          onchange="gastosGridDraft['rep_${ci}']=this.value"/>
-      </div>`;
+      const piVal = gastosGridDraft[`rep_pi_${ci}`] || '0';
+      return `<tr>
+        <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${cat}</td>
+        <td style="padding:4px 8px"><select style="padding:5px;font-size:13px" onchange="gastosGridDraft['rep_pi_${ci}']=this.value">${S.predios.map((p,i)=>`<option value="${i}" ${piVal==String(i)?'selected':''}>${p.emoji} ${p.nombre}</option>`).join('')}</select></td>
+        <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:180px;padding:5px 8px;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['rep_desc_${ci}']=this.value"/></td>
+        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:130px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['rep_${ci}']=this.value"/></td>
+      </tr>`;
     }).join('');
-    tabContent = `<div style="margin-top:8px">${repRows}</div>`;
+    const histRep = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&['Reparaciones Noria','Reparaciones Riego'].includes(g.categoria));
+    const totRep = histRep.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+    const acumRowsRep = histRep.map(g=>`<tr style="font-size:12px">
+      <td style="padding:5px 10px">${g.categoria}${g.descripcion?' — '+g.descripcion:''}</td>
+      <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
+      <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
+      <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${S.gastosGenerales.indexOf(g)})">✕</button>`:''}</td>
+    </tr>`).join('');
+    tabContent = `
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px">
+        <thead><tr style="background:var(--soil);color:var(--straw)">
+          <th style="padding:7px 12px;text-align:left">Tipo</th>
+          <th style="padding:7px 12px;text-align:left">Predio</th>
+          <th style="padding:7px 12px;text-align:left">Descripción</th>
+          <th style="padding:7px 12px;text-align:right">Monto ($)</th>
+        </tr></thead>
+        <tbody>${repRows}</tbody>
+      </table>
+      ${totRep>0?`<div style="margin-top:12px;border-top:2px solid var(--border);padding-top:12px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Acumulado Reparaciones C${selectedCn}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="font-size:10px;color:var(--muted)"><th style="padding:4px 10px;text-align:left">Concepto</th><th style="padding:4px 10px;text-align:left">Predio</th><th style="padding:4px 10px;text-align:right">Monto</th><th></th></tr></thead>
+          <tbody>${acumRowsRep}</tbody>
+          <tfoot><tr style="background:var(--soil);color:var(--cream)"><td colspan="2" style="padding:8px 12px;font-weight:700">TOTAL</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmt(totRep)}</td><td></td></tr></tfoot>
+        </table></div>`:''}`;
 
   } else if(gastosTab === 'otros') {
     const otroCats = ['Sirre y Desmonte','Otro'];
     const otroRows = otroCats.map((cat,ci)=>{
       const val = gastosGridDraft[`otro_${ci}`] || '';
       const desc = gastosGridDraft[`otro_desc_${ci}`] || '';
-      return `<div style="display:flex;align-items:center;gap:16px;padding:10px 0;border-bottom:1px solid var(--border)">
-        <span style="min-width:180px"><strong>${cat}</strong></span>
-        <input type="text" placeholder="Descripción..." value="${desc}"
-          style="width:200px;padding:5px 8px;border:1px solid #d4c0a0;font-size:13px"
-          onchange="gastosGridDraft['otro_desc_${ci}']=this.value"/>
-        <input type="number" min="0" step="1" placeholder="—" value="${val}"
-          style="width:140px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
-          onchange="gastosGridDraft['otro_${ci}']=this.value"/>
-      </div>`;
+      const piVal = gastosGridDraft[`otro_pi_${ci}`] || '0';
+      return `<tr>
+        <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${cat}</td>
+        <td style="padding:4px 8px"><select style="padding:5px;font-size:13px" onchange="gastosGridDraft['otro_pi_${ci}']=this.value">${S.predios.map((p,i)=>`<option value="${i}" ${piVal==String(i)?'selected':''}>${p.emoji} ${p.nombre}</option>`).join('')}</select></td>
+        <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:180px;padding:5px 8px;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['otro_desc_${ci}']=this.value"/></td>
+        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:130px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['otro_${ci}']=this.value"/></td>
+      </tr>`;
     }).join('');
-    tabContent = `<div style="margin-top:8px">${otroRows}</div>`;
+    const histOtro = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&['Sirre y Desmonte','Otro'].includes(g.categoria));
+    const totOtro = histOtro.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+    const acumRowsOtro = histOtro.map(g=>`<tr style="font-size:12px">
+      <td style="padding:5px 10px">${g.categoria}${g.descripcion?' — '+g.descripcion:''}</td>
+      <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
+      <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
+      <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${S.gastosGenerales.indexOf(g)})">✕</button>`:''}</td>
+    </tr>`).join('');
+    tabContent = `
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px">
+        <thead><tr style="background:var(--soil);color:var(--straw)">
+          <th style="padding:7px 12px;text-align:left">Categoría</th>
+          <th style="padding:7px 12px;text-align:left">Predio</th>
+          <th style="padding:7px 12px;text-align:left">Descripción</th>
+          <th style="padding:7px 12px;text-align:right">Monto ($)</th>
+        </tr></thead>
+        <tbody>${otroRows}</tbody>
+      </table>
+      ${totOtro>0?`<div style="margin-top:12px;border-top:2px solid var(--border);padding-top:12px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Acumulado Otros C${selectedCn}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="font-size:10px;color:var(--muted)"><th style="padding:4px 10px;text-align:left">Concepto</th><th style="padding:4px 10px;text-align:left">Predio</th><th style="padding:4px 10px;text-align:right">Monto</th><th></th></tr></thead>
+          <tbody>${acumRowsOtro}</tbody>
+          <tfoot><tr style="background:var(--soil);color:var(--cream)"><td colspan="2" style="padding:8px 12px;font-weight:700">TOTAL</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmt(totOtro)}</td><td></td></tr></tfoot>
+        </table></div>`:''}`;
   }
 
   // Existing records
@@ -2476,22 +2538,25 @@ function capturarGastos() {
     });
 
   } else if(gastosTab === 'nomina') {
-    const mes = gastosGridDraft['mes'] || new Date().getMonth()+1;
+    const mes = parseInt(gastosGridDraft['mes'] || new Date().getMonth()+1);
+    const nomPi = parseInt(gastosGridDraft['nom_pi'] || 0);
     const monto = parseFloat(gastosGridDraft['nom_0']);
-    if(monto>0) { pushConSplit({id:uid(),anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto,prediosIdx,fecha:today()}); }
+    if(monto>0) { pushConSplit({id:uid(),anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto,prediosIdx:[nomPi],fecha:today()}); }
 
   } else if(gastosTab === 'reparaciones') {
     ['Reparaciones Noria','Reparaciones Riego'].forEach((cat,ci)=>{
       const monto = parseFloat(gastosGridDraft[`rep_${ci}`]);
       const descripcion = gastosGridDraft[`rep_desc_${ci}`] || '';
-      if(monto>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:cat,descripcion,monto,prediosIdx,fecha:today()}); total++; }
+      const repPi = parseInt(gastosGridDraft[`rep_pi_${ci}`] || 0);
+      if(monto>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:cat,descripcion,monto,prediosIdx:[repPi],fecha:today()}); total++; }
     });
 
   } else if(gastosTab === 'otros') {
     ['Sirre y Desmonte','Otro'].forEach((cat,ci)=>{
       const monto = parseFloat(gastosGridDraft[`otro_${ci}`]);
       const descripcion = gastosGridDraft[`otro_desc_${ci}`] || '';
-      if(monto>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:cat,descripcion,monto,prediosIdx,fecha:today()}); total++; }
+      const otroPi = parseInt(gastosGridDraft[`otro_pi_${ci}`] || 0);
+      if(monto>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:cat,descripcion,monto,prediosIdx:[otroPi],fecha:today()}); total++; }
     });
   }
 
