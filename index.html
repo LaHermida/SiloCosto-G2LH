@@ -744,35 +744,39 @@ function renderDash() {
     const cosechas = ciclos===1?[1]:[1,2,3];
     cosechas.forEach(cn=>{
       const meta = getCosechaMeta(pi,cn);
-      let totalCost=0, totalKilos=0, totalKgMS=0;
-      // Cultivos presentes en esta cosecha
-      const cultivosSet = new Set();
+      // Agrupar por cultivo
+      const cultivoMap = {};
       for(let ti=0;ti<p.tablas.length;ti++) {
         const td = getTablaData(pi,cn,ti);
+        if(td.sinSiembra) continue;
+        const cv = td.cultivo||'maiz';
+        if(!cultivoMap[cv]) cultivoMap[cv] = {cost:0,kilos:0,kgMS:0};
+        cultivoMap[cv].cost += calcTotalTabla(pi,cn,ti);
         const kilos = parseFloat(td.kilos)||0;
-        if(kilos>0) {
-          totalCost += calcTotalTabla(pi,cn,ti);
-          totalKilos += kilos;
-          totalKgMS += kilos*((parseFloat(td.pctMS)||0)/100);
-          cultivosSet.add(td.cultivo||'maiz');
-        }
+        cultivoMap[cv].kilos += kilos;
+        cultivoMap[cv].kgMS += kilos*((parseFloat(td.pctMS)||0)/100);
       }
-      const cpk = totalKilos ? totalCost/totalKilos : null;
-      const cpkms = totalKgMS ? totalCost/totalKgMS : null;
-      const cvIcons = [...cultivosSet].map(c=>CULTIVOS[c]?.icon||'🌱').join(' ');
+      const cultivosPresentes = Object.keys(cultivoMap);
       const colors = ['c1','c2','c3'];
+
+      // Si hay un solo cultivo: tarjeta simple; si hay varios: desglose
+      const cultivoRows = cultivosPresentes.map(cv => {
+        const d = cultivoMap[cv];
+        const cvCpk = d.kilos ? d.cost/d.kilos : null;
+        const cvCpkms = d.kgMS ? d.cost/d.kgMS : null;
+        const cvInfo = CULTIVOS[cv]||CULTIVOS.otro;
+        return `<div style="display:flex;align-items:center;gap:10px;margin-top:6px;padding-top:${cultivosPresentes.length>1?'6px;border-top:1px solid rgba(255,255,255,0.1)':'0px'}">
+          <span style="font-size:13px">${cvInfo.icon}</span>
+          <div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:#2a7a2a;text-transform:uppercase;letter-spacing:1px">${cvInfo.label} · kg húmedo</div>
+            <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:#2a7a2a;line-height:1">${cvCpk!==null?'$'+cvCpk.toFixed(2):'—'} <span style="font-size:13px;color:#7a4a1a">/ $${cvCpkms!==null?cvCpkms.toFixed(2):'—'} MS</span></div>
+          </div>
+        </div>`;
+      }).join('');
+
       cards += `<div class="stat ${colors[pi%3]}" style="min-width:0">
         <div class="stat-lbl">${p.emoji} ${p.nombre} · Cosecha ${cn} ${meta.closed?'🔒':''} · ${meta.year}</div>
-        <div style="display:flex;align-items:baseline;gap:12px;margin-top:6px;flex-wrap:wrap">
-          <div>
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:#2a7a2a;text-transform:uppercase;letter-spacing:1px">kg húmedo ${cvIcons}</div>
-            <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:#2a7a2a;line-height:1">${cpk!==null?'$'+cpk.toFixed(2):'—'}</div>
-          </div>
-          <div>
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:#7a4a1a;text-transform:uppercase;letter-spacing:1px">kg seco (MS)</div>
-            <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:#7a4a1a;line-height:1">${cpkms!==null?'$'+cpkms.toFixed(2):'—'}</div>
-          </div>
-        </div>
+        ${cultivoRows || '<div style="color:var(--muted);font-size:12px;margin-top:8px">Sin datos</div>'}
       </div>`;
     });
   });
@@ -1249,8 +1253,9 @@ function renderRegContent() {
       </table></div>
       <div class="result">
         <div><div class="res-lbl">Consumos</div><div class="res-val">${fmt(vars)}</div></div>
+        <div><div class="res-lbl">Gastos Gral.</div><div class="res-val">${fmt(calcGastosGeneralesTabla(pi,cn,ti))}</div></div>
         <div><div class="res-lbl">Deprec. tabla</div><div class="res-val">${fmt(dep)}</div></div>
-        <div><div class="res-lbl">Total tabla</div><div class="res-val">${fmt(total)}</div></div>
+        <div><div class="res-lbl">Total tabla</div><div class="res-val">${fmt(dep+vars+calcGastosGeneralesTabla(pi,cn,ti))}</div></div>
         <div>
           <div class="res-lbl">$/kg silo</div>
           <div class="res-val">${cpk!==null?'$'+cpk.toFixed(2):'—'}</div>
@@ -1920,6 +1925,7 @@ function renderGastos() {
         <span style="font-size:11px;color:var(--muted)">El sistema calcula Litros × Precio</span>
       </div>` : precioDiesel ? `<div style="font-size:11px;color:var(--muted);padding:6px 12px">💧 Precio diesel C${selectedCn}: $${precioDiesel}/L</div>` : `<div style="font-size:11px;color:#7a1f1f;padding:6px 12px">⚠️ El admin aún no ha definido el precio de diesel para esta cosecha</div>`;
 
+    const riegoVal = gastosGridDraft['rep_riego'] || '';
     tabContent = `
       ${configEq}
       ${precioDieselInput}
@@ -1937,6 +1943,15 @@ function renderGastos() {
         </tr></thead>
         <tbody>${equipoRows}</tbody>
       </table>
+      </div>
+      <div style="margin-top:16px;padding:12px;background:#fff8e8;border:1px solid #d4c0a0;max-width:420px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">🚿 Reparaciones Sistema de Riego</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="font-size:13px;min-width:140px">Monto reparación ($)</label>
+          <input type="number" min="0" step="1" placeholder="—" value="${riegoVal}"
+            style="width:140px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+            onchange="gastosGridDraft['rep_riego']=this.value"/>
+        </div>
       </div>`;
 
   } else if(gastosTab === 'luz') {
@@ -2244,13 +2259,15 @@ function capturarGastos() {
         const litros = parseFloat(gastosGridDraft[`d_${pi}_${eq.id}`]);
         const rep    = parseFloat(gastosGridDraft[`r_${pi}_${eq.id}`]);
         if(litros>0) {
-          const montoDiesel = precioDieselCn ? litros * precioDieselCn : litros; // fallback to amount if no price
+          const montoDiesel = precioDieselCn ? litros * precioDieselCn : litros;
           S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel',equipo:eq.nombre,litros,precioPorLitro:precioDieselCn,monto:montoDiesel,prediosIdx:[pi],fecha:today()});
           total++;
         }
         if(rep>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria',equipo:eq.nombre,monto:rep,prediosIdx:[pi],fecha:today()}); total++; }
       });
     });
+    const montoRiego = parseFloat(gastosGridDraft['rep_riego']);
+    if(montoRiego>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Reparaciones Riego',monto:montoRiego,prediosIdx,fecha:today()}); total++; }
 
   } else if(gastosTab === 'luz') {
     S.predios.forEach((p,pi)=>{
