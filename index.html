@@ -783,40 +783,60 @@ function renderDash() {
   stats.innerHTML = cards;
 
   const det = document.getElementById('dash-detail');
+  // Group by predio > cosecha > cultivo
   let html = '';
   S.predios.forEach((p,pi)=>{
     const ciclos = p.ciclos||3;
     const cosechas = ciclos===1?[1]:[1,2,3];
-    let rows = '';
     for(const cn of cosechas) {
+      // Build cultivo groups
+      const cvGroups = {};
       for(let ti=0;ti<p.tablas.length;ti++) {
         const td = getTablaData(pi,cn,ti);
+        if(td.sinSiembra) continue;
+        const cv = td.cultivo||'maiz';
+        if(!cvGroups[cv]) cvGroups[cv] = {tablas:[],ha:0,kilos:0,kgMS:0,cost:0};
+        const haTabla = parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
         const kilos = parseFloat(td.kilos)||0;
-        const cons = calcConsumosTabla(pi,cn,ti);
-        const dep = calcDepTabla(pi,cn,ti);
-        const cpk = calcCPK(pi,cn,ti);
-        const cpkms = calcCPKMS(pi,cn,ti);
-        if(kilos>0||cons>0) {
-          const haTabla = parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
-          const total = calcTotalTabla(pi,cn,ti);
-          const gasHa = haTabla ? total/haTabla : null;
-          rows += `<tr>
-            <td>${p.emoji} ${p.nombre}</td>
-            <td>C${cn}</td>
-            <td>${p.tablas[ti].nombre}</td>
-            <td>${cultivoBadge(td.cultivo||'maiz')}</td>
-            <td class="mono tr">${haTabla} ha</td>
-            <td class="mono tr">${fmt(total)}</td>
-            <td class="mono tr amber">${gasHa!==null?'$'+gasHa.toFixed(2):'—'}</td>
-          </tr>`;
+        const kgMS = kilos*((parseFloat(td.pctMS)||0)/100);
+        const total = calcTotalTabla(pi,cn,ti);
+        if(haTabla>0||total>0) {
+          cvGroups[cv].tablas.push(p.tablas[ti].nombre);
+          cvGroups[cv].ha += haTabla;
+          cvGroups[cv].kilos += kilos;
+          cvGroups[cv].kgMS += kgMS;
+          cvGroups[cv].cost += total;
         }
       }
+      Object.entries(cvGroups).forEach(([cv, d])=>{
+        if(!d.tablas.length) return;
+        const cvInfo = CULTIVOS[cv]||CULTIVOS.otro;
+        const gasHa  = d.ha    ? d.cost/d.ha    : null;
+        const kgHa   = d.ha    ? d.kilos/d.ha   : null;
+        const cpk    = d.kilos ? d.cost/d.kilos  : null;
+        const cpkms  = d.kgMS  ? d.cost/d.kgMS   : null;
+        html += `<tr>
+          <td>${p.emoji} <strong>${p.nombre}</strong></td>
+          <td class="mono">C${cn}</td>
+          <td>${cultivoBadge(cv)}</td>
+          <td style="font-size:11px;color:var(--muted)">${d.tablas.join(', ')}</td>
+          <td class="mono tr">${d.ha.toFixed(2)} ha</td>
+          <td class="mono tr">${fmt(d.cost)}</td>
+          <td class="mono tr amber">${gasHa!==null?'$'+gasHa.toFixed(2):'—'}</td>
+          <td class="mono tr" style="color:#2a7a2a">${kgHa!==null?fmtN(kgHa,0)+' kg':'—'}</td>
+          <td class="mono tr amber">${cpk!==null?'$'+cpk.toFixed(2):'—'}</td>
+          <td class="mono tr green">${cpkms!==null?'$'+cpkms.toFixed(2):'—'}</td>
+        </tr>`;
+      });
     }
-    if(rows) html += rows;
   });
 
   det.innerHTML = html ? `<div class="tbl-wrap"><table>
-    <thead><tr><th>Predio</th><th>Cos.</th><th>Tabla</th><th>Cultivo</th><th>Ha sembradas</th><th>Gasto total</th><th>$/ha</th></tr></thead>
+    <thead><tr>
+      <th>Predio</th><th>Cos.</th><th>Cultivo</th><th>Tablas</th>
+      <th class="tr">Ha</th><th class="tr">Gasto Total</th><th class="tr">$/ha</th>
+      <th class="tr">kg/ha</th><th class="tr">$/kg húmedo</th><th class="tr">$/kg MS</th>
+    </tr></thead>
     <tbody>${html}</tbody>
   </table></div>` : `<div class="empty"><div class="empty-icon">🌱</div><div>Sin datos registrados aún</div></div>`;
 }
