@@ -1866,6 +1866,108 @@ let gastosGridPrediosIdx = [];
 let gastosGridCn = 1;
 let gastosTab = 'tractores';
 
+// ── Helper: build grid table (maquila, pizca, camiones) ──
+function buildGridTable(prediosList, prefix, headerColor='#1a1208') {
+  let tiMax = 0;
+  prediosList.forEach(({p})=>{ if(p.tablas.length>tiMax) tiMax=p.tablas.length; });
+  const headerRow1 = prediosList.map(({p})=>
+    `<th colspan="2" style="padding:6px 10px;text-align:center;background:${headerColor};color:#faf6ed;font-size:12px;border-left:2px solid rgba(255,255,255,0.15)">${p.emoji} ${p.nombre}</th>`
+  ).join('');
+  const headerRow2 = prediosList.map(({p,pi})=>{
+    const ppt = gastosGridDraft[`${prefix}_ppt_${pi}`] || '';
+    return `<th style="padding:4px 6px;background:#f5efe0;border-left:2px solid var(--border);text-align:center">
+        <input type="number" min="0" step="0.01" placeholder="$/ton" value="${ppt}"
+          style="width:85px;padding:3px 6px;text-align:center;border:1px solid #d4c0a0;font-size:12px;background:#fffbe8"
+          onchange="gastosGridDraft['${prefix}_ppt_${pi}']=this.value;renderGastos()"/>
+      </th>
+      <th style="padding:4px 8px;background:#f5efe0;font-size:10px;color:var(--muted);text-align:center;white-space:nowrap">$ Total</th>`;
+  }).join('');
+  const tablaRows = Array.from({length:tiMax},(_,ti)=>{
+    const cells = prediosList.map(({p,pi})=>{
+      if(ti>=p.tablas.length) return `<td style="border-left:2px solid var(--border)"></td><td></td>`;
+      const t = p.tablas[ti];
+      const key = `${prefix}_t_${pi}_${ti}`;
+      const isChecked = gastosGridDraft[key] !== '0' && gastosGridDraft[key] !== false && gastosGridDraft[key] !== undefined;
+      const ppt = parseFloat(gastosGridDraft[`${prefix}_ppt_${pi}`])||0;
+      const kilos = parseFloat(getTablaData(pi,selectedCn,ti).kilos)||0;
+      const total = isChecked && ppt ? (kilos/1000)*ppt : 0;
+      return `<td style="padding:5px 10px;border-left:2px solid var(--border);${!isChecked?'opacity:0.45':''}">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#1a1208;font-weight:500">
+            <input type="checkbox" ${isChecked?'checked':''} style="width:14px;height:14px"
+              onchange="gastosGridDraft['${key}']=this.checked?'1':'0';renderGastos()"/>
+            ${t.nombre}
+          </label>
+        </td>
+        <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:${total?'var(--amber)':'var(--muted)'}">
+          ${total?fmt(total):'—'}
+        </td>`;
+    }).join('');
+    return `<tr style="border-bottom:1px solid var(--border)">${cells}</tr>`;
+  }).join('');
+  return `<div style="overflow-x:auto;margin-bottom:4px">
+    <table style="border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr>${headerRow1}</tr>
+        <tr>${headerRow2}</tr>
+      </thead>
+      <tbody>${tablaRows}</tbody>
+    </table></div>`;
+}
+
+// Helper: build grid table filtering tablas by cultivo list
+function buildGridTableFiltered(prediosList, prefix, headerColor, cultivoFilter) {
+  // For each predio, only show tablas matching the cultivo filter
+  const filteredList = prediosList.map(({p,pi})=>({
+    p: {...p, tablas: p.tablas.filter((_,ti)=>cultivoFilter.includes(getTablaData(pi,selectedCn,ti).cultivo||'maiz'))},
+    pi,
+    origTablaIdx: p.tablas.map((t,ti)=>cultivoFilter.includes(getTablaData(pi,selectedCn,ti).cultivo||'maiz')?ti:null).filter(ti=>ti!==null)
+  })).filter(({p})=>p.tablas.length>0);
+  if(!filteredList.length) return '<div style="color:var(--muted);font-size:12px;padding:8px">Sin tablas con este cultivo en la cosecha seleccionada</div>';
+
+  let tiMax = 0;
+  filteredList.forEach(({p})=>{ if(p.tablas.length>tiMax) tiMax=p.tablas.length; });
+  const headerRow1 = filteredList.map(({p})=>
+    `<th colspan="2" style="padding:6px 10px;text-align:center;background:${headerColor};color:#faf6ed;font-size:12px;border-left:2px solid rgba(255,255,255,0.15)">${p.emoji} ${p.nombre}</th>`
+  ).join('');
+  const headerRow2 = filteredList.map(({p,pi})=>{
+    const ppt = gastosGridDraft[`${prefix}_ppt_${pi}`] || '';
+    return `<th style="padding:4px 6px;background:#f5efe0;border-left:2px solid var(--border);text-align:center">
+        <input type="number" min="0" step="0.01" placeholder="$/ton" value="${ppt}"
+          style="width:85px;padding:3px 6px;text-align:center;border:1px solid #d4c0a0;font-size:12px;background:#fffbe8"
+          onchange="gastosGridDraft['${prefix}_ppt_${pi}']=this.value;renderGastos()"/>
+      </th>
+      <th style="padding:4px 8px;background:#f5efe0;font-size:10px;color:var(--muted);text-align:center;white-space:nowrap">$ Total</th>`;
+  }).join('');
+  const tablaRows = Array.from({length:tiMax},(_,rowIdx)=>{
+    const cells = filteredList.map(({p,pi,origTablaIdx})=>{
+      if(rowIdx>=origTablaIdx.length) return `<td style="border-left:2px solid var(--border)"></td><td></td>`;
+      const ti = origTablaIdx[rowIdx];
+      const t = S.predios[pi].tablas[ti];
+      const key = `${prefix}_t_${pi}_${ti}`;
+      const isChecked = gastosGridDraft[key]!=='0'&&gastosGridDraft[key]!==false&&gastosGridDraft[key]!==undefined;
+      const ppt = parseFloat(gastosGridDraft[`${prefix}_ppt_${pi}`])||0;
+      const kilos = parseFloat(getTablaData(pi,selectedCn,ti).kilos)||0;
+      const total = isChecked && ppt ? (kilos/1000)*ppt : 0;
+      return `<td style="padding:5px 10px;border-left:2px solid var(--border);${!isChecked?'opacity:0.45':''}">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#1a1208;font-weight:500">
+            <input type="checkbox" ${isChecked?'checked':''} style="width:14px;height:14px"
+              onchange="gastosGridDraft['${key}']=this.checked?'1':'0';renderGastos()"/>
+            ${t.nombre}
+          </label>
+        </td>
+        <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:${total?'var(--amber)':'var(--muted)'}">
+          ${total?fmt(total):'—'}
+        </td>`;
+    }).join('');
+    return `<tr style="border-bottom:1px solid var(--border)">${cells}</tr>`;
+  }).join('');
+  return `<div style="overflow-x:auto;margin-bottom:4px">
+    <table style="border-collapse:collapse;font-size:13px">
+      <thead><tr>${headerRow1}</tr><tr>${headerRow2}</tr></thead>
+      <tbody>${tablaRows}</tbody>
+    </table></div>`;
+}
+
 function renderGastos() {
   if(!S.gastosGenerales) S.gastosGenerales = [];
   if(!S.equipos) S.equipos = {}; // {pi: [{id, nombre, tipo}]} tipo: tractor|noria|luz
@@ -2160,107 +2262,6 @@ function renderGastos() {
     }
 
     // Maquila section - per predio, price per ton, select tablas
-    // ── Helper: build grid table (maquila, pizca, camiones) ──
-    function buildGridTable(prediosList, prefix, headerColor='#1a1208') {
-      let tiMax = 0;
-      prediosList.forEach(({p})=>{ if(p.tablas.length>tiMax) tiMax=p.tablas.length; });
-      const headerRow1 = prediosList.map(({p})=>
-        `<th colspan="2" style="padding:6px 10px;text-align:center;background:${headerColor};color:#faf6ed;font-size:12px;border-left:2px solid rgba(255,255,255,0.15)">${p.emoji} ${p.nombre}</th>`
-      ).join('');
-      const headerRow2 = prediosList.map(({p,pi})=>{
-        const ppt = gastosGridDraft[`${prefix}_ppt_${pi}`] || '';
-        return `<th style="padding:4px 6px;background:#f5efe0;border-left:2px solid var(--border);text-align:center">
-            <input type="number" min="0" step="0.01" placeholder="$/ton" value="${ppt}"
-              style="width:85px;padding:3px 6px;text-align:center;border:1px solid #d4c0a0;font-size:12px;background:#fffbe8"
-              onchange="gastosGridDraft['${prefix}_ppt_${pi}']=this.value;renderGastos()"/>
-          </th>
-          <th style="padding:4px 8px;background:#f5efe0;font-size:10px;color:var(--muted);text-align:center;white-space:nowrap">$ Total</th>`;
-      }).join('');
-      const tablaRows = Array.from({length:tiMax},(_,ti)=>{
-        const cells = prediosList.map(({p,pi})=>{
-          if(ti>=p.tablas.length) return `<td style="border-left:2px solid var(--border)"></td><td></td>`;
-          const t = p.tablas[ti];
-          const key = `${prefix}_t_${pi}_${ti}`;
-          const isChecked = gastosGridDraft[key] !== '0' && gastosGridDraft[key] !== false && gastosGridDraft[key] !== undefined;
-          const ppt = parseFloat(gastosGridDraft[`${prefix}_ppt_${pi}`])||0;
-          const kilos = parseFloat(getTablaData(pi,selectedCn,ti).kilos)||0;
-          const total = isChecked && ppt ? (kilos/1000)*ppt : 0;
-          return `<td style="padding:5px 10px;border-left:2px solid var(--border);${!isChecked?'opacity:0.45':''}">
-              <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#1a1208;font-weight:500">
-                <input type="checkbox" ${isChecked?'checked':''} style="width:14px;height:14px"
-                  onchange="gastosGridDraft['${key}']=this.checked?'1':'0';renderGastos()"/>
-                ${t.nombre}
-              </label>
-            </td>
-            <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:${total?'var(--amber)':'var(--muted)'}">
-              ${total?fmt(total):'—'}
-            </td>`;
-        }).join('');
-        return `<tr style="border-bottom:1px solid var(--border)">${cells}</tr>`;
-      }).join('');
-      return `<div style="overflow-x:auto;margin-bottom:4px">
-        <table style="border-collapse:collapse;font-size:13px">
-          <thead>
-            <tr>${headerRow1}</tr>
-            <tr>${headerRow2}</tr>
-          </thead>
-          <tbody>${tablaRows}</tbody>
-        </table></div>`;
-    }
-
-    // Helper: build grid table filtering tablas by cultivo list
-    function buildGridTableFiltered(prediosList, prefix, headerColor, cultivoFilter) {
-      // For each predio, only show tablas matching the cultivo filter
-      const filteredList = prediosList.map(({p,pi})=>({
-        p: {...p, tablas: p.tablas.filter((_,ti)=>cultivoFilter.includes(getTablaData(pi,selectedCn,ti).cultivo||'maiz'))},
-        pi,
-        origTablaIdx: p.tablas.map((t,ti)=>cultivoFilter.includes(getTablaData(pi,selectedCn,ti).cultivo||'maiz')?ti:null).filter(ti=>ti!==null)
-      })).filter(({p})=>p.tablas.length>0);
-      if(!filteredList.length) return '<div style="color:var(--muted);font-size:12px;padding:8px">Sin tablas con este cultivo en la cosecha seleccionada</div>';
-
-      let tiMax = 0;
-      filteredList.forEach(({p})=>{ if(p.tablas.length>tiMax) tiMax=p.tablas.length; });
-      const headerRow1 = filteredList.map(({p})=>
-        `<th colspan="2" style="padding:6px 10px;text-align:center;background:${headerColor};color:#faf6ed;font-size:12px;border-left:2px solid rgba(255,255,255,0.15)">${p.emoji} ${p.nombre}</th>`
-      ).join('');
-      const headerRow2 = filteredList.map(({p,pi})=>{
-        const ppt = gastosGridDraft[`${prefix}_ppt_${pi}`] || '';
-        return `<th style="padding:4px 6px;background:#f5efe0;border-left:2px solid var(--border);text-align:center">
-            <input type="number" min="0" step="0.01" placeholder="$/ton" value="${ppt}"
-              style="width:85px;padding:3px 6px;text-align:center;border:1px solid #d4c0a0;font-size:12px;background:#fffbe8"
-              onchange="gastosGridDraft['${prefix}_ppt_${pi}']=this.value;renderGastos()"/>
-          </th>
-          <th style="padding:4px 8px;background:#f5efe0;font-size:10px;color:var(--muted);text-align:center;white-space:nowrap">$ Total</th>`;
-      }).join('');
-      const tablaRows = Array.from({length:tiMax},(_,rowIdx)=>{
-        const cells = filteredList.map(({p,pi,origTablaIdx})=>{
-          if(rowIdx>=origTablaIdx.length) return `<td style="border-left:2px solid var(--border)"></td><td></td>`;
-          const ti = origTablaIdx[rowIdx];
-          const t = S.predios[pi].tablas[ti];
-          const key = `${prefix}_t_${pi}_${ti}`;
-          const isChecked = gastosGridDraft[key]!=='0'&&gastosGridDraft[key]!==false&&gastosGridDraft[key]!==undefined;
-          const ppt = parseFloat(gastosGridDraft[`${prefix}_ppt_${pi}`])||0;
-          const kilos = parseFloat(getTablaData(pi,selectedCn,ti).kilos)||0;
-          const total = isChecked && ppt ? (kilos/1000)*ppt : 0;
-          return `<td style="padding:5px 10px;border-left:2px solid var(--border);${!isChecked?'opacity:0.45':''}">
-              <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#1a1208;font-weight:500">
-                <input type="checkbox" ${isChecked?'checked':''} style="width:14px;height:14px"
-                  onchange="gastosGridDraft['${key}']=this.checked?'1':'0';renderGastos()"/>
-                ${t.nombre}
-              </label>
-            </td>
-            <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:${total?'var(--amber)':'var(--muted)'}">
-              ${total?fmt(total):'—'}
-            </td>`;
-        }).join('');
-        return `<tr style="border-bottom:1px solid var(--border)">${cells}</tr>`;
-      }).join('');
-      return `<div style="overflow-x:auto;margin-bottom:4px">
-        <table style="border-collapse:collapse;font-size:13px">
-          <thead><tr>${headerRow1}</tr><tr>${headerRow2}</tr></thead>
-          <tbody>${tablaRows}</tbody>
-        </table></div>`;
-    }
 
     // Maquila: predios con tablas de cultivo ensilable (no Los Higos, no empaque)
     const prediosMaquilaIdx = S.predios.map((p,pi)=>({p,pi}));
