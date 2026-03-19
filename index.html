@@ -2013,18 +2013,30 @@ function renderGastos() {
     }
 
   } else if(gastosTab === 'luz') {
+    if(!S.luzPct) S.luzPct = {};
+    if(!S.luzNoriaPredios) S.luzNoriaPredios = {}; // {noriaId: {pi: pct}} % por predio
+
+    // Collect unique norias (by nombre) across all predios
+    const noriaMap = {}; // {nombre: [{pi, pt}]}
+    S.predios.forEach((p,pi)=>{
+      (S.equipos[pi]||[]).filter(e=>e.tipo==='luz').forEach(pt=>{
+        if(!noriaMap[pt.nombre]) noriaMap[pt.nombre] = [];
+        noriaMap[pt.nombre].push({pi,p,pt});
+      });
+    });
+    const uniqueNorias = Object.entries(noriaMap); // [[nombre, [{pi,p,pt}]]]
+
     const configLuz = isAdmin ? `
       <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">⚙️ Agregar noria:</div>
-        <select id="eq-predio-luz" style="padding:5px;font-size:13px">${S.predios.map((p,i)=>`<option value="${i}">${p.emoji} ${p.nombre}</option>`).join('')}</select>
         <input type="text" id="eq-nombre-luz" placeholder="Ej: Noria 212, Rebombeo..." style="padding:5px;width:180px;font-size:13px"/>
-        <button class="btn btn-s" onclick="addEquipoLuz()">+ Agregar</button>
+        <button class="btn btn-s" onclick="addEquipoLuzMulti()">+ Agregar</button>
+        <span style="font-size:11px;color:var(--muted)">Se agrega a todos los predios, configura % abajo</span>
       </div>` : '';
 
-    // Mes selector (global)
     const mesActual = parseInt(gastosGridDraft['mes']||new Date().getMonth()+1);
     const mesSelector = `
-      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:#fff8e8;border:1px solid #d4c0a0">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:#fff8e8;border:1px solid #d4c0a0">
         <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">MES</div>
           <select style="padding:5px" onchange="gastosGridDraft['mes']=this.value;renderGastos()">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActual===i+1?'selected':''}>${m}</option>`).join('')}</select>
         </div>
@@ -2033,53 +2045,45 @@ function renderGastos() {
         </div>
       </div>`;
 
-    // Build all norias across all predios as one table
-    const allNorias = [];
-    S.predios.forEach((p,pi)=>{
-      (S.equipos[pi]||[]).filter(e=>e.tipo==='luz').forEach(pt=>{
-        allNorias.push({pi,p,pt});
-      });
-    });
-
-    if(!allNorias.length) {
+    if(!uniqueNorias.length) {
       tabContent = `${configLuz}<div class="empty"><div class="empty-icon">💡</div><div>Sin norias configuradas</div></div>`;
     } else {
-      // Get saved % per noria from S.luzPct (persisted)
-      if(!S.luzPct) S.luzPct = {};
+      // Build header columns: Noria | La Hermida % | La Cruz % | Los Higos % | Luz $ | Acum C${selectedCn}
+      const predioHeaders = S.predios.map(p=>`<th style="padding:7px 10px;text-align:center">${p.emoji} ${p.nombre} %</th>`).join('');
+      const luzRows = uniqueNorias.map(([nombre, entries])=>{
+        const firstEntry = entries[0];
+        const noriaId = firstEntry.pt.id;
+        // % por predio — stored in S.luzNoriaPredios[noriaId][pi]
+        const prediosPct = S.predios.map((p,pi)=>{
+          const key = `${noriaId}_${pi}`;
+          const pct = (S.luzNoriaPredios[key] !== undefined) ? S.luzNoriaPredios[key] : (entries.find(e=>e.pi===pi) ? Math.round(100/entries.length) : 0);
+          return `<td style="padding:4px 6px;text-align:center">
+            <input type="number" min="0" max="100" step="1" value="${pct}"
+              style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px"
+              onchange="if(!S.luzNoriaPredios)S.luzNoriaPredios={};S.luzNoriaPredios['${noriaId}_${pi}']=parseFloat(this.value)||0;save()"/>
+          </td>`;
+        }).join('');
 
-      const luzRows = allNorias.map(({pi,p,pt})=>{
-        const val    = gastosGridDraft[`luz_${pi}_${pt.id}`] || '';
-
-        const pct    = S.luzPct[`${pi}_${pt.id}`] !== undefined ? S.luzPct[`${pi}_${pt.id}`] : 100;
-        const cnA    = parseInt(gastosGridDraft['cn_split_a']||selectedCn);
-        // Acumulado this cosecha by mes
-        const histMes = (S.gastosGenerales||[]).filter(g=>
-          g.categoria==='Luz'&&g.equipo===pt.nombre&&(g.prediosIdx||[]).includes(pi)&&getGastoCosecha(g)===selectedCn
-        );
-        const acumMes = {};
-        histMes.forEach(g=>{ const m=g.mes||'?'; acumMes[m]=(acumMes[m]||0)+parseFloat(g.monto||0); });
-        const acumTotal = histMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-        const acumStr = Object.entries(acumMes).map(([m,v])=>`<span style="font-size:10px;color:var(--muted)">${MESES[(parseInt(m)||1)-1]?.slice(0,3)||m}: ${fmt(v)}</span>`).join(' ');
+        const val = gastosGridDraft[`luz_${noriaId}`] || '';
+        const histN = (S.gastosGenerales||[]).filter(g=>g.categoria==='Luz'&&g.equipo===nombre&&getGastoCosecha(g)===selectedCn);
+        const acumTotal = histN.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        const mesDetalle = {};
+        histN.forEach(g=>{ const m=g.mes||'?'; mesDetalle[m]=(mesDetalle[m]||0)+parseFloat(g.monto||0); });
+        const acumStr = Object.entries(mesDetalle).map(([m,v])=>`${MESES[(parseInt(m)||1)-1]?.slice(0,3)||m}: ${fmt(v)}`).join(' · ');
 
         return `<tr>
-          <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${pt.nombre}</td>
-          <td style="padding:8px 12px;font-size:11px;color:var(--muted)">${p.emoji} ${p.nombre}</td>
-          <td style="padding:4px 8px;text-align:center">
-            <input type="number" min="0" max="100" step="1" value="${pct}"
-              style="width:60px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px"
-              onchange="if(!S.luzPct)S.luzPct={};S.luzPct['${pi}_${pt.id}']=parseFloat(this.value)||100;save()"/>%
-          </td>
+          <td style="padding:7px 12px;font-weight:600;white-space:nowrap">💡 ${nombre}</td>
+          ${prediosPct}
           <td style="padding:4px 8px;text-align:right">
             <input type="number" min="0" step="1" placeholder="—" value="${val}"
-              style="width:120px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
-              onchange="gastosGridDraft['luz_${pi}_${pt.id}']=this.value"/>
+              style="width:120px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:14px"
+              onchange="gastosGridDraft['luz_${noriaId}']=this.value"/>
           </td>
-
-          <td style="padding:8px 12px;text-align:right">
+          <td style="padding:7px 12px;text-align:right">
             <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumTotal?fmt(acumTotal):'—'}</div>
-            <div style="margin-top:2px">${acumStr}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">${acumStr}</div>
           </td>
-          ${isAdmin?`<td style="padding:4px"><button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delEquipoByNombre(${pi},'${pt.id}')">✕</button></td>`:'<td></td>'}
+          ${isAdmin?`<td style="padding:4px"><button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delNoriaByNombre('${nombre}')">✕</button></td>`:'<td></td>'}
         </tr>`;
       }).join('');
 
@@ -2088,13 +2092,11 @@ function renderGastos() {
         ${mesSelector}
         <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <colgroup><col style="width:160px"/><col style="width:110px"/><col style="width:90px"/><col style="width:140px"/><col style="width:140px"/><col/><col style="width:36px"/></colgroup>
           <thead><tr style="background:var(--soil);color:var(--straw)">
-            <th style="padding:7px 12px;text-align:left">Noria</th>
-            <th style="padding:7px 12px;text-align:left">Predio</th>
-            <th style="padding:7px 12px;text-align:center">% C${selectedCn}</th>
-            <th style="padding:7px 12px;text-align:right">Consumo ($)</th>
-            <th style="padding:7px 12px;text-align:right">Acumulado C${selectedCn}</th>
+            <th style="padding:7px 12px;text-align:left">Equipo</th>
+            ${predioHeaders}
+            <th style="padding:7px 12px;text-align:right">Luz $</th>
+            <th style="padding:7px 12px;text-align:right">Acum. C${selectedCn}</th>
             <th></th>
           </tr></thead>
           <tbody>${luzRows}</tbody>
@@ -2103,9 +2105,95 @@ function renderGastos() {
 
   } else if(gastosTab === 'ensilada') {
     const artsEnsilada = S.articulos.filter(a=>a.categoria==='Materiales de ensilada');
-    const maquilaVal = gastosGridDraft['ensilada'] || '';
-    const camionesVal = gastosGridDraft['camiones'] || '';
     const nomEnsiladaVal = gastosGridDraft['nom_ensilada'] || '';
+
+    // Helper: get total kilos for selected tablas
+    function getKilosTablas(predioIdx, tablaKeys) {
+      let total = 0;
+      const p = S.predios[predioIdx];
+      p.tablas.forEach((t,ti)=>{
+        if(!tablaKeys.includes(`${predioIdx}_${ti}`)) return;
+        total += parseFloat(getTablaData(predioIdx,selectedCn,ti).kilos)||0;
+      });
+      return total;
+    }
+
+    // Maquila section - per predio, price per ton, select tablas
+    const maquilaSections = S.predios.map((p,pi)=>{
+      const precioPorTon = gastosGridDraft[`maq_ppt_${pi}`] || '';
+      const kilosSelKeys = Object.keys(gastosGridDraft).filter(k=>k.startsWith(`maq_t_${pi}_`)&&gastosGridDraft[k]);
+      const kilosSel = getKilosTablas(pi, kilosSelKeys.map(k=>k.replace('maq_t_','').replace(/_[^_]+$/,'')).map((_,i2)=>{
+        // rebuild keys properly
+        return null;
+      }));
+      // Simpler: collect checked tablas
+      const tablaChecks = p.tablas.map((t,ti)=>{
+        const key = `maq_t_${pi}_${ti}`;
+        const checked = gastosGridDraft[key] !== false && gastosGridDraft[key] !== '0';
+        const kilos = parseFloat(getTablaData(pi,selectedCn,ti).kilos)||0;
+        return {t,ti,key,checked,kilos};
+      });
+      const kilosTotal = tablaChecks.filter(tc=>gastosGridDraft[tc.key]!==false&&gastosGridDraft[tc.key]!='0'&&gastosGridDraft[tc.key]!==undefined?true:false)
+        .reduce((s,tc)=>s+tc.kilos,0);
+      const ton = kilosTotal/1000;
+      const totalMaq = precioPorTon && ton ? parseFloat(precioPorTon)*ton : 0;
+
+      const tablaCheckboxes = tablaChecks.map(({t,ti,key,kilos})=>{
+        const isChecked = gastosGridDraft[key] !== '0' && gastosGridDraft[key] !== false;
+        return `<label style="display:inline-flex;align-items:center;gap:4px;margin-right:8px;font-size:12px;cursor:pointer">
+          <input type="checkbox" ${isChecked?'checked':''} onchange="gastosGridDraft['${key}']=this.checked?'1':'0';renderGastos()"/>
+          ${t.nombre} <span style="color:var(--muted)">(${fmtN(kilos,0)} kg)</span>
+        </label>`;
+      }).join('');
+
+      // Recompute kilos based on current draft state
+      const kilosReal = tablaChecks.filter(tc=>gastosGridDraft[tc.key]!=='0'&&gastosGridDraft[tc.key]!==false&&gastosGridDraft[tc.key]!==undefined).reduce((s,tc)=>s+tc.kilos,0);
+      const tonReal = kilosReal/1000;
+      const totalReal = precioPorTon && tonReal ? parseFloat(precioPorTon)*tonReal : 0;
+
+      return `<div style="padding:10px 14px;border:1px solid var(--border);margin-bottom:8px;background:var(--cream)">
+        <div style="font-weight:600;margin-bottom:6px">${p.emoji} ${p.nombre}</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+          <label style="font-size:12px;color:var(--muted)">$/tonelada:</label>
+          <input type="number" min="0" step="0.01" placeholder="0 = ignorar" value="${precioPorTon}"
+            style="width:120px;padding:4px 8px;border:1px solid #d4c0a0;font-size:13px;text-align:right"
+            onchange="gastosGridDraft['maq_ppt_${pi}']=this.value;renderGastos()"/>
+          ${tonReal>0&&precioPorTon?`<span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${fmtN(tonReal,2)} ton × $${precioPorTon} = <strong>${fmt(totalReal)}</strong></span>`:''}
+        </div>
+        <div style="flex-wrap:wrap">${tablaCheckboxes}</div>
+      </div>`;
+    }).join('');
+
+    // Camiones — same structure
+    const camionesSections = S.predios.map((p,pi)=>{
+      const precioPorTon = gastosGridDraft[`cam_ppt_${pi}`] || '';
+      const tablaChecks = p.tablas.map((t,ti)=>{
+        const key = `cam_t_${pi}_${ti}`;
+        const kilos = parseFloat(getTablaData(pi,selectedCn,ti).kilos)||0;
+        return {t,ti,key,kilos};
+      });
+      const kilosReal = tablaChecks.filter(tc=>gastosGridDraft[tc.key]!=='0'&&gastosGridDraft[tc.key]!==false&&gastosGridDraft[tc.key]!==undefined).reduce((s,tc)=>s+tc.kilos,0);
+      const tonReal = kilosReal/1000;
+      const totalReal = precioPorTon && tonReal ? parseFloat(precioPorTon)*tonReal : 0;
+      const tablaCheckboxes = tablaChecks.map(({t,ti,key,kilos})=>{
+        const isChecked = gastosGridDraft[key] !== '0' && gastosGridDraft[key] !== false;
+        return `<label style="display:inline-flex;align-items:center;gap:4px;margin-right:8px;font-size:12px;cursor:pointer">
+          <input type="checkbox" ${isChecked?'checked':''} onchange="gastosGridDraft['${key}']=this.checked?'1':'0';renderGastos()"/>
+          ${t.nombre} <span style="color:var(--muted)">(${fmtN(kilos,0)} kg)</span>
+        </label>`;
+      }).join('');
+      return `<div style="padding:10px 14px;border:1px solid var(--border);margin-bottom:8px;background:var(--cream)">
+        <div style="font-weight:600;margin-bottom:6px">${p.emoji} ${p.nombre}</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+          <label style="font-size:12px;color:var(--muted)">$/tonelada:</label>
+          <input type="number" min="0" step="0.01" placeholder="0 = ignorar" value="${precioPorTon}"
+            style="width:120px;padding:4px 8px;border:1px solid #d4c0a0;font-size:13px;text-align:right"
+            onchange="gastosGridDraft['cam_ppt_${pi}']=this.value;renderGastos()"/>
+          ${tonReal>0&&precioPorTon?`<span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${fmtN(tonReal,2)} ton × $${precioPorTon} = <strong>${fmt(totalReal)}</strong></span>`:''}
+        </div>
+        <div>${tablaCheckboxes}</div>
+      </div>`;
+    }).join('');
 
     const matRows = artsEnsilada.map(art=>{
       const precio = getCurrentPrice(art.id);
@@ -2135,36 +2223,88 @@ function renderGastos() {
       <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
     </tr>`).join('');
 
+    // Sección maquinaria ensilada: tractores y cosechadoras que ensilan
+    const equiposEnsilada = [];
+    S.predios.forEach((p,pi)=>{
+      (S.equipos[pi]||[]).filter(e=>e.tipo==='tractor'||e.tipo==='cosechadora'||e.tipo==='implemento').forEach(eq=>{
+        if(!equiposEnsilada.find(x=>x.eq.nombre===eq.nombre&&x.pi===pi))
+          equiposEnsilada.push({pi,p,eq});
+      });
+    });
+
+    // Config para agregar cosechadoras
+    const configEqEns = isAdmin ? `
+      <div style="padding:8px 12px;background:var(--cream);border:1px solid var(--border);margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar equipo de ensilada:</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          ${S.predios.map((p,i)=>`<label class="check-row"><input type="checkbox" class="eq-predio-check" value="${i}" checked/> ${p.emoji} ${p.nombre}</label>`).join('')}
+        </div>
+        <input type="text" id="eq-nombre" placeholder="Ej: Cosechadora 1..." style="padding:5px;width:160px;font-size:13px"/>
+        <select id="eq-tipo" style="padding:5px"><option value="tractor">Tractor</option><option value="cosechadora">Cosechadora</option></select>
+        <button class="btn btn-s" onclick="addEquipo()">+ Agregar</button>
+      </div>` : '';
+
+    const precioDieselEns = S.precioDiesel?.[selectedCn] || '';
+    const precioDieselBadge = precioDieselEns
+      ? `<span style="font-size:11px;color:var(--muted);background:#fff8e8;padding:3px 8px;border:1px solid #d4c0a0">💧 $${precioDieselEns}/L</span>`
+      : `<span style="font-size:11px;color:#999;font-style:italic">💧 precio diesel pendiente</span>`;
+
+    const maqEqRows = equiposEnsilada.map(({pi,p,eq})=>{
+      const dDiesel = gastosGridDraft[`ens_d_${pi}_${eq.id}`] || '';
+      const dServ   = gastosGridDraft[`ens_s_${pi}_${eq.id}`] || '';
+      const dRep    = gastosGridDraft[`ens_r_${pi}_${eq.id}`] || '';
+      const histEq  = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.equipo===eq.nombre&&(g.prediosIdx||[]).includes(pi)&&g.actividad==='Ensilada');
+      const totEq   = histEq.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      return `<tr>
+        <td style="padding:7px 12px;font-weight:600">${eq.nombre}</td>
+        <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${p.emoji} ${p.nombre}</td>
+        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="0.1" placeholder="—" value="${dDiesel}"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+          onchange="gastosGridDraft['ens_d_${pi}_${eq.id}']=this.value"/></td>
+        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dServ}"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+          onchange="gastosGridDraft['ens_s_${pi}_${eq.id}']=this.value"/></td>
+        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dRep}"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+          onchange="gastosGridDraft['ens_r_${pi}_${eq.id}']=this.value"/></td>
+        <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber);font-size:12px">${totEq?fmt(totEq):'—'}</td>
+      </tr>`;
+    }).join('');
+
     tabContent = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-        <div style="padding:12px;border:1px solid var(--border)">
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase">🌽 Maquila ensilada</div>
-          <input type="number" min="0" step="1" placeholder="$ maquila" value="${maquilaVal}"
-            style="width:100%;padding:8px;border:1px solid #d4c0a0;font-size:14px;text-align:right"
-            onchange="gastosGridDraft['ensilada']=this.value"/>
-        </div>
-        <div style="padding:12px;border:1px solid var(--border)">
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase">🚛 Camiones alquiler</div>
-          <input type="number" min="0" step="1" placeholder="$ camiones" value="${camionesVal}"
-            style="width:100%;padding:8px;border:1px solid #d4c0a0;font-size:14px;text-align:right"
-            onchange="gastosGridDraft['camiones']=this.value"/>
-        </div>
-        <div style="padding:12px;border:1px solid var(--border)">
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase">👷 Nómina ensilada</div>
-          <input type="number" min="0" step="1" placeholder="$ nómina" value="${nomEnsiladaVal}"
-            style="width:100%;padding:8px;border:1px solid #d4c0a0;font-size:14px;text-align:right"
-            onchange="gastosGridDraft['nom_ensilada']=this.value"/>
-        </div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🚜 Maquinaria propia ensilada ${precioDieselBadge}</div>
+      ${configEqEns}
+      ${equiposEnsilada.length ? `<div style="overflow-x:auto;margin-bottom:16px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:var(--soil);color:var(--straw)">
+          <th style="padding:7px 12px;text-align:left">Equipo</th>
+          <th style="padding:7px 10px;text-align:left">Predio</th>
+          <th style="padding:7px 12px;text-align:right">Diesel (L)</th>
+          <th style="padding:7px 12px;text-align:right">Servicio ($)</th>
+          <th style="padding:7px 12px;text-align:right">Reparación ($)</th>
+          <th style="padding:7px 12px;text-align:right">Acum. C${selectedCn}</th>
+        </tr></thead>
+        <tbody>${maqEqRows}</tbody>
+      </table></div>` : `<div style="color:var(--muted);font-size:12px;margin-bottom:16px">Sin equipos — agrega tractores o cosechadoras arriba</div>`}
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌽 Maquila — precio por tonelada × tablas seleccionadas</div>
+      ${maquilaSections}
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">🚛 Camiones — precio por tonelada × tablas seleccionadas</div>
+      ${camionesSections}
+      <div style="margin-top:16px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina ensilada</div>
+        <input type="number" min="0" step="1" placeholder="$ nómina" value="${nomEnsiladaVal}"
+          style="width:200px;padding:8px;border:1px solid #d4c0a0;font-size:14px;text-align:right"
+          onchange="gastosGridDraft['nom_ensilada']=this.value"/>
       </div>
       ${artsEnsilada.length ? `
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">🧪 Materiales de ensilada</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;margin-top:16px">🧪 Materiales de ensilada</div>
       <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px">
         <thead><tr><th style="text-align:left">Artículo</th><th style="text-align:center">Precio</th><th style="text-align:right">Cantidad</th><th style="text-align:right">Total</th></tr></thead>
         <tbody>${matRows}</tbody>
       </table>` : ''}
       ${totalAcum > 0 ? `
-      <div style="border-top:2px solid var(--border);padding-top:12px">
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase">📊 Acumulado ensilada C${selectedCn}</div>
+      <div style="border-top:2px solid var(--border);padding-top:12px;margin-top:12px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase">📊 Acumulado ensilada C${selectedCn} — Total: ${fmt(totalAcum)}</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead><tr style="font-size:10px;color:var(--muted)">
             <th style="padding:4px 10px;text-align:left">Concepto</th>
@@ -2173,54 +2313,62 @@ function renderGastos() {
             <th style="padding:4px 10px;text-align:right">Monto</th>
           </tr></thead>
           <tbody>${histRows}</tbody>
-          <tfoot><tr style="background:var(--soil);color:var(--cream)">
-            <td colspan="3" style="padding:8px 12px;font-weight:700">TOTAL</td>
-            <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmt(totalAcum)}</td>
-          </tr></tfoot>
         </table>
       </div>` : ''}`;
 
   } else if(gastosTab === 'nomina') {
-    const mesActualNom = parseInt(gastosGridDraft['mes']||new Date().getMonth()+1);
+    // Formato tipo Excel: Mes | $ | C1% | C2% | C3%
     const predioOptsNom = S.predios.map((p,i)=>`<option value="${i}" ${(gastosGridDraft['nom_pi']||'0')==String(i)?'selected':''}>${p.emoji} ${p.nombre}</option>`).join('');
-    const actRows = ['Labor'].map((act,ai)=>{
-      const val = gastosGridDraft[`nom_${ai}`] || '';
-      return `<tr>
-        <td style="padding:8px 12px;font-weight:600">${act}</td>
-        <td style="padding:4px 8px"><select style="padding:5px;font-size:13px" onchange="gastosGridDraft['nom_pi']=this.value">${predioOptsNom}</select></td>
-        <td style="padding:4px 8px"><select style="padding:5px" onchange="gastosGridDraft['mes']=this.value">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActualNom===i+1?'selected':''}>${m}</option>`).join('')}</select></td>
-        <td style="padding:4px 8px"><select style="padding:5px" onchange="gastosGridDraft['cn_split_a']=this.value">${[1,2,3].map(c=>`<option value="${c}" ${parseInt(gastosGridDraft['cn_split_a']||selectedCn)===c?'selected':''}>C${c}</option>`).join('')}</select></td>
-        <td style="padding:4px 8px"><input type="number" min="1" max="100" value="${gastosGridDraft['cn_split_pct']||100}" style="width:55px;padding:4px;text-align:right;border:1px solid #d4c0a0" onchange="gastosGridDraft['cn_split_pct']=this.value"/>%</td>
-        <td style="padding:4px 8px"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:140px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['nom_${ai}']=this.value"/></td>
-      </tr>`;
-    }).join('');
-    const histNom = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.categoria==='Nómina y gastos admin'&&g.actividad!=='Ensilada');
-    const totNom = histNom.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-    const acumRowsNom = histNom.map(g=>`<tr style="font-size:12px">
-      <td style="padding:5px 10px">${g.actividad||'Labor'}${g.mes?' · '+MESES[(parseInt(g.mes)||1)-1]:''}</td>
+    const mesActualNom = parseInt(gastosGridDraft['mes']||new Date().getMonth()+1);
+    const montoNom = gastosGridDraft['nom_monto'] || '';
+    const c1pct = gastosGridDraft['nom_c1pct'] !== undefined ? gastosGridDraft['nom_c1pct'] : '';
+    const c2pct = gastosGridDraft['nom_c2pct'] !== undefined ? gastosGridDraft['nom_c2pct'] : '';
+    const c3pct = gastosGridDraft['nom_c3pct'] !== undefined ? gastosGridDraft['nom_c3pct'] : '';
+
+    // Historial por cosecha
+    const histNomAll = (S.gastosGenerales||[]).filter(g=>g.categoria==='Nómina y gastos admin'&&g.actividad!=='Ensilada');
+    const nomPorCosecha = {1:0,2:0,3:0};
+    histNomAll.forEach(g=>{ nomPorCosecha[getGastoCosecha(g)] += parseFloat(g.monto||0); });
+
+    // Tabla de registros históricos
+    const histNomRows = histNomAll.map(g=>`<tr style="font-size:12px">
+      <td style="padding:5px 10px">${g.mes ? MESES[(parseInt(g.mes)||1)-1] : '—'}</td>
       <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
+      <td style="padding:5px 10px;text-align:center"><span style="background:#e8f5e8;color:var(--green);padding:2px 6px;font-size:10px">C${getGastoCosecha(g)}</span></td>
       <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
       <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${S.gastosGenerales.indexOf(g)})">✕</button>`:''}</td>
     </tr>`).join('');
+
     tabContent = `
-      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px">
+      <div style="overflow-x:auto;margin-bottom:8px">
+      <table style="border-collapse:collapse;font-size:13px;min-width:600px">
         <thead><tr style="background:var(--soil);color:var(--straw)">
-          <th style="padding:7px 12px;text-align:left">Actividad</th>
           <th style="padding:7px 12px;text-align:left">Predio</th>
           <th style="padding:7px 12px;text-align:left">Mes</th>
-          <th style="padding:7px 12px;text-align:left">Cosecha</th>
-          <th style="padding:7px 12px;text-align:center">%</th>
-          <th style="padding:7px 12px;text-align:right">Monto ($)</th>
+          <th style="padding:7px 12px;text-align:right">Cantidad $</th>
+          <th style="padding:7px 10px;text-align:center">C1 %</th>
+          <th style="padding:7px 10px;text-align:center">C2 %</th>
+          <th style="padding:7px 10px;text-align:center">C3 %</th>
         </tr></thead>
-        <tbody>${actRows}</tbody>
-      </table>
-      ${totNom>0?`<div style="margin-top:12px;border-top:2px solid var(--border);padding-top:12px">
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Acumulado Nómina C${selectedCn}</div>
+        <tbody><tr>
+          <td style="padding:4px 8px"><select style="padding:5px;font-size:13px" onchange="gastosGridDraft['nom_pi']=this.value">${predioOptsNom}</select></td>
+          <td style="padding:4px 8px"><select style="padding:5px" onchange="gastosGridDraft['mes']=this.value">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActualNom===i+1?'selected':''}>${m}</option>`).join('')}</select></td>
+          <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${montoNom}" style="width:140px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['nom_monto']=this.value"/></td>
+          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c1pct}" style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['nom_c1pct']=this.value"/></td>
+          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c2pct}" style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['nom_c2pct']=this.value"/></td>
+          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c3pct}" style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['nom_c3pct']=this.value"/></td>
+        </tr></tbody>
+      </table></div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Los % deben sumar 100. Si un mes aplica 100% a C1, pon 100 en C1 y deja C2/C3 en 0.</div>
+
+      ${histNomAll.length ? `
+      <div style="border-top:2px solid var(--border);padding-top:12px;margin-top:8px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Historial Nómina · C1: ${fmt(nomPorCosecha[1])} · C2: ${fmt(nomPorCosecha[2])} · C3: ${fmt(nomPorCosecha[3])}</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead><tr style="font-size:10px;color:var(--muted)"><th style="padding:4px 10px;text-align:left">Concepto</th><th style="padding:4px 10px;text-align:left">Predio</th><th style="padding:4px 10px;text-align:right">Monto</th><th></th></tr></thead>
-          <tbody>${acumRowsNom}</tbody>
-          <tfoot><tr style="background:var(--soil);color:var(--cream)"><td colspan="2" style="padding:8px 12px;font-weight:700">TOTAL</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmt(totNom)}</td><td></td></tr></tfoot>
-        </table></div>`:''}`;
+          <thead><tr style="font-size:10px;color:var(--muted)"><th style="padding:4px 10px;text-align:left">Mes</th><th style="padding:4px 10px;text-align:left">Predio</th><th style="padding:4px 10px;text-align:center">Cosecha</th><th style="padding:4px 10px;text-align:right">Monto</th><th></th></tr></thead>
+          <tbody>${histNomRows}</tbody>
+        </table>
+      </div>` : ''}`;
 
   } else if(gastosTab === 'reparaciones') {
     // ── Sección 1: Norias (igual que Luz, con % por predio) ──
@@ -2482,15 +2630,34 @@ function recalcDieselCosecha(cn) {
 }
 
 function addEquipoLuz() {
-  const pi = parseInt(document.getElementById('eq-predio-luz').value);
-  const nombre = document.getElementById('eq-nombre-luz').value.trim();
-  if(!nombre) { toast('⚠️ Ingresa el nombre del punto de luz',true); return; }
+  const pi = parseInt(document.getElementById('eq-predio-luz')?.value||0);
+  const nombre = document.getElementById('eq-nombre-luz')?.value.trim();
+  if(!nombre) { toast('⚠️ Ingresa el nombre',true); return; }
   if(!S.equipos[pi]) S.equipos[pi] = [];
   S.equipos[pi].push({id:uid(), nombre, tipo:'luz'});
-  document.getElementById('eq-nombre-luz').value = '';
-  save();
-  renderGastos();
-  toast('✓ Punto de luz agregado');
+  if(document.getElementById('eq-nombre-luz')) document.getElementById('eq-nombre-luz').value = '';
+  save(); renderGastos(); toast('✓ Noria agregada');
+}
+
+function addEquipoLuzMulti() {
+  // Agrega la noria a TODOS los predios (comparte)
+  const nombre = document.getElementById('eq-nombre-luz')?.value.trim();
+  if(!nombre) { toast('⚠️ Ingresa el nombre',true); return; }
+  S.predios.forEach((p,pi)=>{
+    if(!S.equipos[pi]) S.equipos[pi] = [];
+    if(!S.equipos[pi].find(e=>e.nombre===nombre&&e.tipo==='luz'))
+      S.equipos[pi].push({id:uid(), nombre, tipo:'luz'});
+  });
+  if(document.getElementById('eq-nombre-luz')) document.getElementById('eq-nombre-luz').value = '';
+  save(); renderGastos(); toast('✓ Noria agregada a todos los predios');
+}
+
+function delNoriaByNombre(nombre) {
+  if(!confirm(`¿Eliminar noria "${nombre}" de todos los predios?`)) return;
+  S.predios.forEach((p,pi)=>{
+    if(S.equipos[pi]) S.equipos[pi] = S.equipos[pi].filter(e=>!(e.tipo==='luz'&&e.nombre===nombre));
+  });
+  save(); renderGastos(); toast('✓ Noria eliminada');
 }
 
 function delEquipo(pi, ei) {
@@ -2553,27 +2720,75 @@ function capturarGastos() {
   } else if(gastosTab === 'luz') {
     const mes = parseInt(gastosGridDraft['mes'] || new Date().getMonth()+1);
     const cnB = gastosGridDraft['cn_split_b'] ? parseInt(gastosGridDraft['cn_split_b']) : null;
+    if(!S.luzNoriaPredios) S.luzNoriaPredios = {};
+    // Collect unique norias
+    const noriaMapCap = {};
     S.predios.forEach((p,pi)=>{
       (S.equipos[pi]||[]).filter(e=>e.tipo==='luz').forEach(pt=>{
-        const monto = parseFloat(gastosGridDraft[`luz_${pi}_${pt.id}`]);
-        const rep   = parseFloat(gastosGridDraft[`luz_rep_${pi}_${pt.id}`]);
-        const pctA  = ((S.luzPct&&S.luzPct[`${pi}_${pt.id}`]!==undefined) ? S.luzPct[`${pi}_${pt.id}`] : 100) / 100;
-        const pctB  = cnB ? (1 - pctA) : 0;
-        if(monto>0) {
-          S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Luz',equipo:pt.nombre,mes,monto:monto*pctA,prediosIdx:[pi],fecha:today()});
+        if(!noriaMapCap[pt.nombre]) noriaMapCap[pt.nombre] = {id:pt.id, entries:[]};
+        noriaMapCap[pt.nombre].entries.push({pi,pt});
+      });
+    });
+    Object.entries(noriaMapCap).forEach(([nombre, {id:noriaId, entries}])=>{
+      const monto = parseFloat(gastosGridDraft[`luz_${noriaId}`]);
+      if(!monto||monto<=0) return;
+      // Distribute by predio % 
+      S.predios.forEach((p,pi)=>{
+        const pctKey = `${noriaId}_${pi}`;
+        const pct = (S.luzNoriaPredios[pctKey] !== undefined ? parseFloat(S.luzNoriaPredios[pctKey]) : (entries.find(e=>e.pi===pi) ? Math.round(100/entries.length) : 0)) / 100;
+        if(!pct) return;
+        const montoPreio = monto * pct;
+        if(cnB) {
+          const pctCnA = 1; // full amount to cn, split is cosecha-based
+          S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Luz',equipo:nombre,mes,monto:montoPreio,prediosIdx:[pi],fecha:today()});
           total++;
-          if(cnB&&pctB>0) { S.gastosGenerales.push({id:uid(),cosecha:cnB,anio,categoria:'Luz',equipo:pt.nombre,mes,monto:monto*pctB,prediosIdx:[pi],fecha:today()}); total++; }
+        } else {
+          S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Luz',equipo:nombre,mes,monto:montoPreio,prediosIdx:[pi],fecha:today()});
+          total++;
         }
-
       });
     });
 
   } else if(gastosTab === 'ensilada') {
-    const maquila = parseFloat(gastosGridDraft['ensilada']);
-    const camiones = parseFloat(gastosGridDraft['camiones']);
     const nomEnsilada = parseFloat(gastosGridDraft['nom_ensilada']);
-    if(maquila>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Ensilada',monto:maquila,prediosIdx,fecha:today()}); total++; }
-    if(camiones>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Camiones',actividad:'Ensilada',monto:camiones,prediosIdx,fecha:today()}); total++; }
+    const precioDieselCn = (S.precioDiesel && S.precioDiesel[cn]) || 0;
+    // Maquinaria propia ensilada (tractores + cosechadoras)
+    S.predios.forEach((p,pi)=>{
+      (S.equipos[pi]||[]).filter(e=>e.tipo==='tractor'||e.tipo==='cosechadora'||e.tipo==='implemento').forEach(eq=>{
+        const litros = parseFloat(gastosGridDraft[`ens_d_${pi}_${eq.id}`]);
+        const serv   = parseFloat(gastosGridDraft[`ens_s_${pi}_${eq.id}`]);
+        const rep    = parseFloat(gastosGridDraft[`ens_r_${pi}_${eq.id}`]);
+        if(litros>0) {
+          const montoDiesel = precioDieselCn ? litros*precioDieselCn : litros;
+          S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel',equipo:eq.nombre,actividad:'Ensilada',litros,precioPorLitro:precioDieselCn,monto:montoDiesel,prediosIdx:[pi],fecha:today()});
+          total++;
+        }
+        if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria',equipo:eq.nombre,actividad:'Ensilada',monto:serv,prediosIdx:[pi],fecha:today()}); total++; }
+        if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria',equipo:eq.nombre,actividad:'Ensilada',monto:rep,prediosIdx:[pi],fecha:today()}); total++; }
+      });
+    });
+    // Maquila por tonelada por predio
+    S.predios.forEach((p,pi)=>{
+      const precioPorTon = parseFloat(gastosGridDraft[`maq_ppt_${pi}`]);
+      if(!precioPorTon||precioPorTon<=0) return;
+      const tablaChecks = p.tablas.map((t,ti)=>({ti, key:`maq_t_${pi}_${ti}`, kilos:parseFloat(getTablaData(pi,cn,ti).kilos)||0}));
+      const kilosSel = tablaChecks.filter(tc=>gastosGridDraft[tc.key]!=='0'&&gastosGridDraft[tc.key]!==false&&gastosGridDraft[tc.key]!==undefined).reduce((s,tc)=>s+tc.kilos,0);
+      if(!kilosSel) return;
+      const monto = (kilosSel/1000)*precioPorTon;
+      S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Ensilada',monto,prediosIdx:[pi],kilos:kilosSel,fecha:today()});
+      total++;
+    });
+    // Camiones por tonelada por predio
+    S.predios.forEach((p,pi)=>{
+      const precioPorTon = parseFloat(gastosGridDraft[`cam_ppt_${pi}`]);
+      if(!precioPorTon||precioPorTon<=0) return;
+      const tablaChecks = p.tablas.map((t,ti)=>({ti, key:`cam_t_${pi}_${ti}`, kilos:parseFloat(getTablaData(pi,cn,ti).kilos)||0}));
+      const kilosSel = tablaChecks.filter(tc=>gastosGridDraft[tc.key]!=='0'&&gastosGridDraft[tc.key]!==false&&gastosGridDraft[tc.key]!==undefined).reduce((s,tc)=>s+tc.kilos,0);
+      if(!kilosSel) return;
+      const monto = (kilosSel/1000)*precioPorTon;
+      S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Camiones',actividad:'Ensilada',monto,prediosIdx:[pi],kilos:kilosSel,fecha:today()});
+      total++;
+    });
     if(nomEnsilada>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina y gastos admin',actividad:'Ensilada',monto:nomEnsilada,prediosIdx,fecha:today()}); total++; }
     // Mat ensilada
     S.articulos.filter(a=>a.categoria==='Materiales de ensilada').forEach(art=>{
@@ -2587,8 +2802,18 @@ function capturarGastos() {
   } else if(gastosTab === 'nomina') {
     const mes = parseInt(gastosGridDraft['mes'] || new Date().getMonth()+1);
     const nomPi = parseInt(gastosGridDraft['nom_pi'] || 0);
-    const monto = parseFloat(gastosGridDraft['nom_0']);
-    if(monto>0) { pushConSplit({id:uid(),anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto,prediosIdx:[nomPi],fecha:today()}); }
+    const monto = parseFloat(gastosGridDraft['nom_monto']);
+    if(monto>0) {
+      const c1pct = (parseFloat(gastosGridDraft['nom_c1pct'])||0)/100;
+      const c2pct = (parseFloat(gastosGridDraft['nom_c2pct'])||0)/100;
+      const c3pct = (parseFloat(gastosGridDraft['nom_c3pct'])||0)/100;
+      if(c1pct>0) { S.gastosGenerales.push({id:uid(),cosecha:1,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto:monto*c1pct,prediosIdx:[nomPi],fecha:today()}); total++; }
+      if(c2pct>0) { S.gastosGenerales.push({id:uid(),cosecha:2,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto:monto*c2pct,prediosIdx:[nomPi],fecha:today()}); total++; }
+      if(c3pct>0) { S.gastosGenerales.push({id:uid(),cosecha:3,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto:monto*c3pct,prediosIdx:[nomPi],fecha:today()}); total++; }
+      if(!c1pct&&!c2pct&&!c3pct) { // fallback: assign to selected cosecha
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto,prediosIdx:[nomPi],fecha:today()}); total++;
+      }
+    }
 
   } else if(gastosTab === 'reparaciones') {
     // Norias with % split
