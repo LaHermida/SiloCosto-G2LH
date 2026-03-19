@@ -2049,7 +2049,7 @@ function renderGastos() {
 
       const luzRows = allNorias.map(({pi,p,pt})=>{
         const val    = gastosGridDraft[`luz_${pi}_${pt.id}`] || '';
-        const repVal = gastosGridDraft[`luz_rep_${pi}_${pt.id}`] || '';
+
         const pct    = S.luzPct[`${pi}_${pt.id}`] !== undefined ? S.luzPct[`${pi}_${pt.id}`] : 100;
         const cnA    = parseInt(gastosGridDraft['cn_split_a']||selectedCn);
         // Acumulado this cosecha by mes
@@ -2074,11 +2074,7 @@ function renderGastos() {
               style="width:120px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
               onchange="gastosGridDraft['luz_${pi}_${pt.id}']=this.value"/>
           </td>
-          <td style="padding:4px 8px;text-align:right">
-            <input type="number" min="0" step="1" placeholder="—" value="${repVal}"
-              style="width:120px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
-              onchange="gastosGridDraft['luz_rep_${pi}_${pt.id}']=this.value"/>
-          </td>
+
           <td style="padding:8px 12px;text-align:right">
             <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumTotal?fmt(acumTotal):'—'}</div>
             <div style="margin-top:2px">${acumStr}</div>
@@ -2098,7 +2094,6 @@ function renderGastos() {
             <th style="padding:7px 12px;text-align:left">Predio</th>
             <th style="padding:7px 12px;text-align:center">% C${selectedCn}</th>
             <th style="padding:7px 12px;text-align:right">Consumo ($)</th>
-            <th style="padding:7px 12px;text-align:right">Reparación ($)</th>
             <th style="padding:7px 12px;text-align:right">Acumulado C${selectedCn}</th>
             <th></th>
           </tr></thead>
@@ -2228,38 +2223,94 @@ function renderGastos() {
         </table></div>`:''}`;
 
   } else if(gastosTab === 'reparaciones') {
-    const predioOptsRep = S.predios.map((p,i)=>`<option value="${i}">${p.emoji} ${p.nombre}</option>`).join('');
-    const repCats = ['Reparaciones Noria','Reparaciones Riego'];
-    const repRows = repCats.map((cat,ci)=>{
-      const val = gastosGridDraft[`rep_${ci}`] || '';
-      const desc = gastosGridDraft[`rep_desc_${ci}`] || '';
-      const piVal = gastosGridDraft[`rep_pi_${ci}`] || '0';
+    // ── Sección 1: Norias (igual que Luz, con % por predio) ──
+    const allNoriasRep = [];
+    S.predios.forEach((p,pi)=>{
+      (S.equipos[pi]||[]).filter(e=>e.tipo==='luz').forEach(pt=>{
+        allNoriasRep.push({pi,p,pt});
+      });
+    });
+    if(!S.luzPct) S.luzPct = {};
+
+    const noriaRepRows = allNoriasRep.map(({pi,p,pt})=>{
+      const val  = gastosGridDraft[`rnoria_${pi}_${pt.id}`] || '';
+      const desc = gastosGridDraft[`rnoria_desc_${pi}_${pt.id}`] || '';
+      const pct  = S.luzPct[`${pi}_${pt.id}`] !== undefined ? S.luzPct[`${pi}_${pt.id}`] : 100;
+      const histN = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.categoria==='Reparaciones Noria'&&g.equipo===pt.nombre&&(g.prediosIdx||[]).includes(pi));
+      const acumN = histN.reduce((s,g)=>s+parseFloat(g.monto||0),0);
       return `<tr>
-        <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${cat}</td>
-        <td style="padding:4px 8px"><select style="padding:5px;font-size:13px" onchange="gastosGridDraft['rep_pi_${ci}']=this.value">${S.predios.map((p,i)=>`<option value="${i}" ${piVal==String(i)?'selected':''}>${p.emoji} ${p.nombre}</option>`).join('')}</select></td>
-        <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:180px;padding:5px 8px;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['rep_desc_${ci}']=this.value"/></td>
-        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:130px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['rep_${ci}']=this.value"/></td>
+        <td style="padding:7px 12px;font-weight:600">${pt.nombre}</td>
+        <td style="padding:7px 12px;font-size:11px;color:var(--muted)">${p.emoji} ${p.nombre}</td>
+        <td style="padding:7px 12px;text-align:center;font-size:12px;color:var(--muted)">${pct}%</td>
+        <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:160px;padding:4px 7px;border:1px solid #d4c0a0;font-size:12px" onchange="gastosGridDraft['rnoria_desc_${pi}_${pt.id}']=this.value"/></td>
+        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:120px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['rnoria_${pi}_${pt.id}']=this.value"/></td>
+        <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumN?fmt(acumN):'—'}</td>
       </tr>`;
     }).join('');
+
+    // ── Sección 2: Sistemas de Riego (por tabla) ──
+    // Get all tablas across all predios
+    const allTablasSR = [];
+    S.predios.forEach((p,pi)=>{
+      p.tablas.forEach((t,ti)=>{ allTablasSR.push({pi,p,ti,t}); });
+    });
+    const riegoRows = allTablasSR.map(({pi,p,ti,t})=>{
+      const key = `rriego_${pi}_${ti}`;
+      const keyDesc = `rriego_desc_${pi}_${ti}`;
+      const val  = gastosGridDraft[key] || '';
+      const desc = gastosGridDraft[keyDesc] || '';
+      const histR = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.categoria==='Reparaciones Riego'&&(g.tablaIdx===ti)&&(g.prediosIdx||[]).includes(pi));
+      const acumR = histR.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      return `<tr>
+        <td style="padding:7px 12px;font-weight:600">${t.nombre}</td>
+        <td style="padding:7px 12px;font-size:11px;color:var(--muted)">${p.emoji} ${p.nombre}</td>
+        <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:180px;padding:4px 7px;border:1px solid #d4c0a0;font-size:12px" onchange="gastosGridDraft['${keyDesc}']=this.value"/></td>
+        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:120px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['${key}']=this.value"/></td>
+        <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumR?fmt(acumR):'—'}</td>
+      </tr>`;
+    }).join('');
+
+    // Acumulado
     const histRep = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&['Reparaciones Noria','Reparaciones Riego'].includes(g.categoria));
     const totRep = histRep.reduce((s,g)=>s+parseFloat(g.monto||0),0);
     const acumRowsRep = histRep.map(g=>`<tr style="font-size:12px">
-      <td style="padding:5px 10px">${g.categoria}${g.descripcion?' — '+g.descripcion:''}</td>
+      <td style="padding:5px 10px">${g.categoria}${g.equipo?' · '+g.equipo:''}${g.descripcion?' — '+g.descripcion:''}</td>
       <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
       <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
       <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${S.gastosGenerales.indexOf(g)})">✕</button>`:''}</td>
     </tr>`).join('');
+
     tabContent = `
-      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🔧 Norias</div>
+      ${allNoriasRep.length ? `<div style="overflow-x:auto;margin-bottom:16px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <colgroup><col style="width:150px"/><col style="width:110px"/><col style="width:60px"/><col/><col style="width:130px"/><col style="width:130px"/></colgroup>
         <thead><tr style="background:var(--soil);color:var(--straw)">
-          <th style="padding:7px 12px;text-align:left">Tipo</th>
+          <th style="padding:7px 12px;text-align:left">Noria</th>
+          <th style="padding:7px 12px;text-align:left">Predio</th>
+          <th style="padding:7px 12px;text-align:center">%</th>
+          <th style="padding:7px 12px;text-align:left">Descripción</th>
+          <th style="padding:7px 12px;text-align:right">Monto ($)</th>
+          <th style="padding:7px 12px;text-align:right">Acum. C${selectedCn}</th>
+        </tr></thead>
+        <tbody>${noriaRepRows}</tbody>
+      </table></div>` : '<div style="color:var(--muted);font-size:12px;margin-bottom:16px">Sin norias configuradas</div>'}
+
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">💧 Sistemas de Riego</div>
+      <div style="overflow-x:auto;margin-bottom:16px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <colgroup><col style="width:130px"/><col style="width:110px"/><col/><col style="width:130px"/><col style="width:130px"/></colgroup>
+        <thead><tr style="background:var(--soil);color:var(--straw)">
+          <th style="padding:7px 12px;text-align:left">Tabla</th>
           <th style="padding:7px 12px;text-align:left">Predio</th>
           <th style="padding:7px 12px;text-align:left">Descripción</th>
           <th style="padding:7px 12px;text-align:right">Monto ($)</th>
+          <th style="padding:7px 12px;text-align:right">Acum. C${selectedCn}</th>
         </tr></thead>
-        <tbody>${repRows}</tbody>
-      </table>
-      ${totRep>0?`<div style="margin-top:12px;border-top:2px solid var(--border);padding-top:12px">
+        <tbody>${riegoRows}</tbody>
+      </table></div>
+
+      ${totRep>0?`<div style="border-top:2px solid var(--border);padding-top:12px">
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Acumulado Reparaciones C${selectedCn}</div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead><tr style="font-size:10px;color:var(--muted)"><th style="padding:4px 10px;text-align:left">Concepto</th><th style="padding:4px 10px;text-align:left">Predio</th><th style="padding:4px 10px;text-align:right">Monto</th><th></th></tr></thead>
@@ -2513,11 +2564,7 @@ function capturarGastos() {
           total++;
           if(cnB&&pctB>0) { S.gastosGenerales.push({id:uid(),cosecha:cnB,anio,categoria:'Luz',equipo:pt.nombre,mes,monto:monto*pctB,prediosIdx:[pi],fecha:today()}); total++; }
         }
-        if(rep>0) {
-          S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Reparaciones Noria',equipo:pt.nombre,mes,monto:rep*pctA,prediosIdx:[pi],fecha:today()});
-          total++;
-          if(cnB&&pctB>0) { S.gastosGenerales.push({id:uid(),cosecha:cnB,anio,categoria:'Reparaciones Noria',equipo:pt.nombre,mes,monto:rep*pctB,prediosIdx:[pi],fecha:today()}); total++; }
-        }
+
       });
     });
 
@@ -2544,11 +2591,29 @@ function capturarGastos() {
     if(monto>0) { pushConSplit({id:uid(),anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto,prediosIdx:[nomPi],fecha:today()}); }
 
   } else if(gastosTab === 'reparaciones') {
-    ['Reparaciones Noria','Reparaciones Riego'].forEach((cat,ci)=>{
-      const monto = parseFloat(gastosGridDraft[`rep_${ci}`]);
-      const descripcion = gastosGridDraft[`rep_desc_${ci}`] || '';
-      const repPi = parseInt(gastosGridDraft[`rep_pi_${ci}`] || 0);
-      if(monto>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:cat,descripcion,monto,prediosIdx:[repPi],fecha:today()}); total++; }
+    // Norias with % split
+    S.predios.forEach((p,pi)=>{
+      (S.equipos[pi]||[]).filter(e=>e.tipo==='luz').forEach(pt=>{
+        const monto = parseFloat(gastosGridDraft[`rnoria_${pi}_${pt.id}`]);
+        const desc  = gastosGridDraft[`rnoria_desc_${pi}_${pt.id}`] || '';
+        if(!monto||monto<=0) return;
+        const pctA = ((S.luzPct&&S.luzPct[`${pi}_${pt.id}`]!==undefined)?S.luzPct[`${pi}_${pt.id}`]:100)/100;
+        const cnB = gastosGridDraft['cn_split_b'] ? parseInt(gastosGridDraft['cn_split_b']) : null;
+        const pctB = cnB ? (1-pctA) : 0;
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Reparaciones Noria',equipo:pt.nombre,descripcion:desc,monto:monto*pctA,prediosIdx:[pi],fecha:today()});
+        total++;
+        if(cnB&&pctB>0) { S.gastosGenerales.push({id:uid(),cosecha:cnB,anio,categoria:'Reparaciones Noria',equipo:pt.nombre,descripcion:desc,monto:monto*pctB,prediosIdx:[pi],fecha:today()}); total++; }
+      });
+    });
+    // Sistemas de riego by tabla
+    S.predios.forEach((p,pi)=>{
+      p.tablas.forEach((t,ti)=>{
+        const monto = parseFloat(gastosGridDraft[`rriego_${pi}_${ti}`]);
+        const desc  = gastosGridDraft[`rriego_desc_${pi}_${ti}`] || '';
+        if(!monto||monto<=0) return;
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Reparaciones Riego',descripcion:desc,tablaIdx:ti,monto,prediosIdx:[pi],fecha:today()});
+        total++;
+      });
     });
 
   } else if(gastosTab === 'otros') {
