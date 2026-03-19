@@ -475,7 +475,9 @@ function defaultState() {
     // gastosGenerales = [{id, mes, anio, categoria, monto, prediosIdx:[0,1,2], fecha}]
     gastosGenerales: [],
     // equipos = {pi: [{id, nombre, tipo:'tractor'|'noria'|'luz'}]}
-    equipos: {}
+    equipos: {},
+    // equiposEnsilada = [{id, nombre, tipo:'tractor'|'cosechadora'}] — lista independiente
+    equiposEnsilada: []
   };
 }
 
@@ -491,6 +493,28 @@ async function loadState() {
     const r = await sbGet(SK);
     if(r) S = JSON.parse(r);
   } catch(e){ S = defaultState(); }
+  // Ensure equiposEnsilada exists
+  if(!S.equiposEnsilada) S.equiposEnsilada = [];
+  // Recover deleted tractors: Tractor 3, Tractor 6, Tractor 7, Implementos LH
+  // These were in La Hermida (pi=0)
+  // Recover all deleted tractors back to S.equipos (Tractores tab)
+  if(!S.equipos) S.equipos = {};
+  // La Hermida (pi=0)
+  if(!S.equipos[0]) S.equipos[0] = [];
+  const recuperarLH = [{nombre:'Tractor 3',tipo:'tractor'},{nombre:'Tractor 6',tipo:'tractor'},{nombre:'Tractor 7',tipo:'tractor'},{nombre:'Implementos LH',tipo:'implemento'}];
+  recuperarLH.forEach(({nombre,tipo})=>{
+    if(!S.equipos[0].find(e=>e.nombre===nombre))
+      S.equipos[0].push({id:uid(), nombre, tipo});
+  });
+  // La Cruz (pi=1)
+  if(!S.equipos[1]) S.equipos[1] = [];
+  const recuperarLC = [{nombre:'Tractor 5',tipo:'tractor'},{nombre:'Implementos LC',tipo:'implemento'}];
+  recuperarLC.forEach(({nombre,tipo})=>{
+    if(!S.equipos[1].find(e=>e.nombre===nombre))
+      S.equipos[1].push({id:uid(), nombre, tipo});
+  });
+  // Ensilada stays empty — independent list
+  // (don't auto-populate equiposEnsilada)
   _loaded = true;
   render(curSec);
   renderDash();
@@ -1894,7 +1918,16 @@ function renderGastos() {
   }
 
   if(gastosTab === 'tractores') {
-    const configEq = ''; // config now inline in tables
+    const configEq = isAdmin ? `
+      <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar equipo:</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          ${S.predios.map((p,i)=>`<label class="check-row"><input type="checkbox" class="eq-predio-check" value="${i}" checked/> ${p.emoji} ${p.nombre}</label>`).join('')}
+        </div>
+        <input type="text" id="eq-nombre" placeholder="Ej: Tractor 5, Noria LC..." style="padding:5px;width:180px;font-size:13px"/>
+        <select id="eq-tipo" style="padding:5px"><option value="tractor">Tractor</option><option value="noria">Noria</option><option value="implemento">Implementos</option><option value="camioneta">Camioneta</option></select>
+        <button class="btn btn-s" onclick="addEquipo()">+ Agregar</button>
+      </div>` : '';
 
     // Precio diesel — solo admin lo define, Naty puede capturar litros sin precio
     const precioDiesel = S.precioDiesel?.[selectedCn] || '';
@@ -2119,129 +2152,69 @@ function renderGastos() {
     }
 
     // Maquila section - per predio, price per ton, select tablas
-    // ── Maquila y Camiones: tabla limpia por predio/tabla con check + $/ton ──
-    // ── Maquila: tabla estilo Excel, precio por predio (excl Los Higos), filas = tablas ──
-    // Predios que ensilan (excluir Los Higos = el que tiene 1 tabla tipicamente)
-    const prediosMaquilaIdx = S.predios.map((p,pi)=>({p,pi})).filter(({p})=>p.nombre!=='Los Higos'&&!(p.tablas.length===1&&p.tablas[0]?.nombre?.toLowerCase().includes('higo')));
-    // Find max tablas count across maquila predios
-    const maxTablasMaq = Math.max(...prediosMaquilaIdx.map(({p})=>p.tablas.length), 0);
-    // Header: Predio | costo | predio2 | costo2...
-    const maqHeaderCols = prediosMaquilaIdx.map(({p,pi})=>`<th style="padding:7px 10px;text-align:center;background:#2a5425;color:#faf6ed">${p.emoji} ${p.nombre}</th><th style="padding:7px 10px;text-align:center;background:#1a3a18;color:#d4c0a0;font-size:10px">X$</th>`).join('');
-    // Price row per predio
-    const maqPriceRow = prediosMaquilaIdx.map(({p,pi})=>{
-      const ppt = gastosGridDraft[`maq_ppt_${pi}`] || '';
-      return `<td colspan="2" style="padding:4px 8px;text-align:center">
-        <input type="number" min="0" step="0.01" placeholder="$/ton" value="${ppt}"
-          style="width:100px;padding:4px 7px;text-align:center;border:1px solid #d4c0a0;font-size:13px;background:#fffbe8"
-          onchange="gastosGridDraft['maq_ppt_${pi}']=this.value;renderGastos()"/>
-      </td>`;
-    }).join('');
-    // Rows per tabla
-    const allTablaNames = [];
-    let tiMax = 0;
-    prediosMaquilaIdx.forEach(({p})=>{ if(p.tablas.length>tiMax) tiMax=p.tablas.length; });
-    const maqTablaRows = Array.from({length:tiMax},(_,ti)=>{
-      const cells = prediosMaquilaIdx.map(({p,pi})=>{
-        if(ti>=p.tablas.length) return `<td colspan="2"></td>`;
-        const t = p.tablas[ti];
-        const key = `maq_t_${pi}_${ti}`;
-        const isChecked = gastosGridDraft[key] !== '0' && gastosGridDraft[key] !== false && gastosGridDraft[key] !== undefined;
-        const ppt = parseFloat(gastosGridDraft[`maq_ppt_${pi}`])||0;
-        const kilos = parseFloat(getTablaData(pi,selectedCn,ti).kilos)||0;
-        const total = isChecked && ppt ? (kilos/1000)*ppt : 0;
-        return `<td style="padding:5px 10px;text-align:center">
-            <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;font-size:12px">
-              <input type="checkbox" ${isChecked?'checked':''} style="width:14px;height:14px"
-                onchange="gastosGridDraft['${key}']=this.checked?'1':'0';renderGastos()"/>
-              ${t.nombre}
-            </label>
-          </td>
-          <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:${total?'var(--amber)':'var(--muted)'}">${total?fmt(total):'—'}</td>`;
+    // ── Helper: build grid table (maquila, pizca, camiones) ──
+    // prediosList = [{p, pi}], prefix = key prefix, headerColor = bg color
+    function buildGridTable(prediosList, prefix, headerColor='#1a1208') {
+      let tiMax = 0;
+      prediosList.forEach(({p})=>{ if(p.tablas.length>tiMax) tiMax=p.tablas.length; });
+      // Each predio = ONE column with header stacked: name on top, price input below
+      const headerCols = prediosList.map(({p,pi})=>{
+        const ppt = gastosGridDraft[`${prefix}_ppt_${pi}`] || '';
+        return `<th style="padding:0;text-align:center;min-width:130px;border-left:2px solid rgba(255,255,255,0.15)">
+          <div style="padding:6px 10px;background:${headerColor};color:#faf6ed;font-size:12px">${p.emoji} ${p.nombre}</div>
+          <div style="padding:4px 8px;background:#f5efe0">
+            <input type="number" min="0" step="0.01" placeholder="$/ton" value="${ppt}"
+              style="width:100px;padding:3px 6px;text-align:center;border:1px solid #d4c0a0;font-size:12px;background:#fffbe8"
+              onchange="gastosGridDraft['${prefix}_ppt_${pi}']=this.value;renderGastos()"/>
+          </div>
+        </th>`;
       }).join('');
-      return `<tr style="border-bottom:1px solid var(--border)">${cells}</tr>`;
-    }).join('');
-
-    const maquilaSections = prediosMaquilaIdx.length ? `<div style="overflow-x:auto">
-      <table style="border-collapse:collapse;font-size:13px">
-        <thead>
-          <tr style="background:var(--soil);color:var(--straw)"><th style="padding:7px 12px;text-align:left;min-width:60px"></th>${maqHeaderCols}</tr>
-          <tr style="background:#f5efe0"><td style="padding:5px 12px;font-size:11px;color:var(--muted)">$/Ton</td>${maqPriceRow}</tr>
-        </thead>
-        <tbody>${maqTablaRows}</tbody>
-      </table></div>` : '<div style="color:var(--muted);font-size:12px">Sin predios de ensilada configurados</div>';
-
-    // ── Camiones: tabla por tabla con check + $/ton (se queda igual) ──
-    function buildTonTable(prefix) {
-      const allRows = [];
-      S.predios.forEach((p,pi)=>{
-        p.tablas.forEach((t,ti)=>{
+      const tablaRows = Array.from({length:tiMax},(_,ti)=>{
+        const cells = prediosList.map(({p,pi})=>{
+          if(ti>=p.tablas.length) return `<td style="border-left:2px solid var(--border)"></td>`;
+          const t = p.tablas[ti];
           const key = `${prefix}_t_${pi}_${ti}`;
-          const keyPpt = `${prefix}_ppt_${pi}_${ti}`;
           const isChecked = gastosGridDraft[key] !== '0' && gastosGridDraft[key] !== false && gastosGridDraft[key] !== undefined;
-          const ppt = gastosGridDraft[keyPpt] || '';
+          const ppt = parseFloat(gastosGridDraft[`${prefix}_ppt_${pi}`])||0;
           const kilos = parseFloat(getTablaData(pi,selectedCn,ti).kilos)||0;
-          const ton = kilos/1000;
-          const total = ppt && ton ? parseFloat(ppt)*ton : 0;
-          allRows.push(`<tr style="${!isChecked?'opacity:0.45':''}">
-            <td style="padding:6px 12px">${p.emoji} ${p.nombre}</td>
-            <td style="padding:6px 12px;font-weight:600">${t.nombre}</td>
-            <td style="padding:6px 10px;text-align:center">
-              <input type="checkbox" ${isChecked?'checked':''} style="width:16px;height:16px"
-                onchange="gastosGridDraft['${key}']=this.checked?'1':'0';renderGastos()"/>
-            </td>
-            <td style="padding:4px 8px;text-align:right">
-              <input type="number" min="0" step="0.01" placeholder="$/ton" value="${ppt}"
-                style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px;${!isChecked?'pointer-events:none':''}"
-                onchange="gastosGridDraft['${keyPpt}']=this.value;renderGastos()"/>
-            </td>
-            <td style="padding:6px 12px;text-align:right;font-family:'DM Mono',monospace;font-size:13px;color:var(--amber)">${total?fmt(total):'—'}</td>
-          </tr>`);
-        });
-      });
+          const total = isChecked && ppt ? (kilos/1000)*ppt : 0;
+          return `<td style="padding:5px 10px;text-align:center;border-left:2px solid var(--border);${!isChecked?'opacity:0.4':''}">
+            <label style="display:flex;align-items:center;justify-content:space-between;gap:6px;cursor:pointer;font-size:12px">
+              <span style="display:flex;align-items:center;gap:4px">
+                <input type="checkbox" ${isChecked?'checked':''} style="width:14px;height:14px"
+                  onchange="gastosGridDraft['${key}']=this.checked?'1':'0';renderGastos()"/>
+                ${t.nombre}
+              </span>
+              <span style="font-family:'DM Mono',monospace;font-size:11px;color:${total?'var(--amber)':'var(--muted)'}">${total?fmt(total):'—'}</span>
+            </label>
+          </td>`;
+        }).join('');
+        return `<tr style="border-bottom:1px solid var(--border)">${cells}</tr>`;
+      }).join('');
       return `<div style="overflow-x:auto;margin-bottom:4px">
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead><tr style="background:var(--soil);color:var(--straw)">
-            <th style="padding:7px 12px;text-align:left">Predio</th>
-            <th style="padding:7px 12px;text-align:left">Tabla</th>
-            <th style="padding:7px 10px;text-align:center">✓</th>
-            <th style="padding:7px 12px;text-align:right">$/Tonelada</th>
-            <th style="padding:7px 12px;text-align:right">Total</th>
+        <table style="border-collapse:collapse;font-size:13px">
+          <thead><tr>
+            <th style="padding:7px 12px;background:${headerColor};color:#faf6ed;text-align:left;min-width:20px"></th>
+            ${headerCols}
           </tr></thead>
-          <tbody>${allRows.join('')}</tbody>
+          <tbody>${tablaRows}</tbody>
         </table></div>`;
     }
-    const camionesSections = buildTonTable('cam');
 
-    // ── Pizca: solo Los Higos ──
-    const losHigosIdx = S.predios.findIndex(p=>p.nombre==='Los Higos'||(p.tablas.length===1&&p.tablas[0]?.nombre?.toLowerCase().includes('higo')));
-    const pizcaVal = gastosGridDraft['pizca_monto'] || '';
-    const pizcaSection = losHigosIdx>=0 ? (()=>{
-      const pHigos = S.predios[losHigosIdx];
-      const pizcaRows = pHigos.tablas.map((t,ti)=>{
-        const key = `pizca_t_${losHigosIdx}_${ti}`;
-        const keyPpt = `pizca_ppt_${losHigosIdx}_${ti}`;
-        const isChecked = gastosGridDraft[key] !== '0' && gastosGridDraft[key] !== false && gastosGridDraft[key] !== undefined;
-        const ppt = gastosGridDraft[keyPpt] || '';
-        const kilos = parseFloat(getTablaData(losHigosIdx,selectedCn,ti).kilos)||0;
-        const total = isChecked && ppt ? (kilos/1000)*parseFloat(ppt) : 0;
-        return `<tr style="${!isChecked?'opacity:0.45':''}">
-          <td style="padding:6px 12px;font-weight:600">${t.nombre}</td>
-          <td style="padding:6px 10px;text-align:center"><input type="checkbox" ${isChecked?'checked':''} style="width:16px;height:16px" onchange="gastosGridDraft['${key}']=this.checked?'1':'0';renderGastos()"/></td>
-          <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="0.01" placeholder="$/ton" value="${ppt}" style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['${keyPpt}']=this.value;renderGastos()"/></td>
-          <td style="padding:6px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${total?fmt(total):'—'}</td>
-        </tr>`;
-      }).join('');
-      return `<div style="overflow-x:auto;margin-bottom:4px">
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead><tr style="background:#3a2a0a;color:#faf6ed">
-            <th style="padding:7px 12px;text-align:left">Tabla</th>
-            <th style="padding:7px 10px;text-align:center">✓</th>
-            <th style="padding:7px 12px;text-align:right">$/Tonelada</th>
-            <th style="padding:7px 12px;text-align:right">Total</th>
-          </tr></thead>
-          <tbody>${pizcaRows}</tbody>
-        </table></div>`;
-    })() : '';
+    // Maquila: todos los predios excepto Los Higos
+    const prediosMaquilaIdx = S.predios.map((p,pi)=>({p,pi})).filter(({p})=>p.nombre!=='Los Higos');
+    const maquilaSections = prediosMaquilaIdx.length
+      ? buildGridTable(prediosMaquilaIdx, 'maq', '#2a5425')
+      : '<div style="color:var(--muted);font-size:12px">Sin predios configurados</div>';
+
+    // Camiones: todos los predios (misma cuadrícula)
+    const camionesSections = buildGridTable(S.predios.map((p,pi)=>({p,pi})), 'cam', '#1a1208');
+
+    // Pizca: solo Los Higos
+    const losHigosIdx = S.predios.findIndex(p=>p.nombre==='Los Higos');
+    const pizcaSection = losHigosIdx>=0
+      ? buildGridTable([{p:S.predios[losHigosIdx], pi:losHigosIdx}], 'pizca', '#3a2a0a')
+      : '';
 
     const matRows = artsEnsilada.map(art=>{
       const precio = getCurrentPrice(art.id);
@@ -2271,25 +2244,17 @@ function renderGastos() {
       <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
     </tr>`).join('');
 
-    // Sección maquinaria ensilada: tractores y cosechadoras que ensilan
-    const equiposEnsilada = [];
-    S.predios.forEach((p,pi)=>{
-      (S.equipos[pi]||[]).filter(e=>e.tipo==='tractor'||e.tipo==='cosechadora'||e.tipo==='implemento').forEach(eq=>{
-        if(!equiposEnsilada.find(x=>x.eq.nombre===eq.nombre&&x.pi===pi))
-          equiposEnsilada.push({pi,p,eq});
-      });
-    });
+    // Sección maquinaria ensilada: lista propia S.equiposEnsilada
+    if(!S.equiposEnsilada) S.equiposEnsilada = [];
+    const equiposEnsilada = S.equiposEnsilada.map(eq=>({eq, pi:null, p:null}));
 
-    // Config para agregar cosechadoras
+    // Config para agregar equipos de ensilada
     const configEqEns = isAdmin ? `
       <div style="padding:8px 12px;background:var(--cream);border:1px solid var(--border);margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar equipo de ensilada:</span>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-          ${S.predios.map((p,i)=>`<label class="check-row"><input type="checkbox" class="eq-predio-check" value="${i}" checked/> ${p.emoji} ${p.nombre}</label>`).join('')}
-        </div>
-        <input type="text" id="eq-nombre" placeholder="Ej: Cosechadora 1..." style="padding:5px;width:160px;font-size:13px"/>
-        <select id="eq-tipo" style="padding:5px"><option value="tractor">Tractor</option><option value="cosechadora">Cosechadora</option></select>
-        <button class="btn btn-s" onclick="addEquipo()">+ Agregar</button>
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar equipo:</span>
+        <input type="text" id="ens-eq-nombre" placeholder="Ej: Cosechadora 1, Tractor 3..." style="padding:5px;width:180px;font-size:13px"/>
+        <select id="ens-eq-tipo" style="padding:5px"><option value="tractor">Tractor</option><option value="cosechadora">Cosechadora</option></select>
+        <button class="btn btn-s" onclick="addEquipoEnsilada()">+ Agregar</button>
       </div>` : '';
 
     const precioDieselEns = S.precioDiesel?.[selectedCn] || '';
@@ -2297,26 +2262,26 @@ function renderGastos() {
       ? `<span style="font-size:11px;color:var(--muted);background:#fff8e8;padding:3px 8px;border:1px solid #d4c0a0">💧 $${precioDieselEns}/L</span>`
       : `<span style="font-size:11px;color:#999;font-style:italic">💧 precio diesel pendiente</span>`;
 
-    const maqEqRows = equiposEnsilada.map(({pi,p,eq})=>{
-      const dDiesel = gastosGridDraft[`ens_d_${pi}_${eq.id}`] || '';
-      const dServ   = gastosGridDraft[`ens_s_${pi}_${eq.id}`] || '';
-      const dRep    = gastosGridDraft[`ens_r_${pi}_${eq.id}`] || '';
-      const histEq  = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.equipo===eq.nombre&&(g.prediosIdx||[]).includes(pi)&&g.actividad==='Ensilada');
+    const maqEqRows = equiposEnsilada.map(({eq})=>{
+      const dDiesel = gastosGridDraft[`ens_d_${eq.id}`] || '';
+      const dServ   = gastosGridDraft[`ens_s_${eq.id}`] || '';
+      const dRep    = gastosGridDraft[`ens_r_${eq.id}`] || '';
+      const histEq  = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.equipo===eq.nombre&&['Diesel Ensilada','Maquinaria Ensilada'].includes(g.categoria));
       const totEq   = histEq.reduce((s,g)=>s+parseFloat(g.monto||0),0);
       return `<tr>
         <td style="padding:7px 12px;font-weight:600">${eq.nombre}</td>
-        <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${p.emoji} ${p.nombre}</td>
+        <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${eq.tipo}</td>
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="0.1" placeholder="—" value="${dDiesel}"
           style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
-          onchange="gastosGridDraft['ens_d_${pi}_${eq.id}']=this.value"/></td>
+          onchange="gastosGridDraft['ens_d_${eq.id}']=this.value"/></td>
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dServ}"
           style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
-          onchange="gastosGridDraft['ens_s_${pi}_${eq.id}']=this.value"/></td>
+          onchange="gastosGridDraft['ens_s_${eq.id}']=this.value"/></td>
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dRep}"
           style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
-          onchange="gastosGridDraft['ens_r_${pi}_${eq.id}']=this.value"/></td>
+          onchange="gastosGridDraft['ens_r_${eq.id}']=this.value"/></td>
         <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber);font-size:12px">${totEq?fmt(totEq):'—'}</td>
-        <td style="padding:4px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delEquipoByNombre(${pi},'${eq.id}')">✕</button>`:''}</td>
+        <td style="padding:4px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delEquipoEnsilada('${eq.id}')">✕</button>`:''}</td>
       </tr>`;
     }).join('');
 
@@ -2680,6 +2645,23 @@ function recalcDieselCosecha(cn) {
   toast('✓ Diesel recalculado: ' + fmtN(precio,2) + '/L');
 }
 
+function addEquipoEnsilada() {
+  const nombre = document.getElementById('ens-eq-nombre')?.value.trim();
+  const tipo = document.getElementById('ens-eq-tipo')?.value || 'tractor';
+  if(!nombre) { toast('⚠️ Ingresa el nombre',true); return; }
+  if(!S.equiposEnsilada) S.equiposEnsilada = [];
+  if(S.equiposEnsilada.find(e=>e.nombre===nombre)) { toast('⚠️ Ya existe ese equipo',true); return; }
+  S.equiposEnsilada.push({id:uid(), nombre, tipo});
+  if(document.getElementById('ens-eq-nombre')) document.getElementById('ens-eq-nombre').value = '';
+  save(); renderGastos(); toast('✓ Equipo de ensilada agregado');
+}
+
+function delEquipoEnsilada(eqId) {
+  if(!confirm('¿Eliminar equipo de la lista de ensilada? Los gastos registrados se conservan.')) return;
+  S.equiposEnsilada = (S.equiposEnsilada||[]).filter(e=>e.id!==eqId);
+  save(); renderGastos(); toast('✓ Eliminado de ensilada');
+}
+
 function addEquipoLuz() {
   const pi = parseInt(document.getElementById('eq-predio-luz')?.value||0);
   const nombre = document.getElementById('eq-nombre-luz')?.value.trim();
@@ -2803,20 +2785,18 @@ function capturarGastos() {
   } else if(gastosTab === 'ensilada') {
     const nomEnsilada = parseFloat(gastosGridDraft['nom_ensilada']);
     const precioDieselCn = (S.precioDiesel && S.precioDiesel[cn]) || 0;
-    // Maquinaria propia ensilada (tractores + cosechadoras) — categoria propia
-    S.predios.forEach((p,pi)=>{
-      (S.equipos[pi]||[]).filter(e=>e.tipo==='tractor'||e.tipo==='cosechadora'||e.tipo==='implemento').forEach(eq=>{
-        const litros = parseFloat(gastosGridDraft[`ens_d_${pi}_${eq.id}`]);
-        const serv   = parseFloat(gastosGridDraft[`ens_s_${pi}_${eq.id}`]);
-        const rep    = parseFloat(gastosGridDraft[`ens_r_${pi}_${eq.id}`]);
-        if(litros>0) {
-          const montoDiesel = precioDieselCn ? litros*precioDieselCn : litros;
-          S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel Ensilada',equipo:eq.nombre,litros,precioPorLitro:precioDieselCn,monto:montoDiesel,prediosIdx:[pi],fecha:today()});
-          total++;
-        }
-        if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Ensilada',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx:[pi],fecha:today()}); total++; }
-        if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Ensilada',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx:[pi],fecha:today()}); total++; }
-      });
+    // Maquinaria propia ensilada — lista independiente S.equiposEnsilada
+    (S.equiposEnsilada||[]).forEach(eq=>{
+      const litros = parseFloat(gastosGridDraft[`ens_d_${eq.id}`]);
+      const serv   = parseFloat(gastosGridDraft[`ens_s_${eq.id}`]);
+      const rep    = parseFloat(gastosGridDraft[`ens_r_${eq.id}`]);
+      if(litros>0) {
+        const montoDiesel = precioDieselCn ? litros*precioDieselCn : litros;
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel Ensilada',equipo:eq.nombre,litros,precioPorLitro:precioDieselCn,monto:montoDiesel,prediosIdx,fecha:today()});
+        total++;
+      }
+      if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Ensilada',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,fecha:today()}); total++; }
+      if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Ensilada',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,fecha:today()}); total++; }
     });
     // Maquila por tonelada por tabla
     S.predios.forEach((p,pi)=>{
