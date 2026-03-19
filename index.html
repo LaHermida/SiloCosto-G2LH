@@ -2013,56 +2013,98 @@ function renderGastos() {
     }
 
   } else if(gastosTab === 'luz') {
-    const selPredios = gastosGridPrediosIdx.length ? gastosGridPrediosIdx : S.predios.map((_,i)=>i);
-
     const configLuz = isAdmin ? `
-      <div style="padding:12px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px">
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">⚙️ Agregar noria / punto de luz</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <select id="eq-predio-luz" style="padding:5px">${S.predios.map((p,i)=>`<option value="${i}">${p.emoji} ${p.nombre}</option>`).join('')}</select>
-          <input type="text" id="eq-nombre-luz" placeholder="Ej: Noria 212, Rebombeo..." style="padding:5px;width:180px"/>
-          <button class="btn btn-s" onclick="addEquipoLuz()">+ Agregar</button>
-        </div>
+      <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">⚙️ Agregar noria:</div>
+        <select id="eq-predio-luz" style="padding:5px;font-size:13px">${S.predios.map((p,i)=>`<option value="${i}">${p.emoji} ${p.nombre}</option>`).join('')}</select>
+        <input type="text" id="eq-nombre-luz" placeholder="Ej: Noria 212, Rebombeo..." style="padding:5px;width:180px;font-size:13px"/>
+        <button class="btn btn-s" onclick="addEquipoLuz()">+ Agregar</button>
       </div>` : '';
 
-    // Selector mes + cosecha split
+    // Mes selector (global)
+    const mesActual = parseInt(gastosGridDraft['mes']||new Date().getMonth()+1);
     const mesSelector = `
       <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:#fff8e8;border:1px solid #d4c0a0">
         <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">MES</div>
-          <select style="padding:5px" onchange="gastosGridDraft['mes']=this.value">${mesOpts}</select></div>
-        <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">COSECHA PRINCIPAL</div>
-          <select style="padding:5px" onchange="gastosGridDraft['cn_split_a']=this.value">${[1,2,3].map(c=>`<option value="${c}" ${parseInt(gastosGridDraft['cn_split_a']||selectedCn)===c?'selected':''}>C${c}</option>`).join('')}</select></div>
-        <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">% A ESA COSECHA</div>
-          <input type="number" min="1" max="100" value="${gastosGridDraft['cn_split_pct']||100}" style="width:70px;padding:5px;text-align:right;border:1px solid #d4c0a0"
-            onchange="gastosGridDraft['cn_split_pct']=this.value"/>%
-          <span style="font-size:11px;color:var(--muted);margin-left:4px">resto → C${parseInt(gastosGridDraft['cn_split_b']||([1,2,3].find(c=>c!==parseInt(gastosGridDraft['cn_split_a']||selectedCn))))||1}</span>
+          <select style="padding:5px" onchange="gastosGridDraft['mes']=this.value;renderGastos()">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActual===i+1?'selected':''}>${m}</option>`).join('')}</select>
         </div>
-        <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">2ª COSECHA (si aplica)</div>
-          <select style="padding:5px" onchange="gastosGridDraft['cn_split_b']=this.value">${[{v:'',l:'— Solo una —'},...[1,2,3].map(c=>({v:c,l:`C${c}`}))].map(o=>`<option value="${o.v}" ${(gastosGridDraft['cn_split_b']||'')==String(o.v)?'selected':''}>${o.l}</option>`).join('')}</select></div>
+        <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">2ª COSECHA (split)</div>
+          <select style="padding:5px" onchange="gastosGridDraft['cn_split_b']=this.value">${[{v:'',l:'— Solo una —'},...[1,2,3].map(c=>({v:c,l:`C${c}`}))].map(o=>`<option value="${o.v}" ${(gastosGridDraft['cn_split_b']||'')==String(o.v)?'selected':''}>${o.l}</option>`).join('')}</select>
+        </div>
       </div>`;
 
-    const luzRows = selPredios.map(pi => {
-      const p = S.predios[pi];
-      const puntos = (S.equipos[pi]||[]).filter(e=>e.tipo==='luz');
-      if(!puntos.length) return `<div style="padding:10px;color:var(--muted);font-size:12px">${p.emoji} ${p.nombre} — sin norias configuradas.</div>`;
-      return puntos.map(pt => {
-        const val = gastosGridDraft[`luz_${pi}_${pt.id}`] || '';
-        const repVal = gastosGridDraft[`luz_rep_${pi}_${pt.id}`] || '';
-        return `<div style="display:flex;align-items:center;gap:16px;padding:8px 0;border-bottom:1px solid var(--border)">
-          <span style="min-width:180px">${p.emoji} <strong>${pt.nombre}</strong></span>
-          <div><div style="font-size:10px;color:var(--muted);margin-bottom:2px">CONSUMO ($)</div>
-            <input type="number" min="0" step="1" placeholder="—" value="${val}"
-              style="width:130px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
-              onchange="gastosGridDraft['luz_${pi}_${pt.id}']=this.value"/></div>
-          <div><div style="font-size:10px;color:var(--muted);margin-bottom:2px">REPARACIÓN ($)</div>
-            <input type="number" min="0" step="1" placeholder="—" value="${repVal}"
-              style="width:130px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
-              onchange="gastosGridDraft['luz_rep_${pi}_${pt.id}']=this.value"/></div>
-        </div>`;
-      }).join('');
-    }).join('');
+    // Build all norias across all predios as one table
+    const allNorias = [];
+    S.predios.forEach((p,pi)=>{
+      (S.equipos[pi]||[]).filter(e=>e.tipo==='luz').forEach(pt=>{
+        allNorias.push({pi,p,pt});
+      });
+    });
 
-    tabContent = `${configLuz}${mesSelector}<div style="margin-top:4px">${luzRows}</div>`;
+    if(!allNorias.length) {
+      tabContent = `${configLuz}<div class="empty"><div class="empty-icon">💡</div><div>Sin norias configuradas</div></div>`;
+    } else {
+      // Get saved % per noria from S.luzPct (persisted)
+      if(!S.luzPct) S.luzPct = {};
+
+      const luzRows = allNorias.map(({pi,p,pt})=>{
+        const val    = gastosGridDraft[`luz_${pi}_${pt.id}`] || '';
+        const repVal = gastosGridDraft[`luz_rep_${pi}_${pt.id}`] || '';
+        const pct    = S.luzPct[`${pi}_${pt.id}`] !== undefined ? S.luzPct[`${pi}_${pt.id}`] : 100;
+        const cnA    = parseInt(gastosGridDraft['cn_split_a']||selectedCn);
+        // Acumulado this cosecha by mes
+        const histMes = (S.gastosGenerales||[]).filter(g=>
+          g.categoria==='Luz'&&g.equipo===pt.nombre&&(g.prediosIdx||[]).includes(pi)&&getGastoCosecha(g)===selectedCn
+        );
+        const acumMes = {};
+        histMes.forEach(g=>{ const m=g.mes||'?'; acumMes[m]=(acumMes[m]||0)+parseFloat(g.monto||0); });
+        const acumTotal = histMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        const acumStr = Object.entries(acumMes).map(([m,v])=>`<span style="font-size:10px;color:var(--muted)">${MESES[(parseInt(m)||1)-1]?.slice(0,3)||m}: ${fmt(v)}</span>`).join(' ');
+
+        return `<tr>
+          <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${pt.nombre}</td>
+          <td style="padding:8px 12px;font-size:11px;color:var(--muted)">${p.emoji} ${p.nombre}</td>
+          <td style="padding:4px 8px;text-align:center">
+            <input type="number" min="0" max="100" step="1" value="${pct}"
+              style="width:60px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px"
+              onchange="if(!S.luzPct)S.luzPct={};S.luzPct['${pi}_${pt.id}']=parseFloat(this.value)||100;save()"/>%
+          </td>
+          <td style="padding:4px 8px;text-align:right">
+            <input type="number" min="0" step="1" placeholder="—" value="${val}"
+              style="width:120px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+              onchange="gastosGridDraft['luz_${pi}_${pt.id}']=this.value"/>
+          </td>
+          <td style="padding:4px 8px;text-align:right">
+            <input type="number" min="0" step="1" placeholder="—" value="${repVal}"
+              style="width:120px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+              onchange="gastosGridDraft['luz_rep_${pi}_${pt.id}']=this.value"/>
+          </td>
+          <td style="padding:8px 12px;text-align:right">
+            <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumTotal?fmt(acumTotal):'—'}</div>
+            <div style="margin-top:2px">${acumStr}</div>
+          </td>
+          ${isAdmin?`<td style="padding:4px"><button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delEquipoByNombre(${pi},'${pt.id}')">✕</button></td>`:'<td></td>'}
+        </tr>`;
+      }).join('');
+
+      tabContent = `
+        ${configLuz}
+        ${mesSelector}
+        <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <colgroup><col style="width:160px"/><col style="width:110px"/><col style="width:90px"/><col style="width:140px"/><col style="width:140px"/><col/><col style="width:36px"/></colgroup>
+          <thead><tr style="background:var(--soil);color:var(--straw)">
+            <th style="padding:7px 12px;text-align:left">Noria</th>
+            <th style="padding:7px 12px;text-align:left">Predio</th>
+            <th style="padding:7px 12px;text-align:center">% C${selectedCn}</th>
+            <th style="padding:7px 12px;text-align:right">Consumo ($)</th>
+            <th style="padding:7px 12px;text-align:right">Reparación ($)</th>
+            <th style="padding:7px 12px;text-align:right">Acumulado C${selectedCn}</th>
+            <th></th>
+          </tr></thead>
+          <tbody>${luzRows}</tbody>
+        </table></div>`;
+    }
 
   } else if(gastosTab === 'ensilada') {
     const artsEnsilada = S.articulos.filter(a=>a.categoria==='Materiales de ensilada');
@@ -2387,14 +2429,24 @@ function capturarGastos() {
     });
 
   } else if(gastosTab === 'luz') {
-    const mes = gastosGridDraft['mes'] || new Date().getMonth()+1;
+    const mes = parseInt(gastosGridDraft['mes'] || new Date().getMonth()+1);
+    const cnB = gastosGridDraft['cn_split_b'] ? parseInt(gastosGridDraft['cn_split_b']) : null;
     S.predios.forEach((p,pi)=>{
-      if(!prediosIdx.includes(pi)) return;
       (S.equipos[pi]||[]).filter(e=>e.tipo==='luz').forEach(pt=>{
         const monto = parseFloat(gastosGridDraft[`luz_${pi}_${pt.id}`]);
         const rep   = parseFloat(gastosGridDraft[`luz_rep_${pi}_${pt.id}`]);
-        if(monto>0) { pushConSplit({id:uid(),anio,categoria:'Luz',equipo:pt.nombre,mes,monto,prediosIdx:[pi],fecha:today()}); }
-        if(rep>0)   { pushConSplit({id:uid(),anio,categoria:'Reparaciones Noria',equipo:pt.nombre,mes,monto:rep,prediosIdx:[pi],fecha:today()}); }
+        const pctA  = ((S.luzPct&&S.luzPct[`${pi}_${pt.id}`]!==undefined) ? S.luzPct[`${pi}_${pt.id}`] : 100) / 100;
+        const pctB  = cnB ? (1 - pctA) : 0;
+        if(monto>0) {
+          S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Luz',equipo:pt.nombre,mes,monto:monto*pctA,prediosIdx:[pi],fecha:today()});
+          total++;
+          if(cnB&&pctB>0) { S.gastosGenerales.push({id:uid(),cosecha:cnB,anio,categoria:'Luz',equipo:pt.nombre,mes,monto:monto*pctB,prediosIdx:[pi],fecha:today()}); total++; }
+        }
+        if(rep>0) {
+          S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Reparaciones Noria',equipo:pt.nombre,mes,monto:rep*pctA,prediosIdx:[pi],fecha:today()});
+          total++;
+          if(cnB&&pctB>0) { S.gastosGenerales.push({id:uid(),cosecha:cnB,anio,categoria:'Reparaciones Noria',equipo:pt.nombre,mes,monto:rep*pctB,prediosIdx:[pi],fecha:today()}); total++; }
+        }
       });
     });
 
