@@ -129,7 +129,9 @@ tr:hover td { background:var(--cream); }
 .tabla-card { border:2px solid var(--border); padding:10px 14px; cursor:pointer; transition:all 0.15s; text-align:center; background:var(--cream); }
 .tabla-card:hover { border-color:var(--gold); }
 .tabla-card.selected { border-color:var(--gold); background:rgba(208,140,40,0.1); }
-.tabla-card.active-reg { border-color:var(--green); background:rgba(42,84,37,0.08); }
+.tabla-card.active-reg { border-color:var(--green); background:var(--soil); color:var(--straw); }
+.tabla-card.active-reg .tabla-name { color:var(--straw); }
+.tabla-card.active-reg .tabla-ha { color:var(--amber); }
 .tabla-card.sin-siembra { opacity:0.55; border-style:dashed; }
 .tabla-name { font-weight:700; font-size:13px; color:var(--soil); }
 .tabla-ha { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); margin-top:2px; }
@@ -188,11 +190,11 @@ tr:hover td { background:var(--cream); }
   <nav class="header-nav">
     <button class="hnav active" onclick="goSec('dashboard')">Dashboard</button>
     <button class="hnav" onclick="goSec('registro')">Registro</button>
-    <button class="hnav" onclick="goSec('reportes')">Reportes</button>
     <button class="hnav" onclick="goSec('gastos')">Gastos</button>
     <button class="hnav" onclick="goSec('tablas')">Tablas</button>
     <button class="hnav" onclick="goSec('articulos')">Artículos</button>
     <button class="hnav" onclick="goSec('depreciaciones')">Depreciaciones</button>
+    <button class="hnav" onclick="goSec('reportes')">Reportes</button>
   </nav>
 </header>
 
@@ -1424,38 +1426,61 @@ function renderRepContent() {
     // Predio-level report
     const cats = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz','Ensilada','Materiales de ensilada','Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
     const totalHa = p.tablas.reduce((s,t)=>s+t.ha,0);
-    let catTotals = {};
-    cats.forEach(c=>catTotals[c]=0);
-    let totalDep=0, totKilos=0, totKgMS=0, totCost=0;
 
-    for(let ti=0;ti<p.tablas.length;ti++) {
-      const td = getTablaData(pi,cn,ti);
-      const dep = calcDepTabla(pi,cn,ti);
-      totalDep+=dep;
-      totKilos+=parseFloat(td.kilos)||0;
-      totKgMS+=((parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100));
-      (td.consumos||[]).forEach(c=>{
-        if(catTotals[c.categoria]!==undefined) catTotals[c.categoria]+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
-        else catTotals['Otro']+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
+    // Build per-cultivo data
+    const cvSet = new Set();
+    for(let ti=0;ti<p.tablas.length;ti++) { const td=getTablaData(pi,cn,ti); if(!td.sinSiembra) cvSet.add(td.cultivo||'maiz'); }
+    const cultivosPresentes = [...cvSet];
+
+    // Build totals for each cultivo separately
+    function buildCvTotals(filterCv) {
+      let catT = {}; cats.forEach(c=>catT[c]=0);
+      let dep=0, kilos=0, kgMS=0, ha=0;
+      for(let ti=0;ti<p.tablas.length;ti++) {
+        const td=getTablaData(pi,cn,ti);
+        if(td.sinSiembra) continue;
+        const cv=td.cultivo||'maiz';
+        if(filterCv && cv!==filterCv) continue;
+        dep+=calcDepTabla(pi,cn,ti);
+        kilos+=parseFloat(td.kilos)||0;
+        kgMS+=(parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100);
+        ha+=parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
+        (td.consumos||[]).forEach(c=>{
+          if(catT[c.categoria]!==undefined) catT[c.categoria]+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
+          else catT['Otro']+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
+        });
+      }
+      // Gastos generales proportional to ha
+      const totHaAll = p.tablas.reduce((s,t,ti)=>{ const td=getTablaData(pi,cn,ti); return td.sinSiembra?s:s+(parseFloat(td.haSembradas)||t.ha||0); },0);
+      const pctHa = totHaAll ? ha/totHaAll : 0;
+      (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===cn&&(g.prediosIdx||[]).includes(pi)).forEach(g=>{
+        const monto = (parseFloat(g.monto)||0)*pctHa;
+        if(catT[g.categoria]!==undefined) catT[g.categoria]+=monto;
+        else catT['Otro']+=monto;
       });
+      const cost = Object.values(catT).reduce((s,v)=>s+v,0)+dep;
+      return {catT,dep,kilos,kgMS,ha,cost};
     }
-    // Add gastos generales per category
-    (S.gastosGenerales||[]).filter(g=>getCosechaFromMes(g.mes)===cn).forEach(g=>{
-      const montoPredio = getGastoParaPredio(g, pi);
-      if(catTotals[g.categoria]!==undefined) catTotals[g.categoria]+=montoPredio;
-      else catTotals['Otro']+=montoPredio;
-    });
-    totCost = Object.values(catTotals).reduce((s,v)=>s+v,0) + totalDep;
+
+    // Main totals (all cultivos)
+    const main = buildCvTotals(null);
+    const totalDep=main.dep, totKilos=main.kilos, totKgMS=main.kgMS, totCost=main.cost;
     const cpk = totKilos?totCost/totKilos:null;
     const cpkms = totKgMS?totCost/totKgMS:null;
 
-    let catRows = cats.map(cat=>{
-      const tot=catTotals[cat]||0;
-      return `<tr><td>${cat}</td><td><span style="background:#e8f5e8;color:var(--green);padding:2px 6px;font-size:10px">Variable</span></td>
-        <td class="mono tr">${tot?fmt(tot/totalHa):'$ —'}</td><td class="mono tr">${tot?fmt(tot):'$ —'}</td><td class="mono tr" style="color:var(--muted)">—</td></tr>`;
-    }).join('');
-    catRows += `<tr><td>Depreciación</td><td><span style="background:#fef3e2;color:var(--amber);padding:2px 6px;font-size:10px">Constante</span></td>
-      <td class="mono tr">${fmt(totalDep/totalHa)}</td><td class="mono tr">${fmt(totalDep)}</td><td class="mono tr" style="color:var(--muted)">—</td></tr>`;
+    // Build table for a given totals object
+    function buildCatRows(d) {
+      let rows = cats.map(cat=>{
+        const tot=d.catT[cat]||0;
+        return `<tr><td>${cat}</td><td><span style="background:#e8f5e8;color:var(--green);padding:2px 6px;font-size:10px">Variable</span></td>
+          <td class="mono tr">${tot?fmt(tot/d.ha):'$ —'}</td><td class="mono tr">${tot?fmt(tot):'$ —'}</td><td class="mono tr" style="color:var(--muted)">—</td></tr>`;
+      }).join('');
+      rows += `<tr><td>Depreciación</td><td><span style="background:#fef3e2;color:var(--amber);padding:2px 6px;font-size:10px">Constante</span></td>
+        <td class="mono tr">${fmt(d.dep/d.ha)}</td><td class="mono tr">${fmt(d.dep)}</td><td class="mono tr" style="color:var(--muted)">—</td></tr>`;
+      return rows;
+    }
+
+    const catRows = buildCatRows({catT:main.catT, dep:main.dep, ha:totalHa});
 
     document.getElementById('rep-content').innerHTML = `
       <div class="card">
@@ -1503,41 +1528,45 @@ function renderRepContent() {
             </div>
           </div>
         </div>
-        ${(()=>{
-          // Per-cultivo breakdown
-          const cvMap = {};
-          for(let ti=0;ti<p.tablas.length;ti++) {
-            const td=getTablaData(pi,cn,ti);
-            if(td.sinSiembra) continue;
-            const cv=td.cultivo||'maiz';
-            if(!cvMap[cv]) cvMap[cv]={kilos:0,kgMS:0,ha:0,cost:0};
-            cvMap[cv].kilos+=parseFloat(td.kilos)||0;
-            cvMap[cv].kgMS+=(parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100);
-            cvMap[cv].ha+=parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
-            cvMap[cv].cost+=calcTotalTabla(pi,cn,ti);
-          }
-          const cvKeys=Object.keys(cvMap);
-          if(cvKeys.length<=1) return '';
-          const cvRows=cvKeys.map(cv=>{
-            const d=cvMap[cv];
-            const cvInfo=CULTIVOS[cv]||CULTIVOS.otro;
-            const cvCpk=d.kilos?d.cost/d.kilos:null;
-            const cvCpkms=d.kgMS?d.cost/d.kgMS:null;
-            return '<tr><td>'+cvInfo.icon+' '+cvInfo.label+'</td>'
-              +'<td class="mono tr">'+fmtN(d.ha,2)+' ha</td>'
-              +'<td class="mono tr">'+fmtN(d.kilos,0)+' kg</td>'
-              +'<td class="mono tr">'+(d.ha?fmtN(d.kilos/d.ha,0)+' kg/ha':'—')+'</td>'
-              +'<td class="mono tr amber">'+(cvCpk?'$'+cvCpk.toFixed(2):'—')+'</td>'
-              +'<td class="mono tr green">'+(cvCpkms?'$'+cvCpkms.toFixed(2):'—')+'</td></tr>';
-          }).join('');
-          return '<div style="margin-top:12px;padding:14px;background:rgba(255,255,255,0.05)">'
-            +'<div style="font-family:monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Desglose por cultivo</div>'
-            +'<table style="width:100%;border-collapse:collapse;font-size:13px">'
-            +'<thead><tr style="color:var(--amber)"><th style="text-align:left">Cultivo</th><th class="tr">Ha</th><th class="tr">Kilos</th><th class="tr">kg/ha</th><th class="tr">$/kg silo</th><th class="tr">$/kg MS</th></tr></thead>'
-            +'<tbody style="color:var(--straw)">'+cvRows+'</tbody>'
-            +'</table></div>';
-        })()}
-      </div>`;
+      </div>
+      ${cultivosPresentes.length > 1 ? cultivosPresentes.map(cv => {
+        const cvInfo = CULTIVOS[cv]||CULTIVOS.otro;
+        const d = buildCvTotals(cv);
+        const cvCpk = d.kilos?d.cost/d.kilos:null;
+        const cvCpkms = d.kgMS?d.cost/d.kgMS:null;
+        const cvCatRows = buildCatRows(d);
+        return `<div class="card" style="margin-top:8px">
+          <div class="card-head" style="background:var(--soil);color:var(--straw)">${cvInfo.icon} ${cvInfo.label} — ${fmtN(d.ha,2)} ha · ${d.kilos?fmtN(d.kilos,0)+' kg':''}</div>
+          <div class="tbl-wrap"><table style="table-layout:fixed;width:100%">
+            <colgroup><col style="width:220px"/><col style="width:100px"/><col style="width:160px"/><col style="width:160px"/><col style="width:160px"/></colgroup>
+            <thead><tr><th style="text-align:left">Categoría</th><th style="text-align:left">Tipo</th><th class="tr">$/Ha</th><th class="tr">Gasto Total</th><th class="tr">kg/ha</th></tr></thead>
+            <tbody>${cvCatRows}
+              <tr style="background:var(--soil);color:var(--straw)">
+                <td colspan="2"><strong>TOTAL</strong></td>
+                <td class="mono tr"><strong>${fmt(d.cost/d.ha)}</strong></td>
+                <td class="mono tr"><strong>${fmt(d.cost)}</strong></td>
+                <td class="mono tr"><strong>${d.kilos&&d.ha?fmtN(d.kilos/d.ha,0)+' kg':'—'}</strong></td>
+              </tr>
+            </tbody>
+          </table></div>
+          <div style="padding:16px 20px;background:var(--soil);margin-top:8px">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;text-align:center">
+              <div>
+                <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Kilos silo</div>
+                <div style="font-family:'Fraunces',serif;font-size:26px;font-weight:700;color:var(--straw)">${d.kilos?fmtN(d.kilos,0):'—'}</div>
+              </div>
+              <div style="border-left:1px solid rgba(255,255,255,0.15)">
+                <div style="font-family:'DM Mono',monospace;font-size:9px;color:#4caf50;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">$/kg silo</div>
+                <div style="font-family:'Fraunces',serif;font-size:36px;font-weight:700;color:#4caf50;line-height:1">${cvCpk?'$'+cvCpk.toFixed(2):'—'}</div>
+              </div>
+              <div>
+                <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">$/kg MS</div>
+                <div style="font-family:'Fraunces',serif;font-size:36px;font-weight:700;color:var(--gold);line-height:1">${cvCpkms?'$'+cvCpkms.toFixed(2):'—'}</div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join('') : ''}`;
   } else {
     // Per-tabla report — show tabla selector then detail
     const tablaGrid = p.tablas.map((t,ti)=>`
