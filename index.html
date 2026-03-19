@@ -783,13 +783,14 @@ function renderDash() {
   stats.innerHTML = cards;
 
   const det = document.getElementById('dash-detail');
-  // Group by predio > cosecha > cultivo
+  // Group by cosecha > predio > cultivo
   let html = '';
-  S.predios.forEach((p,pi)=>{
-    const ciclos = p.ciclos||3;
-    const cosechas = ciclos===1?[1]:[1,2,3];
-    for(const cn of cosechas) {
-      // Build cultivo groups
+  for(const cn of [1,2,3]) {
+    let sectionRows = '';
+    S.predios.forEach((p,pi)=>{
+      const ciclos = p.ciclos||3;
+      if(ciclos===1 && cn>1) return;
+      // Build cultivo groups for this predio+cosecha
       const cvGroups = {};
       for(let ti=0;ti<p.tablas.length;ti++) {
         const td = getTablaData(pi,cn,ti);
@@ -815,7 +816,7 @@ function renderDash() {
         const kgHa   = d.ha    ? d.kilos/d.ha   : null;
         const cpk    = d.kilos ? d.cost/d.kilos  : null;
         const cpkms  = d.kgMS  ? d.cost/d.kgMS   : null;
-        html += `<tr>
+        sectionRows += `<tr>
           <td>${p.emoji} <strong>${p.nombre}</strong></td>
           <td class="mono">C${cn}</td>
           <td>${cultivoBadge(cv)}</td>
@@ -828,8 +829,9 @@ function renderDash() {
           <td class="mono tr green">${cpkms!==null?'$'+cpkms.toFixed(2):'—'}</td>
         </tr>`;
       });
-    }
-  });
+    });
+    if(sectionRows) html += `<tr style="background:var(--soil);color:var(--straw)"><td colspan="10" style="padding:6px 14px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase">Cosecha ${cn}</td></tr>${sectionRows}`;
+  }
 
   det.innerHTML = html ? `<div class="tbl-wrap"><table>
     <thead><tr>
@@ -1264,7 +1266,6 @@ function renderRegContent() {
       ` : '<div style="color:var(--muted);font-size:13px">Primero agrega artículos en la sección "Artículos"</div>'}
     </div>` : ''}
 
-    ${(td.consumos||[]).length ? `
     <div class="card">
       <div class="card-head">📑 Consumos de ${p.tablas[ti].nombre} · Cosecha ${cn}</div>
       <div class="tbl-wrap"><table>
@@ -1282,7 +1283,7 @@ function renderRegContent() {
           <div class="res-sub">$/kg MS: ${cpkms!==null?'$'+cpkms.toFixed(2):'—'}</div>
         </div>
       </div>
-    </div>` : ''}`;
+    </div>`;
 
   // ── GRID MATERIAL CULTIVO ──
   const artsCultivo = S.articulos.filter(a=>a.categoria==='Material de cultivo');
