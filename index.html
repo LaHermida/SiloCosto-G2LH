@@ -2378,11 +2378,22 @@ function renderGastos() {
           ${p.emoji} ${t.nombre}
         </label>`;
       }).join('');
+      // All keys for this article
+      const allChkKeys = tablaInfoME.map(({pi,ti})=>`me_chk_${art.id}_${pi}_${ti}`);
+      const allChecked = allChkKeys.every(k=>gastosGridDraft[k]!=='0'&&gastosGridDraft[k]!==false&&gastosGridDraft[k]!==undefined);
       return `<tr style="border-bottom:1px solid var(--border)">
         <td style="white-space:nowrap;padding:7px 12px;min-width:150px"><strong>${art.nombre}</strong><br>
           <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${fmt(precio)}/${art.unidad}</span>
         </td>
-        <td style="padding:6px 10px;font-size:12px">${tablaChecks||'<span style="color:var(--muted);font-size:11px">sin tablas</span>'}</td>
+        <td style="padding:6px 10px;font-size:12px">
+          <div style="margin-bottom:4px">
+            <button class="btn btn-s" style="font-size:10px;padding:2px 8px"
+              onclick="${allChkKeys.map(k=>`gastosGridDraft['${k}']='${allChecked?'0':'1'}'`).join(';')};renderGastos()">
+              ${allChecked?'☐ Quitar todas':'☑ Seleccionar todas'}
+            </button>
+          </div>
+          ${tablaChecks||'<span style="color:var(--muted);font-size:11px">sin tablas</span>'}
+        </td>
         <td style="padding:4px 8px;white-space:nowrap">
           <input type="number" min="0" step="0.01" placeholder="Cantidad total" value="${cant}"
             style="width:130px;padding:4px 8px;text-align:right;border:1px solid var(--border);font-family:'DM Mono',monospace;font-size:13px"
