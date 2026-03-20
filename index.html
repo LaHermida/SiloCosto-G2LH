@@ -129,13 +129,13 @@ tr:hover td { background:var(--cream); }
 .tabla-card { border:2px solid var(--border); padding:10px 14px; cursor:pointer; transition:all 0.15s; text-align:center; background:#ffffff; }
 .tabla-card:hover { border-color:var(--earth); background:#f0f5ea; }
 .tabla-card.selected { border-color:var(--earth); background:#e8f0e0; }
-.tabla-card.active-reg { border-color:var(--soil); background:var(--soil); color:#ffffff; }
+.tabla-card.active-reg { border-color:var(--soil); border-width:3px; background:#e8f0e0; color:var(--soil); }
 .tabla-card.sin-siembra { opacity:0.55; border-style:dashed; }
 .tabla-name { font-weight:700; font-size:13px; color:var(--soil); }
 .tabla-ha { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); margin-top:2px; }
-.tabla-card.active-reg .tabla-name { color:#ffffff !important; }
-.tabla-card.active-reg .tabla-ha { color:#c8e6a0 !important; }
-.tabla-card.active-reg span { color:#c8e6a0 !important; }
+.tabla-card.active-reg .tabla-name { color:var(--soil) !important; }
+.tabla-card.active-reg .tabla-ha { color:var(--muted) !important; }
+.tabla-card.active-reg span { color:var(--soil) !important; }
 .tabla-cultivo { font-size:10px; margin-top:4px; padding:2px 6px; display:inline-block; }
 .cultivo-maiz { background:#e8f5e8; color:var(--green); }
 .cultivo-trigo { background:#fef3e2; color:var(--amber); }
