@@ -533,15 +533,15 @@ async function save() {
   }
 }
 function uid() { return Math.random().toString(36).slice(2,9); }
-function today() { return new Date().toLocaleDateString('es-CL'); }
+function today() { return new Date().toLocaleDateString('en-US'); }
 
 function fmt(n) {
   if(n===null||n===undefined||isNaN(n)||n==='') return '—';
-  return '$'+Number(n).toLocaleString('es-CL',{minimumFractionDigits:0,maximumFractionDigits:2});
+  return '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});
 }
 function fmtN(n,d=2) {
   if(!n&&n!==0) return '—';
-  return Number(n).toLocaleString('es-CL',{minimumFractionDigits:d,maximumFractionDigits:d});
+  return Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
 }
 
 const CULTIVOS = {
@@ -1530,30 +1530,34 @@ function renderRepContent() {
         </table></div>` : ''}
         ${cultivosPresentes.length <= 1 ? `<div style="margin-top:14px;padding:20px;background:var(--soil)">
           <div style="text-align:center;color:var(--straw);font-family:'Fraunces',serif;font-size:15px;font-weight:700;margin-bottom:16px">COSTO POR KILO</div>
-          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:24px;padding:0 20px">
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:16px;padding:0 12px">
             <div style="text-align:center">
-              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Kilos silo</div>
-              <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:var(--straw)">${totKilos?fmtN(totKilos,0):'—'}</div>
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Kilos Silo</div>
+              <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--straw)">${totKilos?fmtN(totKilos,0):'—'}</div>
             </div>
             <div style="text-align:center">
-              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">kg MS</div>
-              <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:var(--straw)">${totKgMS?fmtN(totKgMS,0):'—'}</div>
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Kg MS</div>
+              <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--straw)">${totKgMS?fmtN(totKgMS,0):'—'}</div>
             </div>
             <div style="text-align:center">
-              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">$/ha</div>
-              <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:var(--straw)">${fmt(totCost/totalHa)}</div>
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">$/ha</div>
+              <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--straw)">${fmt(totCost/totalHa)}</div>
             </div>
             <div style="text-align:center">
-              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">kg/ha</div>
-              <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:var(--straw)">${totKilos&&totalHa?fmtN(totKilos/totalHa,0):'—'}</div>
-            </div>
-            <div style="text-align:center;border-left:1px solid rgba(255,255,255,0.15);padding-left:24px">
-              <div style="font-family:'DM Mono',monospace;font-size:10px;color:#4caf50;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">$/kg silo</div>
-              <div style="font-family:'Fraunces',serif;font-size:38px;font-weight:700;color:#4caf50;line-height:1">${cpk?'$'+cpk.toFixed(2):'—'}</div>
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">kg/ha</div>
+              <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--straw)">${totKilos&&totalHa?fmtN(totKilos/totalHa,0):'—'}</div>
             </div>
             <div style="text-align:center">
-              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">$/kg MS</div>
-              <div style="font-family:'Fraunces',serif;font-size:38px;font-weight:700;color:var(--gold);line-height:1">${cpkms?'$'+cpkms.toFixed(2):'—'}</div>
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">kg MS/ha</div>
+              <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--straw)">${totKgMS&&totalHa?fmtN(totKgMS/totalHa,0):'—'}</div>
+            </div>
+            <div style="text-align:center;border-left:1px solid rgba(255,255,255,0.15);padding-left:12px">
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:#4caf50;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">$/kg silo</div>
+              <div style="font-family:'Fraunces',serif;font-size:36px;font-weight:700;color:#4caf50;line-height:1">${cpk?'$'+cpk.toFixed(2):'—'}</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">$/kg MS</div>
+              <div style="font-family:'Fraunces',serif;font-size:36px;font-weight:700;color:var(--gold);line-height:1">${cpkms?'$'+cpkms.toFixed(2):'—'}</div>
             </div>
           </div>
         </div>` : ''}
@@ -1581,22 +1585,26 @@ function renderRepContent() {
             </tbody>
           </table></div>
           <div style="padding:16px 20px;background:var(--soil);margin-top:8px">
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:24px;text-align:center">
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;text-align:center">
               <div>
-                <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Kilos silo</div>
-                <div style="font-family:'Fraunces',serif;font-size:26px;font-weight:700;color:var(--straw)">${d.kilos?fmtN(d.kilos,0):'—'}</div>
+                <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Kilos Silo</div>
+                <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:var(--straw)">${d.kilos?fmtN(d.kilos,0):'—'}</div>
               </div>
               <div>
                 <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">kg/ha</div>
-                <div style="font-family:'Fraunces',serif;font-size:26px;font-weight:700;color:var(--straw)">${d.kilos&&d.ha?fmtN(d.kilos/d.ha,0):'—'}</div>
+                <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:var(--straw)">${d.kilos&&d.ha?fmtN(d.kilos/d.ha,0):'—'}</div>
+              </div>
+              <div>
+                <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">kg MS/ha</div>
+                <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:var(--straw)">${d.kgMS&&d.ha?fmtN(d.kgMS/d.ha,0):'—'}</div>
               </div>
               <div style="border-left:1px solid rgba(255,255,255,0.15)">
                 <div style="font-family:'DM Mono',monospace;font-size:9px;color:#4caf50;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">$/kg silo</div>
-                <div style="font-family:'Fraunces',serif;font-size:36px;font-weight:700;color:#4caf50;line-height:1">${cvCpk?'$'+cvCpk.toFixed(2):'—'}</div>
+                <div style="font-family:'Fraunces',serif;font-size:32px;font-weight:700;color:#4caf50;line-height:1">${cvCpk?'$'+cvCpk.toFixed(2):'—'}</div>
               </div>
               <div>
                 <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">$/kg MS</div>
-                <div style="font-family:'Fraunces',serif;font-size:36px;font-weight:700;color:var(--gold);line-height:1">${cvCpkms?'$'+cvCpkms.toFixed(2):'—'}</div>
+                <div style="font-family:'Fraunces',serif;font-size:32px;font-weight:700;color:var(--gold);line-height:1">${cvCpkms?'$'+cvCpkms.toFixed(2):'—'}</div>
               </div>
             </div>
           </div>
@@ -1665,30 +1673,34 @@ function renderRepContent() {
         </table></div>
         <div style="margin-top:14px;padding:20px;background:var(--soil)">
           <div style="text-align:center;color:var(--straw);font-family:'Fraunces',serif;font-size:15px;font-weight:700;margin-bottom:16px">COSTO POR KILO</div>
-          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:24px;padding:0 20px">
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:16px;padding:0 12px">
             <div style="text-align:center">
-              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Kilos silo</div>
-              <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:var(--straw)">${kilos?fmtN(kilos,0):'—'}</div>
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Kilos Silo</div>
+              <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--straw)">${kilos?fmtN(kilos,0):'—'}</div>
             </div>
             <div style="text-align:center">
-              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">kg MS</div>
-              <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:var(--straw)">${kgMS?fmtN(kgMS,0):'—'}</div>
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Kg MS</div>
+              <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--straw)">${kgMS?fmtN(kgMS,0):'—'}</div>
             </div>
             <div style="text-align:center">
-              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">$/ha</div>
-              <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:var(--straw)">${fmt(total/p.tablas[ti].ha)}</div>
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">$/ha</div>
+              <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--straw)">${fmt(total/p.tablas[ti].ha)}</div>
             </div>
             <div style="text-align:center">
-              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">kg/ha</div>
-              <div style="font-family:'Fraunces',serif;font-size:28px;font-weight:700;color:var(--straw)">${kilos&&p.tablas[ti].ha?fmtN(kilos/p.tablas[ti].ha,0):'—'}</div>
-            </div>
-            <div style="text-align:center;border-left:1px solid rgba(255,255,255,0.15);padding-left:24px">
-              <div style="font-family:'DM Mono',monospace;font-size:10px;color:#4caf50;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">$/kg silo</div>
-              <div style="font-family:'Fraunces',serif;font-size:38px;font-weight:700;color:#4caf50;line-height:1">${cpk?'$'+cpk.toFixed(2):'—'}</div>
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">kg/ha</div>
+              <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--straw)">${kilos&&p.tablas[ti].ha?fmtN(kilos/p.tablas[ti].ha,0):'—'}</div>
             </div>
             <div style="text-align:center">
-              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">$/kg MS</div>
-              <div style="font-family:'Fraunces',serif;font-size:38px;font-weight:700;color:var(--gold);line-height:1">${cpkms?'$'+cpkms.toFixed(2):'—'}</div>
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">kg MS/ha</div>
+              <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--straw)">${kgMS&&p.tablas[ti].ha?fmtN(kgMS/p.tablas[ti].ha,0):'—'}</div>
+            </div>
+            <div style="text-align:center;border-left:1px solid rgba(255,255,255,0.15);padding-left:12px">
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:#4caf50;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">$/kg silo</div>
+              <div style="font-family:'Fraunces',serif;font-size:36px;font-weight:700;color:#4caf50;line-height:1">${cpk?'$'+cpk.toFixed(2):'—'}</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">$/kg MS</div>
+              <div style="font-family:'Fraunces',serif;font-size:36px;font-weight:700;color:var(--gold);line-height:1">${cpkms?'$'+cpkms.toFixed(2):'—'}</div>
             </div>
           </div>
         </div>
@@ -1724,7 +1736,7 @@ function printReportePredio(pi, cn) {
   const totCost=Object.values(catTotals).reduce((s,v)=>s+v,0)+totalDep;
   const cpk=totKilos?totCost/totKilos:null;
   const cpkms=totKgMS?totCost/totKgMS:null;
-  const fmtPDF = n => n?'$ '+Number(n).toLocaleString('es-CL',{minimumFractionDigits:2,maximumFractionDigits:2}):'$ —';
+  const fmtPDF = n => n?'$ '+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'$ —';
   // Only show cats with values
   const activeCats = cats.filter(c=>catTotals[c]>0);
 
@@ -1767,7 +1779,7 @@ function printReporteTabla(pi, cn, ti) {
     if(catTotals[c.categoria]!==undefined)catTotals[c.categoria]+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
     else catTotals['Otro']+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
   });
-  const fmtPDF=n=>n?'$ '+Number(n).toLocaleString('es-CL',{minimumFractionDigits:2,maximumFractionDigits:2}):'$ —';
+  const fmtPDF=n=>n?'$ '+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'$ —';
   const win=window.open('','_blank');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte ${t.nombre}</title>
   <style>body{font-family:Arial,sans-serif;font-size:12px;margin:30px}h1{font-size:18px;text-align:center}h2{font-size:12px;text-align:center;color:#666;font-weight:normal;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#1a1208;color:#faf6ed;padding:8px;font-size:10px;text-align:left}td{padding:8px;border-bottom:1px solid #ddd}.tr{text-align:right}.tot{background:#1a1208;color:#faf6ed;font-weight:bold}.sec{background:#2a1c0c;color:#faf6ed;text-align:center;padding:8px;font-weight:bold;margin:14px 0 6px}@media print{button{display:none}}</style>
