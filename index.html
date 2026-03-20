@@ -1507,12 +1507,12 @@ function renderRepContent() {
 
     // Build table for a given totals object
     function buildCatRows(d) {
-      let rows = cats.map(cat=>{
+      let rows = cats.filter(cat=>(d.catT[cat]||0)>0).map(cat=>{
         const tot=d.catT[cat]||0;
         return `<tr><td>${cat}</td><td><span style="background:#e8f5e8;color:var(--green);padding:2px 6px;font-size:10px">Variable</span></td>
-          <td class="mono tr">${tot?fmt(tot/d.ha):'$ —'}</td><td class="mono tr">${tot?fmt(tot):'$ —'}</td><td class="mono tr" style="color:var(--muted)">—</td></tr>`;
+          <td class="mono tr">${fmt(tot/d.ha)}</td><td class="mono tr">${fmt(tot)}</td><td class="mono tr" style="color:var(--muted)">—</td></tr>`;
       }).join('');
-      rows += `<tr><td>Depreciación</td><td><span style="background:#fef3e2;color:var(--amber);padding:2px 6px;font-size:10px">Constante</span></td>
+      if(d.dep>0) rows += `<tr><td>Depreciación</td><td><span style="background:#fef3e2;color:var(--amber);padding:2px 6px;font-size:10px">Constante</span></td>
         <td class="mono tr">${fmt(d.dep/d.ha)}</td><td class="mono tr">${fmt(d.dep)}</td><td class="mono tr" style="color:var(--muted)">—</td></tr>`;
       return rows;
     }
@@ -2347,7 +2347,7 @@ function renderGastos() {
     // Empacado: tablas con cultivo empaque (alfalfa, triticale_heno)
     const empacadoSection = buildGridTableFiltered(S.predios.map((p,pi)=>({p,pi})), 'emp', '#1a3a18', CULTIVOS_EMPAQUE);
 
-    // Grid materiales de ensilada por tabla (solo tablas ensilables)
+    // Grid materiales de ensilada: Artículo | Tablas (checkboxes) | Cantidad | Total
     const selPrediosEns = gastosGridPrediosIdx.length ? gastosGridPrediosIdx : S.predios.map((_,i)=>i);
     const tablaInfoME = [];
     selPrediosEns.forEach(pi=>{
@@ -2357,22 +2357,33 @@ function renderGastos() {
         if(CULTIVOS_ENSILADA.includes(cv)) tablaInfoME.push({pi,ti,t,p});
       });
     });
-    const tablaHeadersME = tablaInfoME.map(({pi,ti,t,p})=>
-      `<th style="text-align:center;min-width:85px;padding:6px 8px">${p.emoji} ${t.nombre}<br><span style="font-weight:400;font-size:9px">${t.ha} ha</span></th>`
-    ).join('');
     const matRows = artsEnsilada.map(art=>{
       const precio = getCurrentPrice(art.id);
-      const cells = tablaInfoME.map(({pi,ti})=>{
-        const key = `me_${art.id}_${pi}_${ti}`;
-        const val = gastosGridDraft[key] || '';
-        return `<td style="padding:4px"><input type="number" min="0" step="0.01" placeholder="—"
-          style="width:75px;padding:4px;text-align:center;border:1px solid var(--border);font-family:'DM Mono',monospace;font-size:12px"
-          value="${val}" onchange="gastosGridDraft['${key}']=this.value"/></td>`;
+      const cantKey = `me_cant_${art.id}`;
+      const cant = gastosGridDraft[cantKey] || '';
+      const totalArtME = cant && precio ? fmt(parseFloat(cant)*precio) : '—';
+      // Checkboxes for which tablas participate
+      const tablaChecks = tablaInfoME.map(({pi,ti,t,p})=>{
+        const chkKey = `me_chk_${art.id}_${pi}_${ti}`;
+        const isChk = gastosGridDraft[chkKey] !== '0' && gastosGridDraft[chkKey] !== false && gastosGridDraft[chkKey] !== undefined;
+        return `<label style="display:inline-flex;align-items:center;gap:3px;margin-right:6px;font-size:11px;cursor:pointer">
+          <input type="checkbox" ${isChk?'checked':''} style="width:13px;height:13px"
+            onchange="gastosGridDraft['${chkKey}']=this.checked?'1':'0'"/>
+          ${p.emoji} ${t.nombre}
+        </label>`;
       }).join('');
-      return `<tr>
-        <td style="white-space:nowrap;padding:7px 12px"><strong>${art.nombre}</strong><br>
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="white-space:nowrap;padding:7px 12px;min-width:150px"><strong>${art.nombre}</strong><br>
           <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${fmt(precio)}/${art.unidad}</span>
-        </td>${cells}
+        </td>
+        <td style="padding:6px 10px;font-size:12px">${tablaChecks||'<span style="color:var(--muted);font-size:11px">sin tablas</span>'}</td>
+        <td style="padding:4px 8px;white-space:nowrap">
+          <input type="number" min="0" step="0.01" placeholder="Cantidad total" value="${cant}"
+            style="width:130px;padding:4px 8px;text-align:right;border:1px solid var(--border);font-family:'DM Mono',monospace;font-size:13px"
+            onchange="gastosGridDraft['${cantKey}']=this.value"/>
+          <span style="font-size:11px;color:var(--muted)"> ${art.unidad}</span>
+        </td>
+        <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;font-size:13px;color:var(--amber)">${totalArtME}</td>
       </tr>`;
     }).join('');
 
@@ -2462,10 +2473,12 @@ function renderGastos() {
       ${artsEnsilada.length && tablaInfoME.length ? `
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;margin-top:16px">🧪 Materiales de ensilada</div>
       <div style="overflow-x:auto;margin-bottom:16px">
-      <table style="border-collapse:collapse;font-size:13px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="background:var(--soil);color:var(--straw)">
-          <th style="text-align:left;min-width:150px;padding:7px 12px">Artículo</th>
-          ${tablaHeadersME}
+          <th style="padding:7px 12px;text-align:left;min-width:150px">Artículo</th>
+          <th style="padding:7px 12px;text-align:left">Tablas</th>
+          <th style="padding:7px 12px;text-align:right">Cantidad Total</th>
+          <th style="padding:7px 12px;text-align:right">Total $</th>
         </tr></thead>
         <tbody>${matRows}</tbody>
       </table></div>` : ''}
@@ -2832,13 +2845,13 @@ function renderGastos() {
     const actLabel = g.actividad ? ` · ${g.actividad}` : '';
     const equipLabel = g.equipo ? ` · ${g.equipo}` : '';
     const descLabel = g.descripcion ? ` — ${g.descripcion}` : '';
-    const litrosLabel = g.litros ? ` (${g.litros}L × $${g.precioPorLitro||'?'})` : '';
+    const litrosLabel = g.litros ? ` (${fmtN(g.litros,1)} × $${g.precioPorLitro||'?'})` : '';
     return `<tr>
       <td><span style="font-family:'DM Mono',monospace;font-size:10px;background:#e8f5e8;color:var(--green);padding:2px 6px">C${cn} ${g.anio||''}</span></td>
       <td>${g.categoria}${actLabel}${equipLabel}${litrosLabel}<span style="color:var(--muted);font-size:11px">${descLabel}</span></td>
       <td style="font-size:12px;color:var(--muted)">${predNombres}</td>
       <td class="mono tr amber">${fmt(g.monto)}</td>
-      <td><button class="btn btn-d" onclick="delGasto(${i})">✕</button></td>
+      <td>${isAdmin?`<button class="btn btn-d" onclick="delGasto(${i})">✕</button>`:''}</td>
     </tr>`;
   }).join('');
 
@@ -3190,18 +3203,31 @@ function capturarGastos() {
       });
     });
     if(nomEnsilada>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina y gastos admin',actividad:'Ensilada',monto:nomEnsilada,prediosIdx,fecha:today()}); total++; }
-    // Mat ensilada — grid por tabla
+    // Mat ensilada — cantidad total prorrateada por superficie entre tablas marcadas
     S.articulos.filter(a=>a.categoria==='Materiales de ensilada').forEach(art=>{
       const precio = getCurrentPrice(art.id) || 0;
+      const cantTotal = parseFloat(gastosGridDraft[`me_cant_${art.id}`]);
+      if(!cantTotal||cantTotal<=0) return;
+      // Collect checked tablas and their ha
+      const tablasChecked = [];
       S.predios.forEach((p,pi)=>{
         p.tablas.forEach((t,ti)=>{
           const cv = getTablaData(pi,cn,ti).cultivo||'maiz';
           if(!CULTIVOS_ENSILADA.includes(cv)) return;
-          const cant = parseFloat(gastosGridDraft[`me_${art.id}_${pi}_${ti}`]);
-          if(!cant||cant<=0) return;
-          S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Materiales de ensilada',equipo:art.nombre,litros:cant,precioPorLitro:precio,monto:cant*precio,prediosIdx:[pi],tablaIdx:ti,fecha:today()});
-          total++;
+          const chkKey = `me_chk_${art.id}_${pi}_${ti}`;
+          if(gastosGridDraft[chkKey]==='0'||gastosGridDraft[chkKey]===false||gastosGridDraft[chkKey]===undefined) return;
+          const ha = parseFloat(getTablaData(pi,cn,ti).haSembradas)||p.tablas[ti].ha||0;
+          tablasChecked.push({pi,ti,t,p,ha});
         });
+      });
+      if(!tablasChecked.length) return;
+      const totalHaMe = tablasChecked.reduce((s,x)=>s+x.ha,0);
+      tablasChecked.forEach(({pi,ti,t,ha})=>{
+        const pct = totalHaMe ? ha/totalHaMe : 1/tablasChecked.length;
+        const cantTabla = cantTotal * pct;
+        const montoTabla = cantTabla * precio;
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Materiales de ensilada',equipo:art.nombre,litros:cantTabla,precioPorLitro:precio,monto:montoTabla,prediosIdx:[pi],tablaIdx:ti,fecha:today()});
+        total++;
       });
     });
 
