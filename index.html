@@ -7,24 +7,24 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;700;900&family=Epilogue:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #f4f1eb;
+  --bg: #f2f5ee;
   --surface: #ffffff;
-  --soil: #1a1208;
-  --earth: #2a1c0c;
-  --clay: #3d2710;
-  --amber: #b5701a;
-  --gold: #d08c28;
-  --straw: #e6c46e;
-  --cream: #faf6ed;
-  --green: #2a5425;
-  --green-l: #387030;
+  --soil: #2d5a1b;
+  --earth: #3d6b2e;
+  --clay: #5a8c3f;
+  --amber: #8b5e3c;
+  --gold: #a8783c;
+  --straw: #d4a84b;
+  --cream: #f5f8f0;
+  --green: #2d5a1b;
+  --green-l: #3d6b2e;
   --blue: #1a3a5c;
   --purple: #4a2060;
   --red: #7a1f1f;
-  --border: #d4c0a0;
-  --text: #1a1208;
-  --muted: #7a5c3a;
-  --shadow: 0 2px 12px rgba(26,18,8,0.09);
+  --border: #b8d4a0;
+  --text: #1a2e10;
+  --muted: #5a7848;
+  --shadow: 0 2px 12px rgba(45,90,27,0.10);
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:var(--bg); color:var(--text); font-family:'Epilogue',sans-serif; min-height:100vh; font-size:14px; }
@@ -859,7 +859,7 @@ function renderDash() {
         </tr>`;
       });
     });
-    if(sectionRows) html += `<tr style="background:var(--soil);color:var(--straw)"><td colspan="10" style="padding:6px 14px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase">Cosecha ${cn}</td></tr>${sectionRows}`;
+    if(sectionRows) html += `<tr style="background:var(--soil);color:var(--cream)"><td colspan="10" style="padding:6px 14px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase">Cosecha ${cn}</td></tr>${sectionRows}`;
   }
 
   det.innerHTML = html ? `<div class="tbl-wrap"><table>
@@ -1255,7 +1255,7 @@ function renderRegContent() {
             <label style="font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0">Año:</label>
             <input type="number" value="${meta.year}" min="2000" max="2100" style="width:80px;padding:4px 8px;font-size:13px" ${isClosed?'disabled':''} onchange="getCosechaMeta(${pi},${cn}).year=parseInt(this.value);save()"/>
           </div>
-          ${!isClosed ? `<button class="btn" style="background:#2a5425;color:white;font-size:11px;padding:6px 14px" onclick="toggleCosechaClosed(${pi},${cn})">🔒 Cerrar cosecha</button>` : ''}
+          ${!isClosed ? `<button class="btn" style="background:#2d5a1b;color:#f5f8f0;font-size:11px;padding:6px 14px" onclick="toggleCosechaClosed(${pi},${cn})">🔒 Cerrar cosecha</button>` : ''}
         </div>
       </div>
       <div class="tabla-grid">${tablaGrid}</div>
@@ -1351,7 +1351,7 @@ function renderRegContent() {
           <th class="tr">Cantidad</th><th class="tr">Precio</th><th class="tr">Total</th><th></th>
         </tr></thead>
         <tbody>${histRows}</tbody>
-        <tfoot><tr style="background:var(--soil);color:var(--straw)">
+        <tfoot><tr style="background:var(--soil);color:var(--cream)">
           <td colspan="6" style="padding:8px 14px;font-weight:700">TOTAL MATERIAL DE CULTIVO</td>
           <td class="mono tr" style="padding:8px 14px;font-weight:700">${fmt(totConsumos)}</td>
           <td></td>
@@ -1528,7 +1528,7 @@ function renderRepContent() {
         <div class="card-head">📄 Reporte — ${p.nombre} · Cosecha ${cn} · Predio completo
           <button class="pdf-btn" onclick="printReportePredio(${pi},${cn})">⬇ Exportar PDF</button>
         </div>
-        <div style="text-align:center;padding:14px;background:var(--soil);color:var(--straw);margin-bottom:14px">
+        <div style="text-align:center;padding:14px;background:var(--soil);color:var(--cream);margin-bottom:14px">
           <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700">GASTOS TOTALES — ${p.nombre}</div>
           <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);margin-top:4px">Cosecha ${cn} · Año ${getCosechaMeta(pi,cn).year} · ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha ${getCosechaMeta(pi,cn).closed?'· 🔒 CERRADA':'· ✓ Abierta'}</div>
         </div>
@@ -1536,7 +1536,7 @@ function renderRepContent() {
           <colgroup><col style="width:220px"/><col style="width:100px"/><col style="width:160px"/><col style="width:160px"/><col style="width:160px"/></colgroup>
           <thead><tr><th style="text-align:left">Categoría</th><th style="text-align:left">Tipo</th><th class="tr">$/Ha</th><th class="tr">Gasto Total</th><th class="tr">kg/ha</th></tr></thead>
           <tbody>${catRows}
-            <tr style="background:var(--soil);color:var(--straw)">
+            <tr style="background:var(--soil);color:var(--cream)">
               <td colspan="2"><strong>TOTAL</strong></td>
               <td class="mono tr"><strong>${fmt(totCost/totalHa)}</strong></td>
               <td class="mono tr"><strong>${fmt(totCost)}</strong></td>
@@ -1590,12 +1590,12 @@ function renderRepContent() {
         const cvCpkms = d.kgMS?d.cost/d.kgMS:null;
         const cvCatRows = buildCatRows(d);
         return `<div class="card" style="margin-top:8px">
-          <div class="card-head" style="background:var(--soil);color:var(--straw)">${cvInfo.icon} ${cvInfo.label} — ${fmtN(d.ha,2)} ha · ${d.kilos?fmtN(d.kilos,0)+' kg':''}</div>
+          <div class="card-head" style="background:var(--soil);color:var(--cream)">${cvInfo.icon} ${cvInfo.label} — ${fmtN(d.ha,2)} ha · ${d.kilos?fmtN(d.kilos,0)+' kg':''}</div>
           <div class="tbl-wrap"><table style="table-layout:fixed;width:100%">
             <colgroup><col style="width:220px"/><col style="width:100px"/><col style="width:160px"/><col style="width:160px"/><col style="width:160px"/></colgroup>
             <thead><tr><th style="text-align:left">Categoría</th><th style="text-align:left">Tipo</th><th class="tr">$/Ha</th><th class="tr">Gasto Total</th><th class="tr">kg/ha</th></tr></thead>
             <tbody>${cvCatRows}
-              <tr style="background:var(--soil);color:var(--straw)">
+              <tr style="background:var(--soil);color:var(--cream)">
                 <td colspan="2"><strong>TOTAL</strong></td>
                 <td class="mono tr"><strong>${fmt(d.cost/d.ha)}</strong></td>
                 <td class="mono tr"><strong>${fmt(d.cost)}</strong></td>
@@ -1702,7 +1702,7 @@ function renderRepContent() {
         <div class="tbl-wrap"><table>
           <thead><tr><th>Categoría</th><th>Tipo</th><th>$/Ha</th><th>Gasto Total</th></tr></thead>
           <tbody>${catRows}
-            <tr style="background:var(--soil);color:var(--straw)">
+            <tr style="background:var(--soil);color:var(--cream)">
               <td colspan="2"><strong>TOTAL</strong></td>
               <td class="mono tr"><strong>${fmt(total/p.tablas[ti].ha)}</strong></td>
               <td class="mono tr"><strong>${fmt(total)}</strong></td>
@@ -1792,7 +1792,7 @@ function printReportePredio(pi, cn) {
 
   const win=window.open('','_blank');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte ${p.nombre} C${cn}</title>
-  <style>body{font-family:Arial,sans-serif;font-size:12px;margin:30px}h1{font-size:18px;text-align:center}h2{font-size:12px;text-align:center;color:#666;font-weight:normal;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#1a1208;color:#faf6ed;padding:8px;font-size:10px;text-align:left}td{padding:8px;border-bottom:1px solid #ddd}.tr{text-align:right}.tot{background:#1a1208;color:#faf6ed;font-weight:bold}.sec{background:#2a1c0c;color:#faf6ed;text-align:center;padding:8px;font-weight:bold;margin:14px 0 6px}.zero{color:#bbb}@media print{button{display:none}}</style>
+  <style>body{font-family:Arial,sans-serif;font-size:12px;margin:30px}h1{font-size:18px;text-align:center}h2{font-size:12px;text-align:center;color:#666;font-weight:normal;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#2d5a1b;color:#f5f8f0;padding:8px;font-size:10px;text-align:left}td{padding:8px;border-bottom:1px solid #ddd}.tr{text-align:right}.tot{background:#2d5a1b;color:#f5f8f0;font-weight:bold}.sec{background:#3d6b2e;color:#faf6ed;text-align:center;padding:8px;font-weight:bold;margin:14px 0 6px}.zero{color:#bbb}@media print{button{display:none}}</style>
   </head><body>
   <h1>GASTOS TOTALES — ${p.nombre}</h1>
   <h2>Cosecha ${cn} · ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha · ${today()}</h2>
@@ -1807,7 +1807,7 @@ function printReportePredio(pi, cn) {
   <div class="sec">COSTO POR KILO</div>
   <table><thead><tr><th>Kilos silo</th><th>Kg MS</th><th>Total</th><th>$/ha</th><th>$/kg silo</th><th>$/kg MS</th></tr></thead>
   <tbody><tr><td>${totKilos?fmtN(totKilos,0):'—'}</td><td>${totKgMS?fmtN(totKgMS,0):'—'}</td><td>${fmtPDF(totCost)}</td><td>${fmtPDF(totCost/totalHa)}</td><td><strong>${cpk?'$ '+cpk.toFixed(2):'—'}</strong></td><td><strong>${cpkms?'$ '+cpkms.toFixed(2):'—'}</strong></td></tr></tbody></table>
-  <br><button onclick="window.print()" style="padding:10px 24px;background:#1a1208;color:#faf6ed;border:none;cursor:pointer">🖨 Imprimir / PDF</button>
+  <br><button onclick="window.print()" style="padding:10px 24px;background:#2d5a1b;color:#f5f8f0;border:none;cursor:pointer">🖨 Imprimir / PDF</button>
   </body></html>`);
   win.document.close();
 }
@@ -1832,7 +1832,7 @@ function printReporteTabla(pi, cn, ti) {
   const fmtPDF=n=>n?'$ '+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'$ —';
   const win=window.open('','_blank');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte ${t.nombre}</title>
-  <style>body{font-family:Arial,sans-serif;font-size:12px;margin:30px}h1{font-size:18px;text-align:center}h2{font-size:12px;text-align:center;color:#666;font-weight:normal;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#1a1208;color:#faf6ed;padding:8px;font-size:10px;text-align:left}td{padding:8px;border-bottom:1px solid #ddd}.tr{text-align:right}.tot{background:#1a1208;color:#faf6ed;font-weight:bold}.sec{background:#2a1c0c;color:#faf6ed;text-align:center;padding:8px;font-weight:bold;margin:14px 0 6px}@media print{button{display:none}}</style>
+  <style>body{font-family:Arial,sans-serif;font-size:12px;margin:30px}h1{font-size:18px;text-align:center}h2{font-size:12px;text-align:center;color:#666;font-weight:normal;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#2d5a1b;color:#f5f8f0;padding:8px;font-size:10px;text-align:left}td{padding:8px;border-bottom:1px solid #ddd}.tr{text-align:right}.tot{background:#2d5a1b;color:#f5f8f0;font-weight:bold}.sec{background:#3d6b2e;color:#faf6ed;text-align:center;padding:8px;font-weight:bold;margin:14px 0 6px}@media print{button{display:none}}</style>
   </head><body>
   <h1>GASTOS TOTALES — ${t.nombre}</h1>
   <h2>${p.nombre} · Cosecha ${cn} · ${t.ha} ha · ${today()}</h2>
@@ -1844,7 +1844,7 @@ function printReporteTabla(pi, cn, ti) {
   <div class="sec">COSTO POR KILO</div>
   <table><thead><tr><th>Kilos silo</th><th>Kg MS</th><th>% MS</th><th>Total</th><th>$/ha</th><th>$/kg silo</th><th>$/kg MS</th></tr></thead>
   <tbody><tr><td>${kilos?fmtN(kilos,0):'—'}</td><td>${kgMS?fmtN(kgMS,0):'—'}</td><td>${td.pctMS?td.pctMS+'%':'—'}</td><td>${fmtPDF(total)}</td><td>${fmtPDF(total/t.ha)}</td><td><strong>${cpk?'$ '+cpk.toFixed(2):'—'}</strong></td><td><strong>${cpkms?'$ '+cpkms.toFixed(2):'—'}</strong></td></tr></tbody></table>
-  <br><button onclick="window.print()" style="padding:10px 24px;background:#1a1208;color:#faf6ed;border:none;cursor:pointer">🖨 Imprimir / PDF</button>
+  <br><button onclick="window.print()" style="padding:10px 24px;background:#2d5a1b;color:#f5f8f0;border:none;cursor:pointer">🖨 Imprimir / PDF</button>
   </body></html>`);
   win.document.close();
 }
@@ -1942,7 +1942,7 @@ let gastosGridCn = 1;
 let gastosTab = 'tractores';
 
 // ── Helper: build grid table (maquila, pizca, camiones) ──
-function buildGridTable(prediosList, prefix, headerColor='#1a1208') {
+function buildGridTable(prediosList, prefix, headerColor='#2d5a1b') {
   let tiMax = 0;
   prediosList.forEach(({p})=>{ if(p.tablas.length>tiMax) tiMax=p.tablas.length; });
   const headerRow1 = prediosList.map(({p})=>
@@ -2199,7 +2199,7 @@ function renderGastos() {
         <div style="overflow-x:auto;margin-bottom:20px">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <colgroup><col style="width:180px"/><col style="width:120px"/><col style="width:150px"/><col style="width:150px"/><col style="width:150px"/><col style="width:40px"/></colgroup>
-          <thead><tr style="background:var(--soil);color:var(--straw)">
+          <thead><tr style="background:var(--soil);color:var(--cream)">
             <th style="padding:7px 12px;text-align:left">Equipo</th>
             <th style="padding:7px 12px;text-align:left">Predio</th>
             <th style="padding:7px 12px;text-align:right">Litros</th>
@@ -2220,7 +2220,7 @@ function renderGastos() {
         <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <colgroup><col style="width:180px"/><col style="width:120px"/><col style="width:150px"/><col style="width:150px"/><col style="width:150px"/><col style="width:40px"/></colgroup>
-          <thead><tr style="background:var(--soil);color:var(--straw)">
+          <thead><tr style="background:var(--soil);color:var(--cream)">
             <th style="padding:7px 12px;text-align:left">Equipo</th>
             <th style="padding:7px 12px;text-align:left">Predio</th>
             <th style="padding:7px 12px;text-align:right">Servicio ($)</th>
@@ -2317,7 +2317,7 @@ function renderGastos() {
         ${mesSelector}
         <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead><tr style="background:var(--soil);color:var(--straw)">
+          <thead><tr style="background:var(--soil);color:var(--cream)">
             <th style="padding:7px 12px;text-align:left">Equipo</th>
             ${predioHeaders}
             <th style="padding:7px 12px;text-align:right">Luz $</th>
@@ -2350,7 +2350,7 @@ function renderGastos() {
     const maquilaSections = buildGridTableFiltered(prediosMaquilaIdx, 'maq', '#2a5425', CULTIVOS_ENSILADA);
 
     // Camiones ensilada: solo tablas ensilables
-    const camionesSections = buildGridTableFiltered(S.predios.map((p,pi)=>({p,pi})), 'cam', '#1a1208', CULTIVOS_ENSILADA);
+    const camionesSections = buildGridTableFiltered(S.predios.map((p,pi)=>({p,pi})), 'cam', '#2d5a1b', CULTIVOS_ENSILADA);
 
     // Pizca: tablas con cultivo pizca (higo)
     const losHigosIdx = S.predios.findIndex(p=>p.nombre==='Los Higos');
@@ -2476,7 +2476,7 @@ function renderGastos() {
       ${configEqEns}
       ${equiposEnsilada.length ? `<div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:var(--soil);color:var(--straw)">
+        <thead><tr style="background:var(--soil);color:var(--cream)">
           <th style="padding:7px 12px;text-align:left">Equipo</th>
           <th style="padding:7px 10px;text-align:left">Predio</th>
           <th style="padding:7px 12px;text-align:right">Diesel (L)</th>
@@ -2503,7 +2503,7 @@ function renderGastos() {
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;margin-top:16px">🧪 Materiales de ensilada</div>
       <div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:var(--soil);color:var(--straw)">
+        <thead><tr style="background:var(--soil);color:var(--cream)">
           <th style="padding:7px 12px;text-align:left;min-width:150px">Artículo</th>
           <th style="padding:7px 12px;text-align:left">Tablas</th>
           <th style="padding:7px 12px;text-align:right">Cantidad Total</th>
@@ -2585,7 +2585,7 @@ function renderGastos() {
       ${configEqEmp}
       ${S.equiposEmpaque.length ? `<div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:var(--soil);color:var(--straw)">
+        <thead><tr style="background:var(--soil);color:var(--cream)">
           <th style="padding:7px 12px;text-align:left">Equipo</th>
           <th style="padding:7px 10px;text-align:left">Tipo</th>
           <th style="padding:7px 12px;text-align:right">Diesel (L)</th>
@@ -2607,7 +2607,7 @@ function renderGastos() {
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina empaque</div>
         <div style="overflow-x:auto;margin-bottom:8px">
         <table style="border-collapse:collapse;font-size:13px;min-width:500px">
-          <thead><tr style="background:var(--soil);color:var(--straw)">
+          <thead><tr style="background:var(--soil);color:var(--cream)">
             <th style="padding:7px 12px;text-align:left">Predio</th>
             <th style="padding:7px 12px;text-align:left">Mes</th>
             <th style="padding:7px 12px;text-align:right">Cantidad $</th>
@@ -2681,7 +2681,7 @@ function renderGastos() {
       ${configEqCorte}
       ${S.equiposCorte.length ? `<div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:var(--soil);color:var(--straw)">
+        <thead><tr style="background:var(--soil);color:var(--cream)">
           <th style="padding:7px 12px;text-align:left">Equipo</th>
           <th style="padding:7px 10px;text-align:left">Tipo</th>
           <th style="padding:7px 12px;text-align:right">Diesel (L)</th>
@@ -2700,7 +2700,7 @@ function renderGastos() {
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina corte</div>
         <div style="overflow-x:auto;margin-bottom:8px">
         <table style="border-collapse:collapse;font-size:13px;min-width:500px">
-          <thead><tr style="background:var(--soil);color:var(--straw)">
+          <thead><tr style="background:var(--soil);color:var(--cream)">
             <th style="padding:7px 12px;text-align:left">Predio</th>
             <th style="padding:7px 12px;text-align:left">Mes</th>
             <th style="padding:7px 12px;text-align:right">Cantidad $</th>
@@ -2781,7 +2781,7 @@ function renderGastos() {
     tabContent = `
       <div style="overflow-x:auto;margin-bottom:8px">
       <table style="border-collapse:collapse;font-size:13px;min-width:600px">
-        <thead><tr style="background:var(--soil);color:var(--straw)">
+        <thead><tr style="background:var(--soil);color:var(--cream)">
           <th style="padding:7px 12px;text-align:left">Predio</th>
           <th style="padding:7px 12px;text-align:left">Mes</th>
           <th style="padding:7px 12px;text-align:right">Cantidad $</th>
@@ -2872,7 +2872,7 @@ function renderGastos() {
       ${allNoriasRep.length ? `<div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <colgroup><col style="width:150px"/><col style="width:110px"/><col style="width:60px"/><col/><col style="width:130px"/><col style="width:130px"/></colgroup>
-        <thead><tr style="background:var(--soil);color:var(--straw)">
+        <thead><tr style="background:var(--soil);color:var(--cream)">
           <th style="padding:7px 12px;text-align:left">Noria</th>
           <th style="padding:7px 12px;text-align:left">Predio</th>
           <th style="padding:7px 12px;text-align:center">%</th>
@@ -2887,7 +2887,7 @@ function renderGastos() {
       <div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <colgroup><col style="width:130px"/><col style="width:110px"/><col/><col style="width:130px"/><col style="width:130px"/></colgroup>
-        <thead><tr style="background:var(--soil);color:var(--straw)">
+        <thead><tr style="background:var(--soil);color:var(--cream)">
           <th style="padding:7px 12px;text-align:left">Tabla</th>
           <th style="padding:7px 12px;text-align:left">Predio</th>
           <th style="padding:7px 12px;text-align:left">Descripción</th>
@@ -2980,7 +2980,7 @@ function renderGastos() {
     </tr>`).join('');
     tabContent = `
       <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px">
-        <thead><tr style="background:var(--soil);color:var(--straw)">
+        <thead><tr style="background:var(--soil);color:var(--cream)">
           <th style="padding:7px 12px;text-align:left">Categoría</th>
           <th style="padding:7px 12px;text-align:left">Predio</th>
           <th style="padding:7px 12px;text-align:left">Descripción</th>
