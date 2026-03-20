@@ -3158,18 +3158,16 @@ function capturarGastos() {
       if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Ensilada',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,fecha:today()}); total++; }
       if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Ensilada',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,fecha:today()}); total++; }
     });
-    // Maquila por tonelada por tabla
+    // Maquila por tonelada — precio por predio, selección por tabla
     S.predios.forEach((p,pi)=>{
+      const ppt = parseFloat(gastosGridDraft[`maq_ppt_${pi}`]);
+      if(!ppt||ppt<=0) return;
       p.tablas.forEach((t,ti)=>{
         const key = `maq_t_${pi}_${ti}`;
-        const keyPpt = `maq_ppt_${pi}_${ti}`;
         if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined) return;
-        const ppt = parseFloat(gastosGridDraft[keyPpt]);
-        if(!ppt||ppt<=0) return;
         const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
         if(!kilos) return;
-        const monto = (kilos/1000)*ppt;
-        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Ensilada',equipo:t.nombre,monto,prediosIdx:[pi],fecha:today()});
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Ensilada',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()});
         total++;
       });
     });
