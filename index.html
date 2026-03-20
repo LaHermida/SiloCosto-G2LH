@@ -2717,7 +2717,43 @@ function renderGastos() {
             <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c3pctCort}" style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['cort_nom_c3pct']=this.value"/></td>
           </tr></tbody>
         </table></div>
-      </div>`;
+      </div>
+
+      ${(()=>{
+        const histCorte = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&
+          ['Diesel Corte','Maquinaria Corte','Maquila Corte','Nómina Corte'].includes(g.categoria));
+        const totCorte = histCorte.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        if(!totCorte) return '';
+        const rows = histCorte.map(g=>{
+          const gi = S.gastosGenerales.indexOf(g);
+          return `<tr style="font-size:12px">
+            <td style="padding:5px 10px">${g.categoria}${g.equipo?' · '+g.equipo:''}${g.actividad?' · '+g.actividad:''}</td>
+            <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
+            <td style="padding:5px 10px;text-align:center"><span style="background:#e8f5e8;color:var(--green);padding:2px 6px;font-size:10px">C${getGastoCosecha(g)}</span></td>
+            <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
+            <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${gi})">✕</button>`:''}</td>
+          </tr>`;
+        }).join('');
+        return `<div style="border-top:2px solid var(--border);padding-top:12px;margin-top:8px">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Acumulado Corte C${selectedCn} — ${fmt(totCorte)}</div>
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr style="font-size:10px;color:var(--muted)">
+              <th style="padding:4px 10px;text-align:left">Concepto</th>
+              <th style="padding:4px 10px;text-align:left">Predio</th>
+              <th style="padding:4px 10px;text-align:center">Cosecha</th>
+              <th style="padding:4px 10px;text-align:right">Monto</th>
+              <th></th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+            <tfoot><tr style="background:var(--soil);color:var(--cream)">
+              <td colspan="3" style="padding:8px 12px;font-weight:700">TOTAL</td>
+              <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmt(totCorte)}</td>
+              <td></td>
+            </tr></tfoot>
+          </table>
+        </div>`;
+      })()}
+      `;
 
   } else if(gastosTab === 'nomina') {
     // Formato tipo Excel: Mes | $ | C1% | C2% | C3%
