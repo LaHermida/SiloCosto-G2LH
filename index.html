@@ -548,15 +548,18 @@ const CULTIVOS = {
   maiz:           { label:'Maíz',           icon:'🌽', css:'cultivo-maiz',    pct:40 },
   trigo:          { label:'Triticale',      icon:'🌾', css:'cultivo-trigo',   pct:20 },
   sorgo:          { label:'Sorgo',          icon:'🌿', css:'cultivo-sorgo',   pct:40 },
-  higo:           { label:'Higo',           icon:'🍃', css:'cultivo-otro',    pct:40 },
-  alfalfa:        { label:'Alfalfa',        icon:'🟢', css:'cultivo-alfalfa', pct:33, anual:true, empaque:true },
+  higo:           { label:'Higo',           icon:'🍃', css:'cultivo-otro',    pct:40, pizca:true },
+  alfalfa:        { label:'Alfalfa',        icon:'🟢', css:'cultivo-alfalfa', pct:33, anual:true },
+  alfalfa_heno:   { label:'Alfalfa Heno',   icon:'🟡', css:'cultivo-alfalfa', pct:33, anual:true, empaque:true },
   triticale_heno: { label:'Triticale Heno', icon:'🌾', css:'cultivo-trigo',   pct:20, empaque:true },
+  higo:           { label:'Higo',           icon:'🍃', css:'cultivo-otro',    pct:40, pizca:true },
   otro:           { label:'Otro',           icon:'🌱', css:'cultivo-otro',    pct:40 }
 };
 
 // Cultivos que van a ensilada vs empaque
-const CULTIVOS_ENSILADA = ['maiz','sorgo','trigo','higo','otro'];
-const CULTIVOS_EMPAQUE  = ['alfalfa','triticale_heno'];
+const CULTIVOS_ENSILADA = ['maiz','sorgo','trigo','otro'];
+const CULTIVOS_EMPAQUE  = ['alfalfa_heno','triticale_heno'];
+const CULTIVOS_PIZCA    = ['higo'];
 
 function cultivoBadge(c) {
   const cv = CULTIVOS[c] || CULTIVOS.otro;
@@ -1449,7 +1452,16 @@ function renderRepContent() {
 
   if(curTablaRep===-1) {
     // Predio-level report
-    const cats = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz','Ensilada','Materiales de ensilada','Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
+    // Build cats list based on cultivos present in this predio/cosecha
+    const todosCultivosRep = p.tablas.map((_,ti)=>getTablaData(pi,cn,ti).cultivo||'maiz');
+    const hayEnsilada = todosCultivosRep.some(cv=>CULTIVOS_ENSILADA.includes(cv));
+    const hayEmpaque  = todosCultivosRep.some(cv=>CULTIVOS_EMPAQUE.includes(cv));
+    const hayPizca    = todosCultivosRep.some(cv=>CULTIVOS_PIZCA.includes(cv));
+    const cats = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz',
+      ...(hayEnsilada?['Ensilada','Materiales de ensilada']:[]),
+      ...(hayEmpaque?['Empacado','Maquinaria Empaque']:[]),
+      ...(hayPizca?['Pizca']:[]),
+      'Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
     const totalHa = p.tablas.reduce((s,t)=>s+t.ha,0);
 
     // Build per-cultivo data
@@ -1640,7 +1652,16 @@ function renderRepContent() {
     const cpk = calcCPK(pi,cn,ti);
     const cpkms = calcCPKMS(pi,cn,ti);
 
-    const cats = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz','Ensilada','Materiales de ensilada','Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
+    // Build cats list based on cultivos present in this predio/cosecha
+    const todosCultivosRep = p.tablas.map((_,ti)=>getTablaData(pi,cn,ti).cultivo||'maiz');
+    const hayEnsilada = todosCultivosRep.some(cv=>CULTIVOS_ENSILADA.includes(cv));
+    const hayEmpaque  = todosCultivosRep.some(cv=>CULTIVOS_EMPAQUE.includes(cv));
+    const hayPizca    = todosCultivosRep.some(cv=>CULTIVOS_PIZCA.includes(cv));
+    const cats = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz',
+      ...(hayEnsilada?['Ensilada','Materiales de ensilada']:[]),
+      ...(hayEmpaque?['Empacado','Maquinaria Empaque']:[]),
+      ...(hayPizca?['Pizca']:[]),
+      'Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
     let catTotals={};
     cats.forEach(c=>catTotals[c]=0);
     (td.consumos||[]).forEach(c=>{
@@ -1722,8 +1743,20 @@ function renderRepContent() {
 function printReportePredio(pi, cn) {
   const p = S.predios[pi];
   const totalHa = p.tablas.reduce((s,t)=>s+t.ha,0);
-  const cats = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz','Ensilada','Materiales de ensilada','Empacado','Pizca','Nómina y gastos admin','Diesel','Sirre y Desmonte','Camiones','Otro'];
-  const catOrder = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz','Ensilada','Materiales de ensilada','Empacado','Pizca','Nómina y gastos admin','Diesel','Depreciación','Sirre y Desmonte'];
+  const todosCvPDF = p.tablas.map((_,ti)=>getTablaData(pi,cn,ti).cultivo||'maiz');
+  const hayEnsiladaPDF = todosCvPDF.some(cv=>CULTIVOS_ENSILADA.includes(cv));
+  const hayEmpaquePDF  = todosCvPDF.some(cv=>CULTIVOS_EMPAQUE.includes(cv));
+  const hayPizcaPDF    = todosCvPDF.some(cv=>CULTIVOS_PIZCA.includes(cv));
+  const cats = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz',
+    ...(hayEnsiladaPDF?['Ensilada','Materiales de ensilada']:[]),
+    ...(hayEmpaquePDF?['Empacado','Maquinaria Empaque']:[]),
+    ...(hayPizcaPDF?['Pizca']:[]),
+    'Nómina y gastos admin','Diesel','Diesel Ensilada','Diesel Empaque','Maquinaria Ensilada','Sirre y Desmonte','Camiones','Otro'];
+  const catOrder = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz',
+    ...(hayEnsiladaPDF?['Ensilada','Materiales de ensilada']:[]),
+    ...(hayEmpaquePDF?['Empacado','Maquinaria Empaque']:[]),
+    ...(hayPizcaPDF?['Pizca']:[]),
+    'Nómina y gastos admin','Diesel','Diesel Ensilada','Diesel Empaque','Maquinaria Ensilada','Depreciación','Sirre y Desmonte'];
   let catTotals={};
   cats.forEach(c=>catTotals[c]=0);
   let totalDep=0, totKilos=0, totKgMS=0;
@@ -2306,11 +2339,10 @@ function renderGastos() {
     // Camiones ensilada: solo tablas ensilables
     const camionesSections = buildGridTableFiltered(S.predios.map((p,pi)=>({p,pi})), 'cam', '#1a1208', CULTIVOS_ENSILADA);
 
-    // Pizca: solo Los Higos
+    // Pizca: tablas con cultivo pizca (higo)
     const losHigosIdx = S.predios.findIndex(p=>p.nombre==='Los Higos');
-    const pizcaSection = losHigosIdx>=0
-      ? buildGridTable([{p:S.predios[losHigosIdx], pi:losHigosIdx}], 'pizca', '#3a2a0a')
-      : '';
+    const prediosPizca = S.predios.map((p,pi)=>({p,pi}));
+    const pizcaSection = buildGridTableFiltered(prediosPizca, 'pizca', '#3a2a0a', CULTIVOS_PIZCA);
 
     // Empacado: tablas con cultivo empaque (alfalfa, triticale_heno)
     const empacadoSection = buildGridTableFiltered(S.predios.map((p,pi)=>({p,pi})), 'emp', '#1a3a18', CULTIVOS_EMPAQUE);
@@ -2417,7 +2449,7 @@ function renderGastos() {
       </table></div>` : `<div style="color:var(--muted);font-size:12px;margin-bottom:16px">Sin equipos — agrega tractores o cosechadoras arriba</div>`}
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌽 Maquila — precio por predio ($/ton)</div>
       ${maquilaSections}
-      ${losHigosIdx>=0?`<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">🍂 Pizca — Los Higos ($/ton)</div>${pizcaSection}`:''}
+      ${pizcaSection?`<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">🍂 Pizca ($/ton)</div>${pizcaSection}`:``}
 
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">🚛 Camiones — precio por tabla ($/ton)</div>
       ${camionesSections}
@@ -3116,20 +3148,19 @@ function capturarGastos() {
         total++;
       });
     });
-    // Pizca: Los Higos
-    const losHigosPi = S.predios.findIndex(p=>p.nombre==='Los Higos');
-    if(losHigosPi>=0) {
-      const pHigos = S.predios[losHigosPi];
-      pHigos.tablas.forEach((t,ti)=>{
-        const key = `pizca_t_${losHigosPi}_${ti}`;
-        const ppt = parseFloat(gastosGridDraft[`pizca_ppt_${losHigosPi}_${ti}`]);
+    // Pizca: tablas con cultivo pizca (higo)
+    S.predios.forEach((p,pi)=>{
+      p.tablas.forEach((t,ti)=>{
+        if(!CULTIVOS_PIZCA.includes(getTablaData(pi,cn,ti).cultivo||'maiz')) return;
+        const key = `pizca_t_${pi}_${ti}`;
+        const ppt = parseFloat(gastosGridDraft[`pizca_ppt_${pi}`]);
         if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined||!ppt) return;
-        const kilos = parseFloat(getTablaData(losHigosPi,cn,ti).kilos)||0;
+        const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
         if(!kilos) return;
-        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Pizca',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[losHigosPi],fecha:today()});
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Pizca',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()});
         total++;
       });
-    }
+    });
     // Empacado: tablas con alfalfa
     S.predios.forEach((p,pi)=>{
       p.tablas.forEach((t,ti)=>{
