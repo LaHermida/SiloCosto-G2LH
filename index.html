@@ -3065,7 +3065,12 @@ function capturarGastos() {
   const anio = parseInt(document.getElementById('g-anio').value) || new Date().getFullYear();
   const prediosIdx = [];
   document.querySelectorAll('.gasto-predio-check:checked').forEach(cb=>prediosIdx.push(parseInt(cb.value)));
-  if(!prediosIdx.length) { toast('⚠️ Selecciona al menos un predio',true); return; }
+  // For tabs that use tabla-selection grids, prediosIdx is derived per-gasto from selected tablas
+  // For tabs that need a global prediosIdx (tractores, luz, nomina, etc.), require selection
+  const tabsConPredioGlobal = ['tractores','luz','nomina','reparaciones','otros','empaque'];
+  if(!prediosIdx.length && tabsConPredioGlobal.includes(gastosTab)) {
+    S.predios.forEach((_,i)=>prediosIdx.push(i)); // default all for non-tabla tabs
+  }
 
   const cn = gastosGridCn || 1;
   const anyOpen = S.predios.some((p,pi)=>!getCosechaMeta(pi,cn).closed);
