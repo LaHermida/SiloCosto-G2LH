@@ -1985,11 +1985,17 @@ function buildGridTable(prediosList, prefix, headerColor='#1a1208') {
 // Helper: build grid table filtering tablas by cultivo list
 function buildGridTableFiltered(prediosList, prefix, headerColor, cultivoFilter) {
   const cn = gastosGridCn || 1;
-  // For each predio, only show tablas matching the cultivo filter
+  // For each predio, only show tablas matching the cultivo filter AND not sinSiembra
   const filteredList = prediosList.map(({p,pi})=>({
-    p: {...p, tablas: p.tablas.filter((_,ti)=>cultivoFilter.includes(getTablaData(pi,cn,ti).cultivo||'maiz'))},
+    p: {...p, tablas: p.tablas.filter((_,ti)=>{
+      const td = getTablaData(pi,cn,ti);
+      return !td.sinSiembra && cultivoFilter.includes(td.cultivo||'maiz');
+    })},
     pi,
-    origTablaIdx: p.tablas.map((t,ti)=>cultivoFilter.includes(getTablaData(pi,cn,ti).cultivo||'maiz')?ti:null).filter(ti=>ti!==null)
+    origTablaIdx: p.tablas.map((t,ti)=>{
+      const td = getTablaData(pi,cn,ti);
+      return (!td.sinSiembra && cultivoFilter.includes(td.cultivo||'maiz'))?ti:null;
+    }).filter(ti=>ti!==null)
   })).filter(({p})=>p.tablas.length>0);
   if(!filteredList.length) return '<div style="color:var(--muted);font-size:12px;padding:8px">Sin tablas con este cultivo en la cosecha seleccionada</div>';
 
@@ -2353,8 +2359,8 @@ function renderGastos() {
     selPrediosEns.forEach(pi=>{
       const p = S.predios[pi];
       p.tablas.forEach((t,ti)=>{
-        const cv = getTablaData(pi,selectedCn,ti).cultivo||'maiz';
-        if(CULTIVOS_ENSILADA.includes(cv)) tablaInfoME.push({pi,ti,t,p});
+        const td = getTablaData(pi,selectedCn,ti);
+        if(!td.sinSiembra && CULTIVOS_ENSILADA.includes(td.cultivo||'maiz')) tablaInfoME.push({pi,ti,t,p});
       });
     });
     const matRows = artsEnsilada.map(art=>{
@@ -2391,14 +2397,18 @@ function renderGastos() {
     const histEnsilada = S.gastosGenerales.filter(g=>getGastoCosecha(g)===selectedCn&&
       (g.categoria==='Ensilada'||g.categoria==='Materiales de ensilada'||g.categoria==='Camiones'||(g.categoria==='Nómina y gastos admin'&&g.actividad==='Ensilada')));
     const totalAcum = histEnsilada.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-    const histRows = histEnsilada.map(g=>`<tr style="font-size:12px">
-      <td style="padding:5px 10px">${g.categoria}${g.equipo?' · '+g.equipo:''}</td>
-      <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
-      <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--muted)">
-        ${g.litros ? fmtN(g.litros,2)+' '+(g.categoria==='Materiales de ensilada'?'uds':'L') : '—'}
-      </td>
-      <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
-    </tr>`).join('');
+    const histRows = histEnsilada.map((g,_i)=>{
+      const gi = S.gastosGenerales.indexOf(g);
+      return `<tr style="font-size:12px">
+        <td style="padding:5px 10px">${g.categoria}${g.equipo?' · '+g.equipo:''}</td>
+        <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
+        <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--muted)">
+          ${g.litros ? fmtN(g.litros,2)+' '+(g.categoria==='Materiales de ensilada'?'uds':'L') : '—'}
+        </td>
+        <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
+        <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${gi})">✕</button>`:''}</td>
+      </tr>`;
+    }).join('');
 
     // Sección maquinaria ensilada: lista propia S.equiposEnsilada
     if(!S.equiposEnsilada) S.equiposEnsilada = [];
