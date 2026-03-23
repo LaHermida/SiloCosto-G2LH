@@ -1299,6 +1299,11 @@ function renderRegContent() {
     gridEl.className = 'card';
     gridEl.innerHTML = `
       <div class="card-head">🌱 Grid — Material de Cultivo · ${p.nombre} · Cosecha ${cn}</div>
+      <div style="padding:8px 12px;background:#f0fdf4;border:1px solid var(--border);margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">📅 Fecha del registro:</span>
+        <input type="date" id="reg-grid-fecha" value="${new Date().toISOString().slice(0,10)}"
+          style="padding:4px 8px;border:1px solid var(--border);font-size:13px;color:var(--text)"/>
+      </div>
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead><tr><th style="text-align:left;min-width:160px">Artículo</th>${tablaHeaders}</tr></thead>
@@ -1313,6 +1318,7 @@ function renderRegContent() {
     document.getElementById('reg-content').appendChild(gridEl);
 
     document.getElementById('btn-capturar-grid').addEventListener('click', ()=>{
+      const fechaReg = document.getElementById('reg-grid-fecha')?.value || today();
       let total = 0;
       document.querySelectorAll('#reg-content input[data-art]').forEach(inp=>{
         const cant = parseFloat(inp.value);
@@ -1325,7 +1331,7 @@ function renderRegContent() {
         const tdx = getTablaData(pi, cn, ti2);
         tdx.consumos.push({
           articuloId:artId, nombre:art.nombre, categoria:art.categoria,
-          unidad:art.unidad, cantidad:cant, precioSnapshot:precio, fecha:today()
+          unidad:art.unidad, cantidad:cant, precioSnapshot:precio, fecha:fechaReg
         });
         total++;
       });
