@@ -1877,7 +1877,7 @@ const GASTOS_TABS = [
   { id:'empaque',     label:'📦 Empaque',       rol:'admin' },
   { id:'corte',       label:'✂️ Corte',          rol:'admin' },
   { id:'nomina',      label:'👷 Nómina',        rol:'admin' },
-  { id:'reparaciones',label:'🔧 Reparaciones',  rol:'admin' },
+  { id:'reparaciones',label:'🔧 Noria y Riego',  rol:'admin' },
   { id:'otros',       label:'🗂 Otros',         rol:'admin' },
 ];
 
@@ -2850,34 +2850,31 @@ function renderGastos() {
     // Config: add sistema
     const allTablaOpts = S.predios.map((p,pi)=>p.tablas.map((t,ti)=>`<option value="${pi}_${ti}">${p.emoji} ${p.nombre} · ${t.nombre}</option>`).join('')).join('');
     const configSR = isAdmin ? `
-      <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:10px">
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⚙️ Agregar sistema de riego</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-          <div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Nombre</div>
-            <input type="text" id="sr-nombre" placeholder="Ej: Sistema Goteo LH..." style="padding:5px;width:200px;font-size:13px"/>
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:3px">Tablas (ctrl+click para varios)</div>
-            <select id="sr-tablas" multiple style="padding:4px;width:200px;height:80px;font-size:12px">${allTablaOpts}</select>
-          </div>
-          <button class="btn btn-s" onclick="addSistemaRiego()">+ Agregar</button>
+      <div style="padding:10px 16px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">+ Agregar sistema</div>
+          <input type="text" id="sr-nombre" placeholder="Ej: Sistema Goteo LH..." style="padding:5px 8px;width:200px;font-size:12px"/>
         </div>
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Tablas (ctrl+click)</div>
+          <select id="sr-tablas" multiple style="padding:4px;width:220px;height:72px;font-size:11px">${allTablaOpts}</select>
+        </div>
+        <button class="btn btn-s" style="margin-bottom:2px" onclick="addSistemaRiego()">+ Agregar</button>
       </div>` : '';
 
     const riegoRows = S.sistemasRiego.map((sr,sri)=>{
       const val  = gastosGridDraft[`rriego_${sr.id}`] || '';
       const desc = gastosGridDraft[`rriego_desc_${sr.id}`] || '';
-      const tablaLabels = (sr.tablas||[]).map(({pi,ti})=>`${S.predios[pi]?.emoji} ${S.predios[pi]?.tablas[ti]?.nombre}`).join(', ');
+      const tablaLabels = (sr.tablas||[]).map(({pi,ti})=>`<span style="white-space:nowrap">${S.predios[pi]?.emoji} ${S.predios[pi]?.tablas[ti]?.nombre}</span>`).join(', ');
       const histR = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.categoria==='Reparaciones Riego'&&g.equipo===sr.nombre);
       const acumR = histR.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-      return `<tr>
-        <td style="padding:7px 12px;font-weight:600">${sr.nombre}</td>
-        <td style="padding:7px 12px;font-size:11px;color:var(--muted)">${tablaLabels}</td>
-        <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:160px;padding:4px 7px;border:1px solid #d4c0a0;font-size:12px" onchange="gastosGridDraft['rriego_desc_${sr.id}']=this.value"/></td>
-        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['rriego_${sr.id}']=this.value"/></td>
-        <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumR?fmt(acumR):'—'}</td>
-        <td style="padding:4px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delSistemaRiego(${sri})">✕</button>`:''}</td>
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 14px;font-weight:600;white-space:nowrap">${sr.nombre}</td>
+        <td style="padding:8px 14px;font-size:11px;color:var(--muted)">${tablaLabels}</td>
+        <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:100%;padding:4px 7px;border:1px solid #90c070;font-size:12px" onchange="gastosGridDraft['rriego_desc_${sr.id}']=this.value"/></td>
+        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:120px;padding:4px 7px;text-align:right;border:1px solid #90c070;font-size:13px" onchange="gastosGridDraft['rriego_${sr.id}']=this.value"/></td>
+        <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumR?fmt(acumR):'—'}</td>
+        <td style="padding:4px;text-align:center">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delSistemaRiego(${sri})">✕</button>`:''}</td>
       </tr>`;
     }).join('');
 
@@ -2910,12 +2907,13 @@ function renderGastos() {
       ${configSR}
       ${S.sistemasRiego.length ? `<div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <colgroup><col style="width:180px"/><col style="width:260px"/><col/><col style="width:140px"/><col style="width:130px"/><col style="width:36px"/></colgroup>
         <thead><tr style="background:var(--earth);color:#ffffff">
-          <th style="padding:7px 12px;text-align:left">Sistema</th>
-          <th style="padding:7px 10px;text-align:left">Tablas</th>
-          <th style="padding:7px 12px;text-align:left">Descripción</th>
-          <th style="padding:7px 12px;text-align:right">Monto ($)</th>
-          <th style="padding:7px 12px;text-align:right">Acum. C${selectedCn}</th>
+          <th style="padding:7px 14px;text-align:left">Sistema</th>
+          <th style="padding:7px 14px;text-align:left">Tablas</th>
+          <th style="padding:7px 14px;text-align:left">Descripción</th>
+          <th style="padding:7px 14px;text-align:right">Monto ($)</th>
+          <th style="padding:7px 14px;text-align:right">Acum. C${selectedCn}</th>
           <th></th>
         </tr></thead>
         <tbody>${riegoRows}</tbody>
