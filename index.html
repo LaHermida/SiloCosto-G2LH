@@ -3003,28 +3003,34 @@ function renderGastos() {
     const derechosRows = cosechas.map(({cn:dcn, label})=>{
       const montoKey = `da_monto_${dcn}`;
       const monto = gastosGridDraft[montoKey] || '';
-      // Tabla checkboxes
-      const tablaChecks = S.predios.map((p,pi)=>p.tablas.map((t,ti)=>{
-        const td = getTablaData(pi,dcn,ti);
-        if(td.sinSiembra) return '';
-        const key = `da_t_${dcn}_${pi}_${ti}`;
-        const isChk = gastosGridDraft[key]!=='0' && gastosGridDraft[key]!==false && gastosGridDraft[key]!==undefined;
-        return `<label style="display:inline-flex;align-items:center;gap:3px;margin-right:8px;font-size:11px;cursor:pointer;white-space:nowrap">
-          <input type="checkbox" ${isChk?'checked':''} onchange="gastosGridDraft['${key}']=this.checked?'1':'0'"/>
-          ${p.emoji} ${t.nombre}
-        </label>`;
-      }).join('')).join('');
       const histDa = (S.gastosGenerales||[]).filter(g=>g.cosecha===dcn&&g.categoria==='Derechos de Agua');
       const acumDa = histDa.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-      return `<tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:8px 14px;font-weight:600;white-space:nowrap;min-width:120px">${label}</td>
-        <td style="padding:8px 14px;line-height:2">${tablaChecks}</td>
-        <td style="padding:4px 10px;text-align:right;white-space:nowrap">
+      // 3 columnas — una por predio
+      const prediosCols = S.predios.map((p,pi)=>{
+        const tablaChecks = p.tablas.map((t,ti)=>{
+          const td = getTablaData(pi,dcn,ti);
+          if(td.sinSiembra) return '';
+          const key = `da_t_${dcn}_${pi}_${ti}`;
+          const isChk = gastosGridDraft[key]!=='0' && gastosGridDraft[key]!==false && gastosGridDraft[key]!==undefined;
+          return `<label style="display:flex;align-items:center;gap:4px;margin-bottom:2px;font-size:11px;cursor:pointer">
+            <input type="checkbox" ${isChk?'checked':''} onchange="gastosGridDraft['${key}']=this.checked?'1':'0'"/>
+            ${t.nombre}
+          </label>`;
+        }).join('');
+        return `<td style="padding:8px 14px;vertical-align:top;border-left:1px solid var(--border)">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">${p.emoji} ${p.nombre}</div>
+          ${tablaChecks}
+        </td>`;
+      }).join('');
+      return `<tr style="border-bottom:2px solid var(--border)">
+        <td style="padding:8px 14px;font-weight:600;white-space:nowrap;vertical-align:top">${label}</td>
+        ${prediosCols}
+        <td style="padding:8px 14px;vertical-align:top;white-space:nowrap;border-left:1px solid var(--border)">
           <input type="number" min="0" step="1" placeholder="—" value="${monto}"
-            style="width:140px;padding:5px 8px;text-align:right;border:1px solid #90c070;font-size:13px"
+            style="width:130px;padding:5px 8px;text-align:right;border:1px solid #90c070;font-size:13px"
             onchange="gastosGridDraft['${montoKey}']=this.value"/>
         </td>
-        <td style="padding:8px 14px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumDa?fmt(acumDa):'—'}</td>
+        <td style="padding:8px 14px;text-align:right;vertical-align:top;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);white-space:nowrap">${acumDa?fmt(acumDa):'—'}</td>
       </tr>`;
     }).join('');
 
@@ -3044,10 +3050,9 @@ function renderGastos() {
     tabContent = `
       <div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <colgroup><col style="width:140px"/><col/><col style="width:160px"/><col style="width:130px"/></colgroup>
         <thead><tr style="background:var(--earth);color:#ffffff">
           <th style="padding:7px 14px;text-align:left">Cosecha</th>
-          <th style="padding:7px 14px;text-align:left">Tablas</th>
+          ${S.predios.map(p=>`<th style="padding:7px 14px;text-align:left">${p.emoji} ${p.nombre}</th>`).join('')}
           <th style="padding:7px 14px;text-align:right">Monto Total ($)</th>
           <th style="padding:7px 14px;text-align:right">Acum.</th>
         </tr></thead>
@@ -3729,28 +3734,34 @@ function capturarGastos() {
     const derechosRows = cosechas.map(({cn:dcn, label})=>{
       const montoKey = `da_monto_${dcn}`;
       const monto = gastosGridDraft[montoKey] || '';
-      // Tabla checkboxes
-      const tablaChecks = S.predios.map((p,pi)=>p.tablas.map((t,ti)=>{
-        const td = getTablaData(pi,dcn,ti);
-        if(td.sinSiembra) return '';
-        const key = `da_t_${dcn}_${pi}_${ti}`;
-        const isChk = gastosGridDraft[key]!=='0' && gastosGridDraft[key]!==false && gastosGridDraft[key]!==undefined;
-        return `<label style="display:inline-flex;align-items:center;gap:3px;margin-right:8px;font-size:11px;cursor:pointer;white-space:nowrap">
-          <input type="checkbox" ${isChk?'checked':''} onchange="gastosGridDraft['${key}']=this.checked?'1':'0'"/>
-          ${p.emoji} ${t.nombre}
-        </label>`;
-      }).join('')).join('');
       const histDa = (S.gastosGenerales||[]).filter(g=>g.cosecha===dcn&&g.categoria==='Derechos de Agua');
       const acumDa = histDa.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-      return `<tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:8px 14px;font-weight:600;white-space:nowrap;min-width:120px">${label}</td>
-        <td style="padding:8px 14px;line-height:2">${tablaChecks}</td>
-        <td style="padding:4px 10px;text-align:right;white-space:nowrap">
+      // 3 columnas — una por predio
+      const prediosCols = S.predios.map((p,pi)=>{
+        const tablaChecks = p.tablas.map((t,ti)=>{
+          const td = getTablaData(pi,dcn,ti);
+          if(td.sinSiembra) return '';
+          const key = `da_t_${dcn}_${pi}_${ti}`;
+          const isChk = gastosGridDraft[key]!=='0' && gastosGridDraft[key]!==false && gastosGridDraft[key]!==undefined;
+          return `<label style="display:flex;align-items:center;gap:4px;margin-bottom:2px;font-size:11px;cursor:pointer">
+            <input type="checkbox" ${isChk?'checked':''} onchange="gastosGridDraft['${key}']=this.checked?'1':'0'"/>
+            ${t.nombre}
+          </label>`;
+        }).join('');
+        return `<td style="padding:8px 14px;vertical-align:top;border-left:1px solid var(--border)">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">${p.emoji} ${p.nombre}</div>
+          ${tablaChecks}
+        </td>`;
+      }).join('');
+      return `<tr style="border-bottom:2px solid var(--border)">
+        <td style="padding:8px 14px;font-weight:600;white-space:nowrap;vertical-align:top">${label}</td>
+        ${prediosCols}
+        <td style="padding:8px 14px;vertical-align:top;white-space:nowrap;border-left:1px solid var(--border)">
           <input type="number" min="0" step="1" placeholder="—" value="${monto}"
-            style="width:140px;padding:5px 8px;text-align:right;border:1px solid #90c070;font-size:13px"
+            style="width:130px;padding:5px 8px;text-align:right;border:1px solid #90c070;font-size:13px"
             onchange="gastosGridDraft['${montoKey}']=this.value"/>
         </td>
-        <td style="padding:8px 14px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumDa?fmt(acumDa):'—'}</td>
+        <td style="padding:8px 14px;text-align:right;vertical-align:top;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);white-space:nowrap">${acumDa?fmt(acumDa):'—'}</td>
       </tr>`;
     }).join('');
 
@@ -3770,10 +3781,9 @@ function capturarGastos() {
     tabContent = `
       <div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <colgroup><col style="width:140px"/><col/><col style="width:160px"/><col style="width:130px"/></colgroup>
         <thead><tr style="background:var(--earth);color:#ffffff">
           <th style="padding:7px 14px;text-align:left">Cosecha</th>
-          <th style="padding:7px 14px;text-align:left">Tablas</th>
+          ${S.predios.map(p=>`<th style="padding:7px 14px;text-align:left">${p.emoji} ${p.nombre}</th>`).join('')}
           <th style="padding:7px 14px;text-align:right">Monto Total ($)</th>
           <th style="padding:7px 14px;text-align:right">Acum.</th>
         </tr></thead>
