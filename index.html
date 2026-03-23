@@ -4010,7 +4010,40 @@ function renderGridContent() {
         <button class="btn btn-s" onclick="gridDraft={};renderGridContent()">Limpiar</button>
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">Solo llena las celdas que aplican — las vacías se ignoran</span>
       </div>
-    </div>`;
+    </div>
+    ${(()=>{
+      const histRowsGrid = artsCultivo.map(art=>{
+        let artTotal = 0;
+        const cells = p.tablas.map((t,ti)=>{
+          const td = getTablaData(pi,cn,ti);
+          const totMonto = (td.consumos||[]).filter(c=>c.articuloId===art.id).reduce((s,c)=>s+parseFloat(c.cantidad||0)*parseFloat(c.precioSnapshot||0),0);
+          const totCant  = (td.consumos||[]).filter(c=>c.articuloId===art.id).reduce((s,c)=>s+parseFloat(c.cantidad||0),0);
+          artTotal += totMonto;
+          return `<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px">${totMonto?fmt(totMonto):'—'}<br><span style="font-size:10px;color:var(--muted)">${totCant?fmtN(totCant,2)+' '+art.unidad:''}</span></td>`;
+        }).join('');
+        if(!artTotal) return '';
+        return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 10px;font-weight:600;white-space:nowrap;font-size:13px">${art.nombre}</td>${cells}<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);font-weight:700">${fmt(artTotal)}</td></tr>`;
+      }).filter(Boolean).join('');
+      if(!histRowsGrid) return '';
+      const tabHdrs = p.tablas.map(t=>`<th style="padding:5px 8px;text-align:right;white-space:nowrap;font-size:11px">${t.nombre}</th>`).join('');
+      const footCells = p.tablas.map((t,ti)=>{
+        const tot = artsCultivo.reduce((s,art)=>{
+          const td = getTablaData(pi,cn,ti);
+          return s+(td.consumos||[]).filter(c=>c.articuloId===art.id).reduce((ss,c)=>ss+parseFloat(c.cantidad||0)*parseFloat(c.precioSnapshot||0),0);
+        },0);
+        return `<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;font-weight:700">${tot?fmt(tot):'—'}</td>`;
+      }).join('');
+      const grandTotal = artsCultivo.reduce((s,art)=>s+p.tablas.reduce((ss,t,ti)=>{
+        const td=getTablaData(pi,cn,ti);
+        return ss+(td.consumos||[]).filter(c=>c.articuloId===art.id).reduce((sss,c)=>sss+parseFloat(c.cantidad||0)*parseFloat(c.precioSnapshot||0),0);
+      },0),0);
+      return `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px">📊 Historial C${cn} — Artículo x Tabla</div>
+      <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;min-width:400px">
+        <thead><tr style="background:var(--earth);color:#fff"><th style="padding:5px 10px;text-align:left">Artículo</th>${tabHdrs}<th style="padding:5px 8px;text-align:right">TOTAL</th></tr></thead>
+        <tbody>${histRowsGrid}</tbody>
+        <tfoot><tr style="background:var(--cream);font-weight:700"><td style="padding:5px 10px">TOTAL</td>${footCells}<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${fmt(grandTotal)}</td></tr></tfoot>
+      </table></div>`;
+    })()}`;
 }
 
 function updateGridDraft(ti, artId, val) {
