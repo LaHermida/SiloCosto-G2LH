@@ -7,24 +7,24 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;700;900&family=Epilogue:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #f2f5ee;
+  --bg: #f8fdf6;
   --surface: #ffffff;
-  --soil: #2d5a1b;
-  --earth: #3d6b2e;
-  --clay: #5a8c3f;
-  --amber: #8b5e3c;
-  --gold: #a8783c;
-  --straw: #d4a84b;
-  --cream: #f5f8f0;
-  --green: #2d5a1b;
-  --green-l: #3d6b2e;
+  --soil: #1a3d22;
+  --earth: #2a7a3c;
+  --clay: #3d8a50;
+  --amber: #9a6010;
+  --gold: #c8901a;
+  --straw: #e8c048;
+  --cream: #eef8f2;
+  --green: #1a3d22;
+  --green-l: #2a6438;
   --blue: #1a3a5c;
   --purple: #4a2060;
   --red: #7a1f1f;
-  --border: #b8d4a0;
-  --text: #1a2e10;
-  --muted: #5a7848;
-  --shadow: 0 2px 12px rgba(45,90,27,0.10);
+  --border: #7ec89a;
+  --text: #0d2e16;
+  --muted: #2a6438;
+  --shadow: 0 2px 12px rgba(26,61,34,0.10);
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:var(--bg); color:var(--text); font-family:'Epilogue',sans-serif; min-height:100vh; font-size:14px; }
@@ -38,21 +38,21 @@ header {
 }
 .logo { font-family:'Fraunces',serif; font-size:20px; font-weight:900; color:#ffffff; }
 .logo em { color:var(--straw); font-style:normal; }
-.logo-tag { font-family:'DM Mono',monospace; font-size:10px; color:#c8e6a0; margin-left:10px; }
+.logo-tag { font-family:'DM Mono',monospace; font-size:10px; color:#90d8a8; margin-left:10px; }
 .header-nav { display:flex; gap:2px; }
-.hnav { padding:8px 14px; background:transparent; border:none; color:#c8e6a0; font-family:'Epilogue',sans-serif; font-size:12px; font-weight:600; cursor:pointer; text-transform:uppercase; letter-spacing:1px; transition:all 0.15s; border-bottom:2px solid transparent; }
+.hnav { padding:8px 14px; background:transparent; border:none; color:#90d8a8; font-family:'Epilogue',sans-serif; font-size:12px; font-weight:600; cursor:pointer; text-transform:uppercase; letter-spacing:1px; transition:all 0.15s; border-bottom:2px solid transparent; }
 .hnav:hover { color:#ffffff; }
 .hnav.active { color:#ffffff; border-bottom-color:var(--straw); }
 .body { display:flex; flex:1; }
 
 /* SIDEBAR */
 .sidebar { width:210px; background:var(--earth); padding:16px 0; flex-shrink:0; border-right:1px solid var(--clay); }
-.sb-label { font-family:'DM Mono',monospace; font-size:9px; color:#c8e6a0; letter-spacing:3px; text-transform:uppercase; padding:8px 16px 4px; display:block; }
-.sb-item { display:flex; align-items:center; gap:8px; padding:8px 16px; cursor:pointer; color:#d8eec0; font-size:13px; font-weight:500; transition:all 0.12s; border-left:3px solid transparent; }
+.sb-label { font-family:'DM Mono',monospace; font-size:9px; color:#90d8a8; letter-spacing:3px; text-transform:uppercase; padding:8px 16px 4px; display:block; }
+.sb-item { display:flex; align-items:center; gap:8px; padding:8px 16px; cursor:pointer; color:#b0e8c0; font-size:13px; font-weight:500; transition:all 0.12s; border-left:3px solid transparent; }
 .sb-item:hover { color:#ffffff; background:rgba(255,255,255,0.08); }
-.sb-item.active { color:#ffffff; border-left-color:var(--straw); background:rgba(212,168,75,0.15); }
+.sb-item.active { color:#ffffff; border-left-color:var(--straw); background:rgba(232,192,72,0.15); }
 .sb-icon { font-size:14px; width:18px; text-align:center; }
-.sb-ha { font-family:'DM Mono',monospace; font-size:9px; color:#c8e6a0; margin-left:auto; }
+.sb-ha { font-family:'DM Mono',monospace; font-size:9px; color:#90d8a8; margin-left:auto; }
 .sb-div { height:1px; background:var(--clay); margin:8px 16px; }
 
 /* CONTENT */
@@ -84,8 +84,8 @@ header {
 .fg4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; }
 .field { display:flex; flex-direction:column; gap:5px; }
 .field.full { grid-column:1/-1; }
-label { font-family:'DM Mono',monospace; font-size:10px; color:#3d6b2e; text-transform:uppercase; letter-spacing:1px; font-weight:600; }
-input,select,textarea { padding:9px 12px; border:1.5px solid #90c070; background:#f8fbf5; color:#1a3a10; font-family:'Epilogue',sans-serif; font-size:13px; outline:none; transition:border-color 0.15s; }
+label { font-family:'DM Mono',monospace; font-size:10px; color:#2a7a3c; text-transform:uppercase; letter-spacing:1px; font-weight:600; }
+input,select,textarea { padding:9px 12px; border:1.5px solid #7ec89a; background:#f8fdf6; color:#0d2e16; font-family:'Epilogue',sans-serif; font-size:13px; outline:none; transition:border-color 0.15s; }
 input:focus,select:focus { border-color:var(--soil); background:white; }
 input:disabled { opacity:0.6; cursor:not-allowed; }
 
@@ -111,7 +111,7 @@ tr:hover td { background:var(--cream); }
 .mono { font-family:'DM Mono',monospace; }
 .tr { text-align:right; }
 .amber { color:var(--amber); font-weight:700; }
-.green { color:var(--green); font-weight:700; }
+.green { color:#1a3d22; font-weight:700; }
 
 /* TABS */
 .ptabs { display:flex; gap:0; margin-bottom:18px; border-bottom:2px solid var(--border); }
@@ -129,15 +129,15 @@ tr:hover td { background:var(--cream); }
 .tabla-card { border:2px solid #a8d090; padding:10px 14px; cursor:pointer; transition:all 0.15s; text-align:center; background:#f0f7ea; }
 .tabla-card:hover { border-color:#5a8c3f; background:#e4f0d8; }
 .tabla-card.selected { border-color:#5a8c3f; background:#e4f0d8; }
-.tabla-card.active-reg { border:3px solid #2d5a1b; background:#e4f0d8; color:#1a3a10; }
+.tabla-card.active-reg { border:3px solid #1a3d22; background:#e4f0d8; color:#0d2e16; }
 .tabla-card.sin-siembra { opacity:0.55; border-style:dashed; }
-.tabla-name { font-weight:700; font-size:13px; color:#1a3a10; }
-.tabla-ha { font-family:'DM Mono',monospace; font-size:10px; color:#5a7848; margin-top:2px; }
-.tabla-card.active-reg .tabla-name { color:#1a3a10 !important; }
-.tabla-card.active-reg .tabla-ha { color:#5a7848 !important; }
-.tabla-card.active-reg span { color:#1a3a10 !important; }
+.tabla-name { font-weight:700; font-size:13px; color:#0d2e16; }
+.tabla-ha { font-family:'DM Mono',monospace; font-size:10px; color:#2a6438; margin-top:2px; }
+.tabla-card.active-reg .tabla-name { color:#0d2e16 !important; }
+.tabla-card.active-reg .tabla-ha { color:#2a6438 !important; }
+.tabla-card.active-reg span { color:#0d2e16 !important; }
 .tabla-cultivo { font-size:10px; margin-top:4px; padding:2px 6px; display:inline-block; }
-.cultivo-maiz { background:#e8f5e8; color:var(--green); }
+.cultivo-maiz { background:#e8f5e8; color:#1a3d22; }
 .cultivo-trigo { background:#fef3e2; color:var(--amber); }
 .cultivo-sorgo { background:#f0e8f8; color:var(--purple); }
 .cultivo-alfalfa { background:#e0f0e8; color:#1a6b3a; }
@@ -151,7 +151,7 @@ tr:hover td { background:var(--cream); }
 
 /* DEPRECIATION TYPE BADGE */
 .dep-badge { display:inline-block; padding:3px 8px; font-family:'DM Mono',monospace; font-size:9px; font-weight:600; }
-.dep-general { background:#e8f5e8; color:var(--green); }
+.dep-general { background:#e8f5e8; color:#1a3d22; }
 .dep-tabla { background:#fef3e2; color:var(--amber); }
 
 /* EMPTY */
@@ -185,7 +185,7 @@ tr:hover td { background:var(--cream); }
   <div>
     <span class="logo">Silo<em>Costo</em> LH</span>
     <span class="logo-tag">LH</span>
-  <span id="save-indicator" style="font-family:'DM Mono',monospace;font-size:10px;color:#c8e6a0;margin-left:14px">☁️ Nube</span>
+  <span id="save-indicator" style="font-family:'DM Mono',monospace;font-size:10px;color:#90d8a8;margin-left:14px">☁️ Nube</span>
   <span id="user-tag" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--straw);margin-left:14px"></span>
   </div>
   <nav class="header-nav">
@@ -527,7 +527,7 @@ async function save() {
   try {
     await sbSet(SK, JSON.stringify(S));
     const ind = document.getElementById('save-indicator');
-    if(ind) { ind.textContent = '☁️ Guardado'; ind.style.color = '#2a7a2a'; setTimeout(()=>{ ind.textContent = '☁️ Nube'; ind.style.color = '#c8e6a0'; }, 2000); }
+    if(ind) { ind.textContent = '☁️ Guardado'; ind.style.color = '#2a7a2a'; setTimeout(()=>{ ind.textContent = '☁️ Nube'; ind.style.color = '#90d8a8'; }, 2000); }
   } catch(e){
     const ind = document.getElementById('save-indicator');
     if(ind) { ind.textContent = '❌ ' + e.message; ind.style.color = '#7a1f1f'; }
@@ -1197,14 +1197,14 @@ function renderRegContent() {
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Ha</div>
           <input type="number" value="${d.haSembradas||''}" placeholder="${t.ha}"
             step="0.01" min="0" max="${t.ha}"
-            style="width:100%;padding:2px 4px;font-size:11px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#d4c0a0'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'};text-align:center"
+            style="width:100%;padding:2px 4px;font-size:11px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#7ec89a'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'};text-align:center"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'haSembradas',this.value)"/>
         </div>
         <div>
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Kilos</div>
           <input type="number" value="${d.kilos||''}" placeholder="0"
-            style="width:100%;padding:2px 4px;font-size:12px;font-weight:600;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#d4c0a0'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--gold)':'var(--amber)'};text-align:center"
+            style="width:100%;padding:2px 4px;font-size:12px;font-weight:600;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#7ec89a'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--gold)':'var(--amber)'};text-align:center"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'kilos',this.value)"/>
         ${d.kilos ? `<div style="font-size:9px;text-align:center;opacity:0.7;margin-top:1px">${fmtN(parseFloat(d.kilos),0)} kg</div>` : ''}
@@ -1213,13 +1213,13 @@ function renderRegContent() {
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">% MS</div>
           <input type="number" value="${d.pctMS||''}" placeholder="40"
             step="0.01"
-            style="width:100%;padding:2px 4px;font-size:11px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#d4c0a0'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'};text-align:center"
+            style="width:100%;padding:2px 4px;font-size:11px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#7ec89a'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'};text-align:center"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'pctMS',this.value)"/>
         </div>
         <div>
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Cultivo</div>
-          <select style="width:100%;padding:2px 2px;font-size:10px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#d4c0a0'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'}"
+          <select style="width:100%;padding:2px 2px;font-size:10px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#7ec89a'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'}"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'cultivo',this.value)">
             ${Object.entries(CULTIVOS).map(([k,v])=>`<option value="${k}" ${(d.cultivo||'maiz')===k?'selected':''}>${v.icon} ${v.label}</option>`).join('')}
@@ -1228,14 +1228,14 @@ function renderRegContent() {
         <div style="grid-column:span 2">
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Siembra</div>
           <input type="date" value="${d.fechaSiembra||''}"
-            style="width:100%;padding:2px 4px;font-size:10px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#d4c0a0'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'}"
+            style="width:100%;padding:2px 4px;font-size:10px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#7ec89a'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'}"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'fechaSiembra',this.value)"/>
         </div>
         <div style="grid-column:span 2">
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Corte</div>
           <input type="date" value="${d.fechaCorte||''}"
-            style="width:100%;padding:2px 4px;font-size:10px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#d4c0a0'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'}"
+            style="width:100%;padding:2px 4px;font-size:10px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#7ec89a'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'}"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'fechaCorte',this.value)"/>
         </div>
@@ -1270,7 +1270,7 @@ function renderRegContent() {
             <label style="font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0">Año:</label>
             <input type="number" value="${meta.year}" min="2000" max="2100" style="width:80px;padding:4px 8px;font-size:13px" ${isClosed?'disabled':''} onchange="getCosechaMeta(${pi},${cn}).year=parseInt(this.value);save()"/>
           </div>
-          ${!isClosed ? `<button class="btn" style="background:#2d5a1b;color:#f5f8f0;font-size:11px;padding:6px 14px" onclick="toggleCosechaClosed(${pi},${cn})">🔒 Cerrar cosecha</button>` : ''}
+          ${!isClosed ? `<button class="btn" style="background:#1a3d22;color:#eef8f2;font-size:11px;padding:6px 14px" onclick="toggleCosechaClosed(${pi},${cn})">🔒 Cerrar cosecha</button>` : ''}
         </div>
       </div>
       <div class="tabla-grid">${tablaGrid}</div>
@@ -1528,7 +1528,7 @@ function renderRepContent() {
     function buildCatRows(d) {
       let rows = cats.filter(cat=>(d.catT[cat]||0)>0).map(cat=>{
         const tot=d.catT[cat]||0;
-        return `<tr><td>${cat}</td><td><span style="background:#e8f5e8;color:var(--green);padding:2px 6px;font-size:10px">Variable</span></td>
+        return `<tr><td>${cat}</td><td><span style="background:#e8f5e8;color:#1a3d22;padding:2px 6px;font-size:10px">Variable</span></td>
           <td class="mono tr">${fmt(tot/d.ha)}</td><td class="mono tr">${fmt(tot)}</td><td class="mono tr" style="color:var(--muted)">—</td></tr>`;
       }).join('');
       if(d.dep>0) rows += `<tr><td>Depreciación</td><td><span style="background:#fef3e2;color:var(--amber);padding:2px 6px;font-size:10px">Constante</span></td>
@@ -1718,7 +1718,7 @@ function renderRepContent() {
 
     let catRows = cats.map(cat=>`<tr>
       <td>${cat}</td>
-      <td><span style="background:#e8f5e8;color:var(--green);padding:2px 6px;font-size:10px">Variable</span></td>
+      <td><span style="background:#e8f5e8;color:#1a3d22;padding:2px 6px;font-size:10px">Variable</span></td>
       <td class="mono tr">${catTotals[cat]?fmt(catTotals[cat]/p.tablas[ti].ha):'$ —'}</td>
       <td class="mono tr">${catTotals[cat]?fmt(catTotals[cat]):'$ —'}</td>
     </tr>`).join('');
@@ -1831,7 +1831,7 @@ function printReportePredio(pi, cn) {
 
   const win=window.open('','_blank');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte ${p.nombre} C${cn}</title>
-  <style>body{font-family:Arial,sans-serif;font-size:12px;margin:30px}h1{font-size:18px;text-align:center}h2{font-size:12px;text-align:center;color:#666;font-weight:normal;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#2d5a1b;color:#f5f8f0;padding:8px;font-size:10px;text-align:left}td{padding:8px;border-bottom:1px solid #ddd}.tr{text-align:right}.tot{background:#2d5a1b;color:#f5f8f0;font-weight:bold}.sec{background:#3d6b2e;color:#faf6ed;text-align:center;padding:8px;font-weight:bold;margin:14px 0 6px}.zero{color:#bbb}@media print{button{display:none}}</style>
+  <style>body{font-family:Arial,sans-serif;font-size:12px;margin:30px}h1{font-size:18px;text-align:center}h2{font-size:12px;text-align:center;color:#666;font-weight:normal;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#1a3d22;color:#eef8f2;padding:8px;font-size:10px;text-align:left}td{padding:8px;border-bottom:1px solid #ddd}.tr{text-align:right}.tot{background:#1a3d22;color:#eef8f2;font-weight:bold}.sec{background:#2a7a3c;color:#faf6ed;text-align:center;padding:8px;font-weight:bold;margin:14px 0 6px}.zero{color:#bbb}@media print{button{display:none}}</style>
   </head><body>
   <h1>GASTOS TOTALES — ${p.nombre}</h1>
   <h2>Cosecha ${cn} · ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha · ${today()}</h2>
@@ -1846,7 +1846,7 @@ function printReportePredio(pi, cn) {
   <div class="sec">COSTO POR KILO</div>
   <table><thead><tr><th>Kilos silo</th><th>Kg MS</th><th>Total</th><th>$/ha</th><th>$/kg silo</th><th>$/kg MS</th></tr></thead>
   <tbody><tr><td>${totKilos?fmtN(totKilos,0):'—'}</td><td>${totKgMS?fmtN(totKgMS,0):'—'}</td><td>${fmtPDF(totCost)}</td><td>${fmtPDF(totCost/totalHa)}</td><td><strong>${cpk?'$ '+cpk.toFixed(2):'—'}</strong></td><td><strong>${cpkms?'$ '+cpkms.toFixed(2):'—'}</strong></td></tr></tbody></table>
-  <br><button onclick="window.print()" style="padding:10px 24px;background:#2d5a1b;color:#f5f8f0;border:none;cursor:pointer">🖨 Imprimir / PDF</button>
+  <br><button onclick="window.print()" style="padding:10px 24px;background:#1a3d22;color:#eef8f2;border:none;cursor:pointer">🖨 Imprimir / PDF</button>
   </body></html>`);
   win.document.close();
 }
@@ -1871,7 +1871,7 @@ function printReporteTabla(pi, cn, ti) {
   const fmtPDF=n=>n?'$ '+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'$ —';
   const win=window.open('','_blank');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte ${t.nombre}</title>
-  <style>body{font-family:Arial,sans-serif;font-size:12px;margin:30px}h1{font-size:18px;text-align:center}h2{font-size:12px;text-align:center;color:#666;font-weight:normal;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#2d5a1b;color:#f5f8f0;padding:8px;font-size:10px;text-align:left}td{padding:8px;border-bottom:1px solid #ddd}.tr{text-align:right}.tot{background:#2d5a1b;color:#f5f8f0;font-weight:bold}.sec{background:#3d6b2e;color:#faf6ed;text-align:center;padding:8px;font-weight:bold;margin:14px 0 6px}@media print{button{display:none}}</style>
+  <style>body{font-family:Arial,sans-serif;font-size:12px;margin:30px}h1{font-size:18px;text-align:center}h2{font-size:12px;text-align:center;color:#666;font-weight:normal;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#1a3d22;color:#eef8f2;padding:8px;font-size:10px;text-align:left}td{padding:8px;border-bottom:1px solid #ddd}.tr{text-align:right}.tot{background:#1a3d22;color:#eef8f2;font-weight:bold}.sec{background:#2a7a3c;color:#faf6ed;text-align:center;padding:8px;font-weight:bold;margin:14px 0 6px}@media print{button{display:none}}</style>
   </head><body>
   <h1>GASTOS TOTALES — ${t.nombre}</h1>
   <h2>${p.nombre} · Cosecha ${cn} · ${t.ha} ha · ${today()}</h2>
@@ -1883,7 +1883,7 @@ function printReporteTabla(pi, cn, ti) {
   <div class="sec">COSTO POR KILO</div>
   <table><thead><tr><th>Kilos silo</th><th>Kg MS</th><th>% MS</th><th>Total</th><th>$/ha</th><th>$/kg silo</th><th>$/kg MS</th></tr></thead>
   <tbody><tr><td>${kilos?fmtN(kilos,0):'—'}</td><td>${kgMS?fmtN(kgMS,0):'—'}</td><td>${td.pctMS?td.pctMS+'%':'—'}</td><td>${fmtPDF(total)}</td><td>${fmtPDF(total/t.ha)}</td><td><strong>${cpk?'$ '+cpk.toFixed(2):'—'}</strong></td><td><strong>${cpkms?'$ '+cpkms.toFixed(2):'—'}</strong></td></tr></tbody></table>
-  <br><button onclick="window.print()" style="padding:10px 24px;background:#2d5a1b;color:#f5f8f0;border:none;cursor:pointer">🖨 Imprimir / PDF</button>
+  <br><button onclick="window.print()" style="padding:10px 24px;background:#1a3d22;color:#eef8f2;border:none;cursor:pointer">🖨 Imprimir / PDF</button>
   </body></html>`);
   win.document.close();
 }
@@ -1982,7 +1982,7 @@ let gastosGridCn = 1;
 let gastosTab = 'tractores';
 
 // ── Helper: build grid table (maquila, pizca, camiones) ──
-function buildGridTable(prediosList, prefix, headerColor='#2d5a1b') {
+function buildGridTable(prediosList, prefix, headerColor='#1a3d22') {
   let tiMax = 0;
   prediosList.forEach(({p})=>{ if(p.tablas.length>tiMax) tiMax=p.tablas.length; });
   const headerRow1 = prediosList.map(({p})=>
@@ -1992,7 +1992,7 @@ function buildGridTable(prediosList, prefix, headerColor='#2d5a1b') {
     const ppt = gastosGridDraft[`${prefix}_ppt_${pi}`] || '';
     return `<th style="padding:4px 6px;background:#f5efe0;border-left:2px solid var(--border);text-align:center">
         <input type="number" min="0" step="0.01" placeholder="${priceLabel}" value="${ppt}"
-          style="width:85px;padding:3px 6px;text-align:center;border:1px solid #d4c0a0;font-size:12px;background:#fffbe8"
+          style="width:85px;padding:3px 6px;text-align:center;border:1px solid #7ec89a;font-size:12px;background:#fffbe8"
           onchange="gastosGridDraft['${prefix}_ppt_${pi}']=this.value;renderGastos()"/>
       </th>
       <th style="padding:4px 8px;background:#f5efe0;font-size:10px;color:var(--muted);text-align:center;white-space:nowrap">$ Total</th>`;
@@ -2055,7 +2055,7 @@ function buildGridTableFiltered(prediosList, prefix, headerColor, cultivoFilter,
     const ppt = gastosGridDraft[`${prefix}_ppt_${pi}`] || '';
     return `<th style="padding:4px 6px;background:#f5efe0;border-left:2px solid var(--border);text-align:center">
         <input type="number" min="0" step="0.01" placeholder="${priceLabel}" value="${ppt}"
-          style="width:85px;padding:3px 6px;text-align:center;border:1px solid #d4c0a0;font-size:12px;background:#fffbe8"
+          style="width:85px;padding:3px 6px;text-align:center;border:1px solid #7ec89a;font-size:12px;background:#fffbe8"
           onchange="gastosGridDraft['${prefix}_ppt_${pi}']=this.value;renderGastos()"/>
       </th>
       <th style="padding:4px 8px;background:#f5efe0;font-size:10px;color:var(--muted);text-align:center;white-space:nowrap">$ Total</th>`;
@@ -2212,13 +2212,13 @@ function renderGastos() {
     // Precio diesel — solo admin lo define, Naty puede capturar litros sin precio
     const precioDiesel = S.precioDiesel?.[selectedCn] || '';
     const precioDieselInput = isAdmin ? `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:8px 12px;background:#fff8e8;border:1px solid #d4c0a0">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:8px 12px;background:#f0fdf4;border:1px solid #7ec89a">
         <span style="font-size:12px;color:var(--muted)">💧 Precio diesel C${selectedCn}:</span>
         <input type="number" min="0" step="0.01" placeholder="$/litro" value="${precioDiesel}"
-          style="width:100px;padding:4px 8px;border:1px solid #d4c0a0;font-size:13px;text-align:right"
+          style="width:100px;padding:4px 8px;border:1px solid #7ec89a;font-size:13px;text-align:right"
           onchange="if(!S.precioDiesel)S.precioDiesel={};S.precioDiesel[${selectedCn}]=parseFloat(this.value)||0;recalcDieselCosecha(${selectedCn})"/>
         <span style="font-size:11px;color:var(--muted)">El sistema calcula Litros × Precio al capturar</span>
-      </div>` : `<div style="font-size:11px;color:var(--muted);margin-bottom:10px;padding:6px 10px;background:#fff8e8;border:1px solid #d4c0a0">
+      </div>` : `<div style="font-size:11px;color:var(--muted);margin-bottom:10px;padding:6px 10px;background:#f0fdf4;border:1px solid #7ec89a">
         💧 Precio diesel C${selectedCn}: ${precioDiesel ? '<strong>$'+precioDiesel+'/L</strong> — captura litros y el admin cierra el precio' : '<em>pendiente — registra litros, el admin define el precio al cierre</em>'}
       </div>`;
 
@@ -2244,10 +2244,10 @@ function renderGastos() {
           <td style="padding:7px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
           <td style="padding:7px 12px;font-size:11px;color:var(--muted)">${p.emoji} ${p.nombre}</td>
           <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dServ}"
-            style="width:130px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+            style="width:130px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
             onchange="gastosGridDraft['s_${pi}_${eq.id}']=this.value"/></td>
           <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dRep}"
-            style="width:130px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+            style="width:130px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
             onchange="gastosGridDraft['r_${pi}_${eq.id}']=this.value"/></td>
           <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber);font-size:12px">${totServ?fmt(totServ):'—'}</td>
           <td style="padding:4px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delEquipoByNombre(${pi},'${eq.id}')">✕</button>`:''}</td>
@@ -2265,7 +2265,7 @@ function renderGastos() {
           <td style="padding:7px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
           <td style="padding:7px 12px;font-size:11px;color:var(--muted)">${p.emoji} ${p.nombre}</td>
           <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="0.1" placeholder="—" value="${dDiesel}"
-            style="width:130px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+            style="width:130px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
             onchange="gastosGridDraft['d_${pi}_${eq.id}']=this.value"/></td>
           <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${totLitros?fmtN(totLitros,0)+' L':'—'}</td>
           <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber);font-size:12px">${totDiesel?fmt(totDiesel):'—'}</td>
@@ -2363,7 +2363,7 @@ function renderGastos() {
 
     const mesActual = parseInt(gastosGridDraft['mes']||new Date().getMonth()+1);
     const mesSelector = `
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:#fff8e8;border:1px solid #d4c0a0">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:#f0fdf4;border:1px solid #7ec89a">
         <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">MES</div>
           <select style="padding:5px" onchange="gastosGridDraft['mes']=this.value;renderGastos()">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActual===i+1?'selected':''}>${m}</option>`).join('')}</select>
         </div>
@@ -2386,7 +2386,7 @@ function renderGastos() {
           const pct = (S.luzNoriaPredios[key] !== undefined) ? S.luzNoriaPredios[key] : (entries.find(e=>e.pi===pi) ? Math.round(100/entries.length) : 0);
           return `<td style="padding:4px 6px;text-align:center">
             <input type="number" min="0" max="100" step="1" value="${pct}"
-              style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px"
+              style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px"
               onchange="if(!S.luzNoriaPredios)S.luzNoriaPredios={};S.luzNoriaPredios['${noriaId}_${pi}']=parseFloat(this.value)||0;save()"/>
           </td>`;
         }).join('');
@@ -2403,7 +2403,7 @@ function renderGastos() {
           ${prediosPct}
           <td style="padding:4px 8px;text-align:right">
             <input type="number" min="0" step="1" placeholder="—" value="${val}"
-              style="width:120px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:14px"
+              style="width:120px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:14px"
               onchange="gastosGridDraft['luz_${noriaId}']=this.value"/>
           </td>
           <td style="padding:7px 12px;text-align:right">
@@ -2464,7 +2464,7 @@ function renderGastos() {
     const maquilaSections = buildGridTableFiltered(prediosMaquilaIdx, 'maq', '#2a5425', CULTIVOS_ENSILADA);
 
     // Camiones ensilada: solo tablas ensilables
-    const camionesSections = buildGridTableFiltered(S.predios.map((p,pi)=>({p,pi})), 'cam', '#2d5a1b', CULTIVOS_ENSILADA);
+    const camionesSections = buildGridTableFiltered(S.predios.map((p,pi)=>({p,pi})), 'cam', '#1a3d22', CULTIVOS_ENSILADA);
 
     // Pizca: tablas con cultivo pizca (higo)
     const losHigosIdx = S.predios.findIndex(p=>p.nombre==='Los Higos');
@@ -2560,7 +2560,7 @@ function renderGastos() {
 
     const precioDieselEns = S.precioDiesel?.[selectedCn] || '';
     const precioDieselBadge = precioDieselEns
-      ? `<span style="font-size:11px;color:var(--muted);background:#fff8e8;padding:3px 8px;border:1px solid #d4c0a0">💧 $${precioDieselEns}/L</span>`
+      ? `<span style="font-size:11px;color:var(--muted);background:#f0fdf4;padding:3px 8px;border:1px solid #7ec89a">💧 $${precioDieselEns}/L</span>`
       : `<span style="font-size:11px;color:#999;font-style:italic">💧 precio diesel pendiente</span>`;
 
     const maqEqRows = equiposEnsilada.map(({eq})=>{
@@ -2573,13 +2573,13 @@ function renderGastos() {
         <td style="padding:7px 12px;font-weight:600">${eq.nombre}</td>
         <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${eq.tipo}</td>
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="0.1" placeholder="—" value="${dDiesel}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
           onchange="gastosGridDraft['ens_d_${eq.id}']=this.value"/></td>
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dServ}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
           onchange="gastosGridDraft['ens_s_${eq.id}']=this.value"/></td>
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dRep}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
           onchange="gastosGridDraft['ens_r_${eq.id}']=this.value"/></td>
         <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber);font-size:12px">${totEq?fmt(totEq):'—'}</td>
         <td style="padding:4px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delEquipoEnsilada('${eq.id}')">✕</button>`:''}</td>
@@ -2611,7 +2611,7 @@ function renderGastos() {
       <div style="margin-top:16px">
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina ensilada</div>
         <input type="number" min="0" step="1" placeholder="$ nómina" value="${nomEnsiladaVal}"
-          style="width:200px;padding:8px;border:1px solid #d4c0a0;font-size:14px;text-align:right"
+          style="width:200px;padding:8px;border:1px solid #7ec89a;font-size:14px;text-align:right"
           onchange="gastosGridDraft['nom_ensilada']=this.value"/>
       </div>
       ${artsEnsilada.length && tablaInfoME.length ? `
@@ -2655,7 +2655,7 @@ function renderGastos() {
     // Diesel (tractores), Camiones, Nómina, Empacado
     const precioDieselEmp = S.precioDiesel?.[selectedCn] || '';
     const precioDieselBadgeEmp = precioDieselEmp
-      ? `<span style="font-size:11px;color:var(--muted);background:#fff8e8;padding:3px 8px;border:1px solid #d4c0a0">💧 $${precioDieselEmp}/L</span>`
+      ? `<span style="font-size:11px;color:var(--muted);background:#f0fdf4;padding:3px 8px;border:1px solid #7ec89a">💧 $${precioDieselEmp}/L</span>`
       : `<span style="font-size:11px;color:#999;font-style:italic">💧 precio diesel pendiente</span>`;
 
     // Equipos de empaque — misma lista S.equiposEnsilada (se puede reusar o crear nueva)
@@ -2680,13 +2680,13 @@ function renderGastos() {
         <td style="padding:7px 12px;font-weight:600">${eq.nombre}</td>
         <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${eq.tipo}</td>
         ${eq.tipo!=='empacadora'?`<td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="0.1" placeholder="—" value="${dDiesel}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
           onchange="gastosGridDraft['empdiesel_${eq.id}']=this.value"/></td>`:'<td></td>'}
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dServ}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
           onchange="gastosGridDraft['empserv_${eq.id}']=this.value"/></td>
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dRep}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
           onchange="gastosGridDraft['emprep_${eq.id}']=this.value"/></td>
         <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber);font-size:12px">${totEq?fmt(totEq):'—'}</td>
         <td style="padding:4px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delEquipoEmpaque('${eq.id}')">✕</button>`:''}</td>
@@ -2744,10 +2744,10 @@ function renderGastos() {
           <tbody><tr>
             <td style="padding:4px 8px"><select style="padding:5px;font-size:13px" onchange="gastosGridDraft['emp_nom_pi']=this.value">${predioOptsEmp}</select></td>
             <td style="padding:4px 8px"><select style="padding:5px" onchange="gastosGridDraft['emp_nom_mes']=this.value">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActualEmp===i+1?'selected':''}>${m}</option>`).join('')}</select></td>
-            <td style="padding:4px 8px"><input type="number" min="0" step="1" placeholder="—" value="${montoNomEmp}" style="width:130px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['emp_nom_monto']=this.value"/></td>
-            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c1pctEmp}" style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['emp_nom_c1pct']=this.value"/></td>
-            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c2pctEmp}" style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['emp_nom_c2pct']=this.value"/></td>
-            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c3pctEmp}" style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['emp_nom_c3pct']=this.value"/></td>
+            <td style="padding:4px 8px"><input type="number" min="0" step="1" placeholder="—" value="${montoNomEmp}" style="width:130px;padding:5px 8px;text-align:right;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['emp_nom_monto']=this.value"/></td>
+            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c1pctEmp}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['emp_nom_c1pct']=this.value"/></td>
+            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c2pctEmp}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['emp_nom_c2pct']=this.value"/></td>
+            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c3pctEmp}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['emp_nom_c3pct']=this.value"/></td>
           </tr></tbody>
         </table></div>
       </div>
@@ -2768,7 +2768,7 @@ function renderGastos() {
   if(!S.sistemasRiego) S.sistemasRiego = [];
     const precioDieselCorte = S.precioDiesel?.[selectedCn] || '';
     const precioDieselBadgeCorte = precioDieselCorte
-      ? `<span style="font-size:11px;color:var(--muted);background:#fff8e8;padding:3px 8px;border:1px solid #d4c0a0">💧 $${precioDieselCorte}/L</span>`
+      ? `<span style="font-size:11px;color:var(--muted);background:#f0fdf4;padding:3px 8px;border:1px solid #7ec89a">💧 $${precioDieselCorte}/L</span>`
       : `<span style="font-size:11px;color:#999;font-style:italic">💧 precio diesel pendiente</span>`;
 
     // Maquila de corte: $/ha por predio, tablas de CULTIVOS_CORTE
@@ -2793,13 +2793,13 @@ function renderGastos() {
         <td style="padding:7px 12px;font-weight:600">${eq.nombre}</td>
         <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${eq.tipo}</td>
         ${eq.tipo!=='rastrillo'?`<td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="0.1" placeholder="—" value="${dDiesel}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
           onchange="gastosGridDraft['cortd_${eq.id}']=this.value"/></td>`:'<td></td>'}
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dServ}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
           onchange="gastosGridDraft['corts_${eq.id}']=this.value"/></td>
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dRep}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #d4c0a0;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
           onchange="gastosGridDraft['cortr_${eq.id}']=this.value"/></td>
         <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber);font-size:12px">${totEq?fmt(totEq):'—'}</td>
         <td style="padding:4px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delEquipoCorte('${eq.id}')">✕</button>`:''}</td>
@@ -2849,10 +2849,10 @@ function renderGastos() {
           <tbody><tr>
             <td style="padding:4px 8px"><select style="padding:5px;font-size:13px" onchange="gastosGridDraft['cort_nom_pi']=this.value">${predioOptsCort}</select></td>
             <td style="padding:4px 8px"><select style="padding:5px" onchange="gastosGridDraft['cort_nom_mes']=this.value">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActualCort===i+1?'selected':''}>${m}</option>`).join('')}</select></td>
-            <td style="padding:4px 8px"><input type="number" min="0" step="1" placeholder="—" value="${montoNomCort}" style="width:130px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['cort_nom_monto']=this.value"/></td>
-            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c1pctCort}" style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['cort_nom_c1pct']=this.value"/></td>
-            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c2pctCort}" style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['cort_nom_c2pct']=this.value"/></td>
-            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c3pctCort}" style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['cort_nom_c3pct']=this.value"/></td>
+            <td style="padding:4px 8px"><input type="number" min="0" step="1" placeholder="—" value="${montoNomCort}" style="width:130px;padding:5px 8px;text-align:right;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['cort_nom_monto']=this.value"/></td>
+            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c1pctCort}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['cort_nom_c1pct']=this.value"/></td>
+            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c2pctCort}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['cort_nom_c2pct']=this.value"/></td>
+            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c3pctCort}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['cort_nom_c3pct']=this.value"/></td>
           </tr></tbody>
         </table></div>
       </div>
@@ -2867,7 +2867,7 @@ function renderGastos() {
           return `<tr style="font-size:12px">
             <td style="padding:5px 10px">${g.categoria}${g.equipo?' · '+g.equipo:''}${g.actividad?' · '+g.actividad:''}</td>
             <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
-            <td style="padding:5px 10px;text-align:center"><span style="background:#e8f5e8;color:var(--green);padding:2px 6px;font-size:10px">C${getGastoCosecha(g)}</span></td>
+            <td style="padding:5px 10px;text-align:center"><span style="background:#e8f5e8;color:#1a3d22;padding:2px 6px;font-size:10px">C${getGastoCosecha(g)}</span></td>
             <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
             <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${gi})">✕</button>`:''}</td>
           </tr>`;
@@ -2900,7 +2900,7 @@ function renderGastos() {
     const histNomRows = histNomAll.map(g=>`<tr style="font-size:12px">
       <td style="padding:5px 10px">${g.mes ? MESES[(parseInt(g.mes)||1)-1] : '—'}</td>
       <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
-      <td style="padding:5px 10px;text-align:center"><span style="background:#e8f5e8;color:var(--green);padding:2px 6px;font-size:10px">C${getGastoCosecha(g)}</span></td>
+      <td style="padding:5px 10px;text-align:center"><span style="background:#e8f5e8;color:#1a3d22;padding:2px 6px;font-size:10px">C${getGastoCosecha(g)}</span></td>
       <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
       <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${S.gastosGenerales.indexOf(g)})">✕</button>`:''}</td>
     </tr>`).join('');
@@ -2919,10 +2919,10 @@ function renderGastos() {
         <tbody><tr>
           <td style="padding:4px 8px"><select style="padding:5px;font-size:13px" onchange="gastosGridDraft['nom_pi']=this.value">${predioOptsNom}</select></td>
           <td style="padding:4px 8px"><select style="padding:5px" onchange="gastosGridDraft['mes']=this.value">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActualNom===i+1?'selected':''}>${m}</option>`).join('')}</select></td>
-          <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${montoNom}" style="width:140px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['nom_monto']=this.value"/></td>
-          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c1pct}" style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['nom_c1pct']=this.value"/></td>
-          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c2pct}" style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['nom_c2pct']=this.value"/></td>
-          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c3pct}" style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['nom_c3pct']=this.value"/></td>
+          <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${montoNom}" style="width:140px;padding:5px 8px;text-align:right;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['nom_monto']=this.value"/></td>
+          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c1pct}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['nom_c1pct']=this.value"/></td>
+          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c2pct}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['nom_c2pct']=this.value"/></td>
+          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c3pct}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['nom_c3pct']=this.value"/></td>
         </tr></tbody>
       </table></div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Los % deben sumar 100. Si un mes aplica 100% a C1, pon 100 en C1 y deja C2/C3 en 0.</div>
@@ -2964,8 +2964,8 @@ function renderGastos() {
       return `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:8px 14px;font-weight:600;white-space:nowrap">${nombre}</td>
         <td style="padding:8px 14px">${predioChecks}</td>
-        <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:100%;padding:4px 7px;border:1px solid #90c070;font-size:12px" onchange="gastosGridDraft['rnoria_desc_${noriaId}']=this.value"/></td>
-        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:120px;padding:4px 7px;text-align:right;border:1px solid #90c070;font-size:13px" onchange="gastosGridDraft['rnoria_${noriaId}']=this.value"/></td>
+        <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:100%;padding:4px 7px;border:1px solid #7ec89a;font-size:12px" onchange="gastosGridDraft['rnoria_desc_${noriaId}']=this.value"/></td>
+        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:120px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['rnoria_${noriaId}']=this.value"/></td>
         <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumN?fmt(acumN):'—'}</td>
         <td style="padding:4px;text-align:center">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delNoriaRep('${nombre}')">✕</button>`:''}</td>
       </tr>`;
@@ -2997,8 +2997,8 @@ function renderGastos() {
       return `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:8px 14px;font-weight:600;white-space:nowrap">${sr.nombre}</td>
         <td style="padding:8px 14px;font-size:11px;color:var(--muted)">${tablaLabels}</td>
-        <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:100%;padding:4px 7px;border:1px solid #90c070;font-size:12px" onchange="gastosGridDraft['rriego_desc_${sr.id}']=this.value"/></td>
-        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:120px;padding:4px 7px;text-align:right;border:1px solid #90c070;font-size:13px" onchange="gastosGridDraft['rriego_${sr.id}']=this.value"/></td>
+        <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:100%;padding:4px 7px;border:1px solid #7ec89a;font-size:12px" onchange="gastosGridDraft['rriego_desc_${sr.id}']=this.value"/></td>
+        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:120px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['rriego_${sr.id}']=this.value"/></td>
         <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumR?fmt(acumR):'—'}</td>
         <td style="padding:4px;text-align:center">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delSistemaRiego(${sri})">✕</button>`:''}</td>
       </tr>`;
@@ -3151,7 +3151,7 @@ function renderGastos() {
         ${prediosCols}
         <td style="padding:8px 14px;vertical-align:top;white-space:nowrap;border-left:1px solid var(--border)">
           <input type="number" min="0" step="1" placeholder="—" value="${monto}"
-            style="width:130px;padding:5px 8px;text-align:right;border:1px solid #90c070;font-size:13px"
+            style="width:130px;padding:5px 8px;text-align:right;border:1px solid #7ec89a;font-size:13px"
             onchange="gastosGridDraft['${montoKey}']=this.value"/>
         </td>
         <td style="padding:8px 14px;text-align:right;vertical-align:top;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);white-space:nowrap">${acumDa?fmt(acumDa):'—'}</td>
@@ -3208,8 +3208,8 @@ function renderGastos() {
       return `<tr>
         <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${cat}</td>
         <td style="padding:4px 8px"><select style="padding:5px;font-size:13px" onchange="gastosGridDraft['otro_pi_${ci}']=this.value">${S.predios.map((p,i)=>`<option value="${i}" ${piVal==String(i)?'selected':''}>${p.emoji} ${p.nombre}</option>`).join('')}</select></td>
-        <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:180px;padding:5px 8px;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['otro_desc_${ci}']=this.value"/></td>
-        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:130px;padding:5px 8px;text-align:right;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['otro_${ci}']=this.value"/></td>
+        <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:180px;padding:5px 8px;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['otro_desc_${ci}']=this.value"/></td>
+        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:130px;padding:5px 8px;text-align:right;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['otro_${ci}']=this.value"/></td>
       </tr>`;
     }).join('');
     const histOtro = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&['Sirre y Desmonte','Otro'].includes(g.categoria));
@@ -3248,7 +3248,7 @@ function renderGastos() {
     const descLabel = g.descripcion ? ` — ${g.descripcion}` : '';
     const litrosLabel = g.litros ? ` (${fmtN(g.litros,1)} × $${g.precioPorLitro||'?'})` : '';
     return `<tr>
-      <td><span style="font-family:'DM Mono',monospace;font-size:10px;background:#e8f5e8;color:var(--green);padding:2px 6px">C${cn} ${g.anio||''}</span></td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:10px;background:#e8f5e8;color:#1a3d22;padding:2px 6px">C${cn} ${g.anio||''}</span></td>
       <td>${g.categoria}${actLabel}${equipLabel}${litrosLabel}<span style="color:var(--muted);font-size:11px">${descLabel}</span></td>
       <td style="font-size:12px;color:var(--muted)">${predNombres}</td>
       <td class="mono tr amber">${fmt(g.monto)}</td>
@@ -3882,7 +3882,7 @@ function capturarGastos() {
         ${prediosCols}
         <td style="padding:8px 14px;vertical-align:top;white-space:nowrap;border-left:1px solid var(--border)">
           <input type="number" min="0" step="1" placeholder="—" value="${monto}"
-            style="width:130px;padding:5px 8px;text-align:right;border:1px solid #90c070;font-size:13px"
+            style="width:130px;padding:5px 8px;text-align:right;border:1px solid #7ec89a;font-size:13px"
             onchange="gastosGridDraft['${montoKey}']=this.value"/>
         </td>
         <td style="padding:8px 14px;text-align:right;vertical-align:top;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);white-space:nowrap">${acumDa?fmt(acumDa):'—'}</td>
@@ -4034,10 +4034,10 @@ function renderGridContent() {
   document.getElementById('grid-content').innerHTML = `
     <div class="card">
       <div class="card-head">🌱 ${p.nombre} · Cosecha ${cn} · Material de cultivo</div>
-      <div style="padding:8px 12px;background:#fff8e8;border:1px solid #d4c0a0;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="padding:8px 12px;background:#f0fdf4;border:1px solid #7ec89a;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">📅 Fecha del registro:</span>
         <input type="date" id="grid-fecha" value="${gridDraft['_fecha']||new Date().toISOString().slice(0,10)}"
-          style="padding:4px 8px;border:1px solid #d4c0a0;font-size:13px"
+          style="padding:4px 8px;border:1px solid #7ec89a;font-size:13px"
           onchange="gridDraft['_fecha']=this.value"/>
       </div>
       <div style="overflow-x:auto">
