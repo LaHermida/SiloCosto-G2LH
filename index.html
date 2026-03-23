@@ -2842,6 +2842,7 @@ function renderGastos() {
         <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:100%;padding:4px 7px;border:1px solid #90c070;font-size:12px" onchange="gastosGridDraft['rnoria_desc_${noriaId}']=this.value"/></td>
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:120px;padding:4px 7px;text-align:right;border:1px solid #90c070;font-size:13px" onchange="gastosGridDraft['rnoria_${noriaId}']=this.value"/></td>
         <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumN?fmt(acumN):'—'}</td>
+        <td style="padding:4px;text-align:center">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delNoriaRep('${nombre}')">✕</button>`:''}</td>
       </tr>`;
     }).join('');
 
@@ -2888,20 +2889,36 @@ function renderGastos() {
       <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${S.gastosGenerales.indexOf(g)})">✕</button>`:''}</td>
     </tr>`).join('');
 
+    // Config agregar noria en reparaciones
+    const configNoriaRep = isAdmin ? `
+      <div style="padding:10px 16px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">+ Agregar noria</div>
+          <input type="text" id="rep-noria-nombre" placeholder="Ej: Cerro, 212..." style="padding:5px 8px;width:160px;font-size:12px"/>
+        </div>
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Predios</div>
+          <div style="display:flex;gap:8px">${S.predios.map((p,i)=>`<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" class="rep-noria-pi" value="${i}"/> ${p.emoji} ${p.nombre}</label>`).join('')}</div>
+        </div>
+        <button class="btn btn-s" style="margin-bottom:2px" onclick="addNoriaRep()">+ Agregar</button>
+      </div>` : '';
+
     tabContent = `
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🔧 Norias</div>
+      ${configNoriaRep}
       ${Object.keys(noriaMapRep).length ? `<div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <colgroup><col style="width:140px"/><col style="width:160px"/><col/><col style="width:140px"/><col style="width:130px"/></colgroup>
+        <colgroup><col style="width:140px"/><col style="width:160px"/><col/><col style="width:140px"/><col style="width:130px"/><col style="width:36px"/></colgroup>
         <thead><tr style="background:var(--earth);color:#ffffff">
           <th style="padding:7px 14px;text-align:left">Noria</th>
           <th style="padding:7px 14px;text-align:left">Predios</th>
           <th style="padding:7px 14px;text-align:left">Descripción</th>
           <th style="padding:7px 14px;text-align:right">Monto ($)</th>
           <th style="padding:7px 14px;text-align:right">Acum. C${selectedCn}</th>
+          <th></th>
         </tr></thead>
         <tbody>${noriaRepRows}</tbody>
-      </table></div>` : '<div style="color:var(--muted);font-size:12px;margin-bottom:16px">Sin norias configuradas</div>'}
+      </table></div>` : '<div style="color:var(--muted);font-size:12px;margin-bottom:16px">Sin norias configuradas — agrega arriba</div>'}
 
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">💧 Sistemas de Riego</div>
       ${configSR}
@@ -3201,6 +3218,29 @@ function delEquipoEnsilada(eqId) {
   if(!confirm('¿Eliminar equipo de la lista de ensilada? Los gastos registrados se conservan.')) return;
   S.equiposEnsilada = (S.equiposEnsilada||[]).filter(e=>e.id!==eqId);
   save(); renderGastos(); toast('✓ Eliminado de ensilada');
+}
+
+function addNoriaRep() {
+  const nombre = document.getElementById('rep-noria-nombre')?.value.trim();
+  if(!nombre) { toast('⚠️ Ingresa el nombre',true); return; }
+  const prediosSelIdx = [];
+  document.querySelectorAll('.rep-noria-pi:checked').forEach(cb=>prediosSelIdx.push(parseInt(cb.value)));
+  if(!prediosSelIdx.length) { toast('⚠️ Selecciona al menos un predio',true); return; }
+  prediosSelIdx.forEach(pi=>{
+    if(!S.equipos[pi]) S.equipos[pi] = [];
+    if(!S.equipos[pi].find(e=>e.nombre===nombre&&e.tipo==='luz'))
+      S.equipos[pi].push({id:uid(), nombre, tipo:'luz'});
+  });
+  if(document.getElementById('rep-noria-nombre')) document.getElementById('rep-noria-nombre').value='';
+  save(); renderGastos(); toast('✓ Noria agregada en '+prediosSelIdx.length+' predio(s)');
+}
+
+function delNoriaRep(nombre) {
+  if(!confirm('¿Eliminar noria "'+nombre+'" de todos los predios? Los gastos se conservan.')) return;
+  S.predios.forEach((p,pi)=>{
+    S.equipos[pi] = (S.equipos[pi]||[]).filter(e=>!(e.tipo==='luz'&&e.nombre===nombre));
+  });
+  save(); renderGastos(); toast('✓ Noria eliminada');
 }
 
 function addSistemaRiego() {
