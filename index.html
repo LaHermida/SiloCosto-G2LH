@@ -482,7 +482,7 @@ function defaultState() {
 }
 
 function emptyTablaData() {
-  return { cultivo:'maiz', kilos:'', pctMS:'', haSembradas:'', consumos:[], sinSiembra:false };
+  return { cultivo:'maiz', kilos:'', pctMS:'', haSembradas:'', consumos:[], sinSiembra:false, fechaSiembra:'', fechaCorte:'' };
 }
 
 let S = defaultState();
@@ -1225,6 +1225,20 @@ function renderRegContent() {
             ${Object.entries(CULTIVOS).map(([k,v])=>`<option value="${k}" ${(d.cultivo||'maiz')===k?'selected':''}>${v.icon} ${v.label}</option>`).join('')}
           </select>
         </div>
+        <div style="grid-column:span 2">
+          <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Siembra</div>
+          <input type="date" value="${d.fechaSiembra||''}"
+            style="width:100%;padding:2px 4px;font-size:10px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#d4c0a0'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'}"
+            onclick="event.stopPropagation()"
+            onchange="event.stopPropagation();saveTablaFieldFor(${i},'fechaSiembra',this.value)"/>
+        </div>
+        <div style="grid-column:span 2">
+          <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Corte</div>
+          <input type="date" value="${d.fechaCorte||''}"
+            style="width:100%;padding:2px 4px;font-size:10px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#d4c0a0'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'}"
+            onclick="event.stopPropagation()"
+            onchange="event.stopPropagation();saveTablaFieldFor(${i},'fechaCorte',this.value)"/>
+        </div>
       </div>`}
     </div>`;
   }).join('');
@@ -1533,6 +1547,26 @@ function renderRepContent() {
           <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700">GASTOS TOTALES — ${p.nombre}</div>
           <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);margin-top:4px">Cosecha ${cn} · Año ${getCosechaMeta(pi,cn).year} · ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha ${getCosechaMeta(pi,cn).closed?'· 🔒 CERRADA':'· ✓ Abierta'}</div>
         </div>
+        ${(()=>{
+          const tablasFechas = p.tablas.map((t,ti)=>{
+            const td = getTablaData(pi,cn,ti);
+            if(!td.fechaSiembra && !td.fechaCorte) return '';
+            return `<tr><td style="padding:5px 12px;font-weight:600">${t.nombre}</td>
+              <td style="padding:5px 12px;font-family:'DM Mono',monospace;font-size:12px">${td.fechaSiembra||'—'}</td>
+              <td style="padding:5px 12px;font-family:'DM Mono',monospace;font-size:12px">${td.fechaCorte||'—'}</td></tr>`;
+          }).filter(Boolean).join('');
+          if(!tablasFechas) return '';
+          return `<div style="margin-bottom:12px;border:1px solid var(--border)">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead><tr style="background:var(--earth);color:#fff">
+                <th style="padding:6px 12px;text-align:left">Tabla</th>
+                <th style="padding:6px 12px;text-align:left">🌱 Siembra</th>
+                <th style="padding:6px 12px;text-align:left">✂️ Corte</th>
+              </tr></thead>
+              <tbody>${tablasFechas}</tbody>
+            </table>
+          </div>`;
+        })()}
         ${cultivosPresentes.length <= 1 ? `<div class="tbl-wrap"><table style="table-layout:fixed;width:100%">
           <colgroup><col style="width:220px"/><col style="width:100px"/><col style="width:160px"/><col style="width:160px"/><col style="width:160px"/></colgroup>
           <thead><tr><th style="text-align:left">Categoría</th><th style="text-align:left">Tipo</th><th class="tr">$/Ha</th><th class="tr">Gasto Total</th><th class="tr">kg/ha</th></tr></thead>
@@ -1700,6 +1734,10 @@ function renderRepContent() {
         <div class="card-head">📄 ${p.tablas[ti].nombre} — ${p.nombre} · Cosecha ${cn}
           <button class="pdf-btn" onclick="printReporteTabla(${pi},${cn},${ti})">⬇ Exportar PDF</button>
         </div>
+        ${(td.fechaSiembra||td.fechaCorte)?`<div style="display:flex;gap:24px;padding:10px 16px;background:var(--cream);border-bottom:1px solid var(--border);font-size:12px">
+          ${td.fechaSiembra?`<div><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">🌱 Siembra:</span> <strong>${td.fechaSiembra}</strong></div>`:''}
+          ${td.fechaCorte?`<div><span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">✂️ Corte:</span> <strong>${td.fechaCorte}</strong></div>`:''}
+        </div>`:'' }
         <div class="tbl-wrap"><table>
           <thead><tr><th>Categoría</th><th>Tipo</th><th>$/Ha</th><th>Gasto Total</th></tr></thead>
           <tbody>${catRows}
@@ -3996,6 +4034,12 @@ function renderGridContent() {
   document.getElementById('grid-content').innerHTML = `
     <div class="card">
       <div class="card-head">🌱 ${p.nombre} · Cosecha ${cn} · Material de cultivo</div>
+      <div style="padding:8px 12px;background:#fff8e8;border:1px solid #d4c0a0;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">📅 Fecha del registro:</span>
+        <input type="date" id="grid-fecha" value="${gridDraft['_fecha']||new Date().toISOString().slice(0,10)}"
+          style="padding:4px 8px;border:1px solid #d4c0a0;font-size:13px"
+          onchange="gridDraft['_fecha']=this.value"/>
+      </div>
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead><tr>
@@ -4053,9 +4097,11 @@ function updateGridDraft(ti, artId, val) {
 
 function capturarGrid() {
   const pi = curPredioGrid, cn = curCosechaGrid;
+  const fechaReg = gridDraft['_fecha'] || today();
   let total = 0;
   for(const [tiStr, arts] of Object.entries(gridDraft)) {
     const ti = parseInt(tiStr);
+    if(isNaN(ti)) continue;
     for(const [artId, cantStr] of Object.entries(arts)) {
       const cant = parseFloat(cantStr);
       if(!cant || cant <= 0) continue;
@@ -4065,7 +4111,7 @@ function capturarGrid() {
       const td = getTablaData(pi, cn, ti);
       td.consumos.push({
         articuloId:artId, nombre:art.nombre, categoria:art.categoria,
-        unidad:art.unidad, cantidad:cant, precioSnapshot:precio, fecha:today()
+        unidad:art.unidad, cantidad:cant, precioSnapshot:precio, fecha:fechaReg
       });
       total++;
     }
