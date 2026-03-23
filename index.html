@@ -2089,6 +2089,55 @@ function renderGastos() {
 
   // ── Helper: mes selector ──
   const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  // Helper: meses que pertenecen a una cosecha
+  function getMesesCn(cn) {
+    if(cn===1) return [12,1,2];
+    if(cn===2) return [3,4,5,6,7];
+    return [8,9,10,11];
+  }
+  function gridHistorial(titulo, histItems, getKey, getCols, colHeaders) {
+    // histItems: array de gastos ya filtrados por cosecha
+    // getKey(g): string clave de fila
+    // getCols(g): object {colKey: value}
+    if(!histItems.length) return '';
+    const rowKeys = [...new Set(histItems.map(g=>getKey(g)))];
+    const colKeys = colHeaders.map(c=>c.key);
+    const th = colHeaders.map(c=>`<th style="padding:5px 8px;text-align:right;white-space:nowrap;font-size:11px">${c.label}</th>`).join('');
+    const matrix = {};
+    const rowTotals = {};
+    const colTotals = {};
+    histItems.forEach(g=>{
+      const rk = getKey(g);
+      const cols = getCols(g);
+      if(!matrix[rk]) matrix[rk] = {};
+      if(!rowTotals[rk]) rowTotals[rk] = 0;
+      Object.entries(cols).forEach(([ck,v])=>{
+        matrix[rk][ck] = (matrix[rk][ck]||0) + v;
+        rowTotals[rk] = (rowTotals[rk]||0) + v;
+        colTotals[ck] = (colTotals[ck]||0) + v;
+      });
+    });
+    const grandTotal = Object.values(rowTotals).reduce((s,v)=>s+v,0);
+    const bodyRows = rowKeys.map(rk=>{
+      const cells = colKeys.map(ck=>{
+        const v = matrix[rk]?.[ck]||0;
+        return `<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px">${v?fmt(v):'—'}</td>`;
+      }).join('');
+      return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 10px;font-weight:600;white-space:nowrap;font-size:13px">${rk}</td>${cells}<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);font-weight:700">${fmt(rowTotals[rk])}</td></tr>`;
+    }).join('');
+    const footCells = colKeys.map(ck=>{
+      const v = colTotals[ck]||0;
+      return `<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;font-weight:700">${v?fmt(v):'—'}</td>`;
+    }).join('');
+    return `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px">📊 ${titulo}</div>
+    <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;min-width:400px">
+      <thead><tr style="background:var(--earth);color:#fff"><th style="padding:5px 10px;text-align:left">Concepto</th>${th}<th style="padding:5px 8px;text-align:right">TOTAL</th></tr></thead>
+      <tbody>${bodyRows}</tbody>
+      <tfoot><tr style="background:var(--cream);font-weight:700"><td style="padding:5px 10px">TOTAL</td>${footCells}<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${fmt(grandTotal)}</td></tr></tfoot>
+    </table></div>`;
+  }
+
   const mesOpts = MESES.map((m,i)=>`<option value="${i+1}" ${parseInt(gastosGridDraft['mes']||new Date().getMonth()+1)===i+1?'selected':''}>${m}</option>`).join('');
   const cosechaOptsMes = [1,2,3].map(c=>`<option value="${c}" ${parseInt(gastosGridDraft['cn_split_a']||selectedCn)===c?'selected':''}>C${c}</option>`).join('');
 
@@ -2237,7 +2286,19 @@ function renderGastos() {
             <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${totServRepGlobal?fmt(totServRepGlobal):'—'}</td>
             <td></td>
           </tr></tfoot>
-        </table></div>`;
+        </table></div>
+        ${ (()=>{
+          const mesesCn = getMesesCn(selectedCn);
+          const histT = S.gastosGenerales.filter(g=>getGastoCosecha(g)===selectedCn&&(g.categoria==='Diesel'||g.categoria==='Maquinaria'));
+          return gridHistorial(
+            'Historial C'+selectedCn+' — Equipo x Mes',
+            histT,
+            g => (g.equipo||'Sin equipo') + ' ('+g.categoria+')',
+            g => { const m=parseInt(g.mes||0); const obj={}; if(m) obj[m]=parseFloat(g.monto||0); return obj; },
+            mesesCn.map(m=>({key:m, label:MESES[m-1].slice(0,3)}))
+          );
+        })() }
+        `;
     }
 
   } else if(gastosTab === 'luz') {
@@ -2328,7 +2389,19 @@ function renderGastos() {
             <th></th>
           </tr></thead>
           <tbody>${luzRows}</tbody>
-        </table></div>`;
+        </table></div>
+        ${ (()=>{
+          const histLuz = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.categoria==='Luz');
+          if(!histLuz.length) return '';
+          return gridHistorial(
+            'Historial Luz C'+selectedCn+' — Mes x Noria',
+            histLuz,
+            g => MESES[(parseInt(g.mes||1))-1],
+            g => { const obj={}; obj[g.equipo||'Sin noria']=parseFloat(g.monto||0); return obj; },
+            uniqueNorias.map(([nombre])=>({key:nombre, label:nombre}))
+          );
+        })() }
+        `;
     }
 
   } else if(gastosTab === 'ensilada') {
@@ -2527,7 +2600,17 @@ function renderGastos() {
           </tr></thead>
           <tbody>${histRows}</tbody>
         </table>
-      </div>` : ''}`;
+      </div>` : ''}
+      ${ (()=>{
+        if(!histEnsilada.length) return '';
+        return gridHistorial(
+          'Historial Ensilada C'+selectedCn+' — Concepto × Predio',
+          histEnsilada,
+          g => g.categoria + (g.equipo ? ' · '+g.equipo : ''),
+          g => { const obj={}; const preds=(g.prediosIdx||[0]); preds.forEach(pi=>{ const k=S.predios[pi]?.nombre||'Sin predio'; obj[k]=(obj[k]||0)+parseFloat(g.monto||0)/(preds.length||1); }); return obj; },
+          S.predios.map(p=>({key:p.nombre, label:p.emoji+' '+p.nombre}))
+        );
+      })() }`;
 
   } else if(gastosTab === 'empaque') {
     // Empaque: Alfalfa + Triticale Heno
@@ -2629,7 +2712,18 @@ function renderGastos() {
             <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c3pctEmp}" style="width:55px;padding:4px;text-align:center;border:1px solid #d4c0a0;font-size:13px" onchange="gastosGridDraft['emp_nom_c3pct']=this.value"/></td>
           </tr></tbody>
         </table></div>
-      </div>`;
+      </div>
+      ${ (()=>{
+        const histEmp = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&['Diesel Empaque','Maquinaria Empaque','Empacado','Camiones Empaque','Nómina Empaque'].includes(g.categoria));
+        if(!histEmp.length) return '';
+        return gridHistorial(
+          'Historial Empaque C'+selectedCn+' — Concepto × Predio',
+          histEmp,
+          g => g.categoria + (g.equipo ? ' · '+g.equipo : ''),
+          g => { const obj={}; const preds=(g.prediosIdx||[0]); preds.forEach(pi=>{ const k=S.predios[pi]?.nombre||'Sin predio'; obj[k]=(obj[k]||0)+parseFloat(g.monto||0)/(preds.length||1); }); return obj; },
+          S.predios.map(p=>({key:p.nombre, label:p.emoji+' '+p.nombre}))
+        );
+      })() }`;
 
   } else if(gastosTab === 'corte') {
     if(!S.equiposCorte) S.equiposCorte = [];
@@ -2740,24 +2834,13 @@ function renderGastos() {
             <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${gi})">✕</button>`:''}</td>
           </tr>`;
         }).join('');
-        return `<div style="border-top:2px solid var(--border);padding-top:12px;margin-top:8px">
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Acumulado Corte C${selectedCn} — ${fmt(totCorte)}</div>
-          <table style="width:100%;border-collapse:collapse;font-size:12px">
-            <thead><tr style="font-size:10px;color:var(--muted)">
-              <th style="padding:4px 10px;text-align:left">Concepto</th>
-              <th style="padding:4px 10px;text-align:left">Predio</th>
-              <th style="padding:4px 10px;text-align:center">Cosecha</th>
-              <th style="padding:4px 10px;text-align:right">Monto</th>
-              <th></th>
-            </tr></thead>
-            <tbody>${rows}</tbody>
-            <tfoot><tr style="background:var(--earth);color:#ffffff">
-              <td colspan="3" style="padding:8px 12px;font-weight:700">TOTAL</td>
-              <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmt(totCorte)}</td>
-              <td></td>
-            </tr></tfoot>
-          </table>
-        </div>`;
+        return gridHistorial(
+          'Historial Corte C'+selectedCn+' — Concepto × Predio',
+          histCorte,
+          g => g.categoria + (g.equipo ? ' · '+g.equipo : ''),
+          g => { const obj={}; const preds=(g.prediosIdx||[0]); preds.forEach(pi=>{ const k=S.predios[pi]?.nombre||'Sin predio'; obj[k]=(obj[k]||0)+parseFloat(g.monto||0)/(preds.length||1); }); return obj; },
+          S.predios.map(p=>({key:p.nombre, label:p.emoji+' '+p.nombre}))
+        );
       })()}
       `;
 
@@ -2806,14 +2889,17 @@ function renderGastos() {
       </table></div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Los % deben sumar 100. Si un mes aplica 100% a C1, pon 100 en C1 y deja C2/C3 en 0.</div>
 
-      ${histNomAll.length ? `
-      <div style="border-top:2px solid var(--border);padding-top:12px;margin-top:8px">
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Historial Nómina · C1: ${fmt(nomPorCosecha[1])} · C2: ${fmt(nomPorCosecha[2])} · C3: ${fmt(nomPorCosecha[3])}</div>
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead><tr style="font-size:10px;color:var(--muted)"><th style="padding:4px 10px;text-align:left">Mes</th><th style="padding:4px 10px;text-align:left">Predio</th><th style="padding:4px 10px;text-align:center">Cosecha</th><th style="padding:4px 10px;text-align:right">Monto</th><th></th></tr></thead>
-          <tbody>${histNomRows}</tbody>
-        </table>
-      </div>` : ''}`;
+      ${ (()=>{
+        if(!histNomAll.length) return '';
+        const mesesAll = [1,2,3,4,5,6,7,8,9,10,11,12];
+        return gridHistorial(
+          'Historial Nómina — Mes × Predio',
+          histNomAll,
+          g => MESES[(parseInt(g.mes||1))-1],
+          g => { const obj={}; (g.prediosIdx||[]).forEach(pi=>{ obj[S.predios[pi]?.nombre||'Predio']=(parseFloat(g.monto||0)/(g.prediosIdx.length||1)); }); return obj; },
+          S.predios.map(p=>({key:p.nombre, label:p.emoji+' '+p.nombre}))
+        );
+      })() }`;
 
   } else if(gastosTab === 'reparaciones') {
     // ── Sección 1: Norias (igual que Luz, con % por predio) ──
