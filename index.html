@@ -1466,7 +1466,7 @@ function renderRepContent() {
       ...(hayEmpaque?['Empacado','Maquinaria Empaque']:[]),
       ...(hayPizca?['Pizca']:[]),
       ...(hayCorte?['Maquila Corte','Diesel Corte','Maquinaria Corte','Nómina Corte']:[]),
-      'Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
+      'Derechos de Agua','Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
     const totalHa = p.tablas.reduce((s,t)=>s+t.ha,0);
 
     // Build per-cultivo data
@@ -1668,7 +1668,7 @@ function renderRepContent() {
       ...(hayEmpaque?['Empacado','Maquinaria Empaque']:[]),
       ...(hayPizca?['Pizca']:[]),
       ...(hayCorte?['Maquila Corte','Diesel Corte','Maquinaria Corte','Nómina Corte']:[]),
-      'Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
+      'Derechos de Agua','Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
     let catTotals={};
     cats.forEach(c=>catTotals[c]=0);
     (td.consumos||[]).forEach(c=>{
@@ -1824,7 +1824,7 @@ function printReporteTabla(pi, cn, ti) {
   const kgMS=kilos*((parseFloat(td.pctMS)||0)/100);
   const cpk=kilos?total/kilos:null;
   const cpkms=kgMS?total/kgMS:null;
-  const cats=['Material de cultivo','Maquinaria','Reparaciones Riego','Luz','Ensilada','Materiales de ensilada','Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
+  const cats=['Material de cultivo','Maquinaria','Reparaciones Riego','Luz','Ensilada','Materiales de ensilada','Derechos de Agua','Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
   let catTotals={};cats.forEach(c=>catTotals[c]=0);
   (td.consumos||[]).forEach(c=>{
     if(catTotals[c.categoria]!==undefined)catTotals[c.categoria]+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
@@ -1878,6 +1878,7 @@ const GASTOS_TABS = [
   { id:'corte',       label:'✂️ Corte',          rol:'admin' },
   { id:'nomina',      label:'👷 Nómina',        rol:'admin' },
   { id:'reparaciones',label:'🔧 Noria y Riego',  rol:'admin' },
+  { id:'derechos',     label:'💧 Derechos Agua',  rol:'admin' },
   { id:'otros',       label:'🗂 Otros',         rol:'admin' },
 ];
 
@@ -2996,6 +2997,79 @@ function renderGastos() {
       if(!c1p&&!c2p&&!c3p) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap,prediosIdx:[nomPiEmp],fecha:today()}); total++; }
     }
 
+  } else if(gastosTab === 'derechos') {
+    // Derechos de agua: monto por cosecha prorrateado por ha entre tablas marcadas
+    const cosechas = [{cn:1,label:'C1 · Dic-Feb'},{cn:2,label:'C2 · Mar-Jul'},{cn:3,label:'C3 · Ago-Nov'}];
+    const derechosRows = cosechas.map(({cn:dcn, label})=>{
+      const montoKey = `da_monto_${dcn}`;
+      const monto = gastosGridDraft[montoKey] || '';
+      // Tabla checkboxes
+      const tablaChecks = S.predios.map((p,pi)=>p.tablas.map((t,ti)=>{
+        const td = getTablaData(pi,dcn,ti);
+        if(td.sinSiembra) return '';
+        const key = `da_t_${dcn}_${pi}_${ti}`;
+        const isChk = gastosGridDraft[key]!=='0' && gastosGridDraft[key]!==false && gastosGridDraft[key]!==undefined;
+        return `<label style="display:inline-flex;align-items:center;gap:3px;margin-right:8px;font-size:11px;cursor:pointer;white-space:nowrap">
+          <input type="checkbox" ${isChk?'checked':''} onchange="gastosGridDraft['${key}']=this.checked?'1':'0'"/>
+          ${p.emoji} ${t.nombre}
+        </label>`;
+      }).join('')).join('');
+      const histDa = (S.gastosGenerales||[]).filter(g=>g.cosecha===dcn&&g.categoria==='Derechos de Agua');
+      const acumDa = histDa.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 14px;font-weight:600;white-space:nowrap;min-width:120px">${label}</td>
+        <td style="padding:8px 14px;line-height:2">${tablaChecks}</td>
+        <td style="padding:4px 10px;text-align:right;white-space:nowrap">
+          <input type="number" min="0" step="1" placeholder="—" value="${monto}"
+            style="width:140px;padding:5px 8px;text-align:right;border:1px solid #90c070;font-size:13px"
+            onchange="gastosGridDraft['${montoKey}']=this.value"/>
+        </td>
+        <td style="padding:8px 14px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumDa?fmt(acumDa):'—'}</td>
+      </tr>`;
+    }).join('');
+
+    // Acumulado
+    const histDaTot = (S.gastosGenerales||[]).filter(g=>g.categoria==='Derechos de Agua');
+    const totDa = histDaTot.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+    const acumDaRows = histDaTot.map(g=>{
+      const gi = S.gastosGenerales.indexOf(g);
+      return `<tr style="font-size:12px">
+        <td style="padding:5px 10px">C${g.cosecha} ${g.anio||''} · ${g.equipo||''}</td>
+        <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
+        <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
+        <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${gi})">✕</button>`:''}</td>
+      </tr>`;
+    }).join('');
+
+    tabContent = `
+      <div style="overflow-x:auto;margin-bottom:16px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <colgroup><col style="width:140px"/><col/><col style="width:160px"/><col style="width:130px"/></colgroup>
+        <thead><tr style="background:var(--earth);color:#ffffff">
+          <th style="padding:7px 14px;text-align:left">Cosecha</th>
+          <th style="padding:7px 14px;text-align:left">Tablas</th>
+          <th style="padding:7px 14px;text-align:right">Monto Total ($)</th>
+          <th style="padding:7px 14px;text-align:right">Acum.</th>
+        </tr></thead>
+        <tbody>${derechosRows}</tbody>
+      </table></div>
+      ${totDa>0?`<div style="border-top:2px solid var(--border);padding-top:12px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Registros capturados</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="font-size:10px;color:var(--muted)">
+            <th style="padding:4px 10px;text-align:left">Cosecha · Tabla</th>
+            <th style="padding:4px 10px;text-align:left">Predio</th>
+            <th style="padding:4px 10px;text-align:right">Monto</th>
+            <th></th>
+          </tr></thead>
+          <tbody>${acumDaRows}</tbody>
+          <tfoot><tr style="background:var(--earth);color:#ffffff">
+            <td colspan="2" style="padding:8px 12px;font-weight:700">TOTAL</td>
+            <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmt(totDa)}</td>
+            <td></td>
+          </tr></tfoot>
+        </table></div>`:''}`;
+
   } else if(gastosTab === 'otros') {
     const otroCats = ['Sirre y Desmonte','Otro'];
     const otroRows = otroCats.map((cat,ci)=>{
@@ -3648,6 +3722,102 @@ function capturarGastos() {
       if(c3p>0) { S.gastosGenerales.push({id:uid(),cosecha:3,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap*c3p,prediosIdx:[nomPiEmp],fecha:today()}); total++; }
       if(!c1p&&!c2p&&!c3p) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap,prediosIdx:[nomPiEmp],fecha:today()}); total++; }
     }
+
+  } else if(gastosTab === 'derechos') {
+    // Derechos de agua: monto por cosecha prorrateado por ha entre tablas marcadas
+    const cosechas = [{cn:1,label:'C1 · Dic-Feb'},{cn:2,label:'C2 · Mar-Jul'},{cn:3,label:'C3 · Ago-Nov'}];
+    const derechosRows = cosechas.map(({cn:dcn, label})=>{
+      const montoKey = `da_monto_${dcn}`;
+      const monto = gastosGridDraft[montoKey] || '';
+      // Tabla checkboxes
+      const tablaChecks = S.predios.map((p,pi)=>p.tablas.map((t,ti)=>{
+        const td = getTablaData(pi,dcn,ti);
+        if(td.sinSiembra) return '';
+        const key = `da_t_${dcn}_${pi}_${ti}`;
+        const isChk = gastosGridDraft[key]!=='0' && gastosGridDraft[key]!==false && gastosGridDraft[key]!==undefined;
+        return `<label style="display:inline-flex;align-items:center;gap:3px;margin-right:8px;font-size:11px;cursor:pointer;white-space:nowrap">
+          <input type="checkbox" ${isChk?'checked':''} onchange="gastosGridDraft['${key}']=this.checked?'1':'0'"/>
+          ${p.emoji} ${t.nombre}
+        </label>`;
+      }).join('')).join('');
+      const histDa = (S.gastosGenerales||[]).filter(g=>g.cosecha===dcn&&g.categoria==='Derechos de Agua');
+      const acumDa = histDa.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 14px;font-weight:600;white-space:nowrap;min-width:120px">${label}</td>
+        <td style="padding:8px 14px;line-height:2">${tablaChecks}</td>
+        <td style="padding:4px 10px;text-align:right;white-space:nowrap">
+          <input type="number" min="0" step="1" placeholder="—" value="${monto}"
+            style="width:140px;padding:5px 8px;text-align:right;border:1px solid #90c070;font-size:13px"
+            onchange="gastosGridDraft['${montoKey}']=this.value"/>
+        </td>
+        <td style="padding:8px 14px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumDa?fmt(acumDa):'—'}</td>
+      </tr>`;
+    }).join('');
+
+    // Acumulado
+    const histDaTot = (S.gastosGenerales||[]).filter(g=>g.categoria==='Derechos de Agua');
+    const totDa = histDaTot.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+    const acumDaRows = histDaTot.map(g=>{
+      const gi = S.gastosGenerales.indexOf(g);
+      return `<tr style="font-size:12px">
+        <td style="padding:5px 10px">C${g.cosecha} ${g.anio||''} · ${g.equipo||''}</td>
+        <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
+        <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
+        <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${gi})">✕</button>`:''}</td>
+      </tr>`;
+    }).join('');
+
+    tabContent = `
+      <div style="overflow-x:auto;margin-bottom:16px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <colgroup><col style="width:140px"/><col/><col style="width:160px"/><col style="width:130px"/></colgroup>
+        <thead><tr style="background:var(--earth);color:#ffffff">
+          <th style="padding:7px 14px;text-align:left">Cosecha</th>
+          <th style="padding:7px 14px;text-align:left">Tablas</th>
+          <th style="padding:7px 14px;text-align:right">Monto Total ($)</th>
+          <th style="padding:7px 14px;text-align:right">Acum.</th>
+        </tr></thead>
+        <tbody>${derechosRows}</tbody>
+      </table></div>
+      ${totDa>0?`<div style="border-top:2px solid var(--border);padding-top:12px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Registros capturados</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="font-size:10px;color:var(--muted)">
+            <th style="padding:4px 10px;text-align:left">Cosecha · Tabla</th>
+            <th style="padding:4px 10px;text-align:left">Predio</th>
+            <th style="padding:4px 10px;text-align:right">Monto</th>
+            <th></th>
+          </tr></thead>
+          <tbody>${acumDaRows}</tbody>
+          <tfoot><tr style="background:var(--earth);color:#ffffff">
+            <td colspan="2" style="padding:8px 12px;font-weight:700">TOTAL</td>
+            <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmt(totDa)}</td>
+            <td></td>
+          </tr></tfoot>
+        </table></div>`:''}`;
+
+  } else if(gastosTab === 'derechos') {
+    [1,2,3].forEach(dcn=>{
+      const monto = parseFloat(gastosGridDraft[`da_monto_${dcn}`]);
+      if(!monto||monto<=0) return;
+      // Collect checked tablas
+      const tablasMarcadas = [];
+      S.predios.forEach((p,pi)=>{
+        p.tablas.forEach((t,ti)=>{
+          const key = `da_t_${dcn}_${pi}_${ti}`;
+          if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined) return;
+          const ha = parseFloat(getTablaData(pi,dcn,ti).haSembradas)||p.tablas[ti].ha||0;
+          tablasMarcadas.push({pi,ti,t,p,ha});
+        });
+      });
+      if(!tablasMarcadas.length) return;
+      const totalHaDa = tablasMarcadas.reduce((s,x)=>s+x.ha,0);
+      tablasMarcadas.forEach(({pi,ti,t,ha})=>{
+        const pct = totalHaDa ? ha/totalHaDa : 1/tablasMarcadas.length;
+        S.gastosGenerales.push({id:uid(),cosecha:dcn,anio,categoria:'Derechos de Agua',equipo:t.nombre,monto:monto*pct,prediosIdx:[pi],tablaIdx:ti,fecha:today()});
+        total++;
+      });
+    });
 
   } else if(gastosTab === 'otros') {
     ['Sirre y Desmonte','Otro'].forEach((cat,ci)=>{
