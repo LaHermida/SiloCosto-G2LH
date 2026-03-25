@@ -1290,6 +1290,25 @@ function renderDepContent() {
               ${colHeaders}
             </tr></thead>
             <tbody>${rows}</tbody>
+            <tfoot>
+              <tr style="background:var(--cream);font-weight:700;border-top:2px solid var(--border)">
+                <td colspan="3" style="padding:6px 12px">TOTAL</td>
+                ${anios.map(anio=>{
+                  const tot = todosActivos2.reduce((s,{dep,pIdx})=>s+calcDepActivo(dep,pIdx,anio),0);
+                  const hl = anio===curAnioDep?';color:var(--amber)':'';
+                  return `<td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px${hl}">${tot?fmt(tot):'—'}</td>`;
+                }).join('')}
+              </tr>
+              <tr style="background:var(--soil);color:#fff">
+                <td colspan="3" style="padding:6px 12px;font-family:'DM Mono',monospace;font-size:11px">$/HA · ${fmtN(S.predios[curPredioDep].tablas.reduce((s,t)=>s+t.ha,0),2)} ha</td>
+                ${anios.map(anio=>{
+                  const tot = todosActivos2.reduce((s,{dep,pIdx})=>s+calcDepActivo(dep,pIdx,anio),0);
+                  const totalHa = S.predios[curPredioDep].tablas.reduce((s,t)=>s+t.ha,0);
+                  const hl = anio===curAnioDep?';color:var(--straw);font-weight:700':'';
+                  return `<td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px${hl}">${(tot&&totalHa)?fmt(tot/totalHa):'—'}</td>`;
+                }).join('')}
+              </tr>
+            </tfoot>
           </table></div>
           <div style="font-size:11px;color:var(--muted);margin-top:8px">Columna verde = año seleccionado. — = activo no vigente ese año.</div>`;
       })()}
