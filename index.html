@@ -1231,33 +1231,25 @@ function renderDepContent() {
 
         const colHeaders = anios.map(y=>`<th style="padding:5px 8px;text-align:right;white-space:nowrap;font-size:11px${y===curAnioDep?';background:rgba(255,255,255,0.15)':''}">${y}</th>`).join('');
 
-        // Helper: calc dep for one activo for one year
+        // Helper: calc dep for one activo for one year — NO mutation of S
         function calcDepActivo(dep, pIdx, anio) {
-          const origYears = {};
-          S.predios.forEach((_,pi2)=>{
-            [1,2,3].forEach(cn2=>{
-              const m = S.cosechas[pi2]?.[cn2]?._meta;
-              if(m) { origYears[pi2+'_'+cn2] = m.year; m.year = anio; }
-            });
-          });
-          // Isolate dep
-          const savedDeps = S.predios.map((_,px)=>[...(S.depreciaciones[px]||[])]);
-          S.predios.forEach((_,px)=>{ S.depreciaciones[px]=[]; });
-          S.depreciaciones[pIdx] = [dep];
-          let total = 0;
-          S.predios.forEach((p2,pi2)=>{
-            [1,2,3].forEach(cn2=>{
-              p2.tablas.forEach((_,ti2)=>{ total += calcDepTabla(pi2,cn2,ti2); });
-            });
-          });
-          savedDeps.forEach((deps,px)=>{ S.depreciaciones[px]=deps; });
-          S.predios.forEach((_,pi2)=>{
-            [1,2,3].forEach(cn2=>{
-              const m = S.cosechas[pi2]?.[cn2]?._meta;
-              if(m && origYears[pi2+'_'+cn2]!==undefined) m.year = origYears[pi2+'_'+cn2];
-            });
-          });
-          return total;
+          const costoAnual = parseFloat(dep.costoAnual)||0;
+          if(!costoAnual) return 0;
+          const aFin = dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
+          if(dep.anioInicio && anio < dep.anioInicio) return 0;
+          if(aFin && anio > aFin) return 0;
+          // Check asignacion for this year
+          const asig = (dep.asignaciones||[]).find(a=>a.anio===anio);
+          if(asig) {
+            // Sum pct across assigned predios
+            const pctPredios = asig.pctPredio||[];
+            if(pctPredios.length>0) return costoAnual;
+            // Else proportional by cosechas
+            const totalCn = asig.prediosCosechas.reduce((s,pc)=>s+(pc.cosechas||[]).length,0);
+            return totalCn>0 ? costoAnual : 0;
+          }
+          // Default: belongs to origin predio, full year
+          return costoAnual;
         }
 
         const rows = todosActivos2.map(({dep,pIdx,pr})=>{
