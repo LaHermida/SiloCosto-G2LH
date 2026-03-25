@@ -659,29 +659,33 @@ function calcDepTabla(pi, cn, ti) {
     // Check if this dep has an assignment for this year
     const asignAnio = (dep.asignaciones||[]).find(a=>a.anio===metaYear);
     if(asignAnio) {
-      // Only applies if this pi+cn is in the assignment
       const asigPredio = asignAnio.prediosCosechas.find(pc=>pc.pi===pi);
-      if(!asigPredio) continue; // this predio not assigned this year
-      if(!(asigPredio.cosechas||[]).includes(cn)) continue; // this cosecha not assigned
+      if(!asigPredio) continue;
+      if(!(asigPredio.cosechas||[]).includes(cn)) continue;
 
-      // How many total cosechas are assigned across ALL predios this year?
-      let totalCosechasAsig = 0;
-      asignAnio.prediosCosechas.forEach(pc=>{
-        totalCosechasAsig += (pc.cosechas||[]).length;
-      });
-      const fraccionCosecha = totalCosechasAsig > 0 ? 1/totalCosechasAsig : 0;
+      // % del costo anual para este predio
+      const pctPredios = asignAnio.pctPredio || [];
+      let predioFraccion;
+      if(pctPredios.length > 0) {
+        const pctEntry = pctPredios.find(p=>p.pi===pi);
+        predioFraccion = (parseFloat(pctEntry?.pct||0)) / 100;
+      } else {
+        // Sin % manual: dividir igual entre cosechas totales asignadas
+        let totalCosechasAsig = 0;
+        asignAnio.prediosCosechas.forEach(pc=>{ totalCosechasAsig += (pc.cosechas||[]).length; });
+        predioFraccion = totalCosechasAsig > 0 ? 1/totalCosechasAsig : 0;
+      }
+      // Dividir entre cosechas de este predio
+      const cosechasEstePredio = (asigPredio.cosechas||[]).length;
+      const fraccionCosecha = cosechasEstePredio > 0 ? predioFraccion / cosechasEstePredio : 0;
 
-      // Within this predio/cosecha: distribute by ha
       const tablaPct = totalHa > 0 ? tablaHa/totalHa : 0;
-
-      // Cultivos filter
       const aplicaCultivos = dep.aplicaCultivos || 'todos';
       const esPrincipal = cultivo==='maiz'||cultivo==='sorgo';
       const esTriticale = cultivo==='trigo'||cultivo==='triticale'||cultivo==='triticale_heno';
       if(aplicaCultivos==='principales' && !esPrincipal) continue;
       if(aplicaCultivos==='triticale' && !esTriticale) continue;
 
-      // Cultivo weight within this cosecha
       const miPeso = CULTIVOS[cultivo]?.pct||40;
       let pesoTotalCosecha = 0;
       for(let t=0;t<predio.tablas.length;t++) {
@@ -1155,6 +1159,30 @@ function renderDepContent() {
           <td style="padding:7px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);white-space:nowrap">${fmt(dep.costoAnual)}/año</td>
           <td style="padding:7px 10px;font-size:11px">${cultivosLabel}</td>
           ${celdas}
+        </tr>
+        <tr style="border-bottom:2px solid var(--border);background:var(--cream)">
+          <td colspan="5" style="padding:4px 12px;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:1px">% del costo anual por predio</td>
+          ${S.predios.map((p,pi)=>{
+            const asig = (dep.asignaciones||[]).find(a=>a.anio===anioVer);
+            const pctEntry = (asig?.pctPredio||[]).find(x=>x.pi===pi);
+            // Default: distribute by cosechas assigned
+            let defaultPct = '';
+            if(asig && asig.prediosCosechas) {
+              let totalCn = 0;
+              asig.prediosCosechas.forEach(pc=>{ totalCn += (pc.cosechas||[]).length; });
+              const miCn = (asig.prediosCosechas.find(pc=>pc.pi===pi)?.cosechas||[]).length;
+              if(totalCn > 0) defaultPct = Math.round(miCn/totalCn*100);
+            }
+            const val = pctEntry ? pctEntry.pct : (defaultPct||'');
+            const color = pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
+            return `<td colspan="1" style="padding:3px 8px;text-align:center">
+              <div style="font-size:10px;color:${color};font-weight:600;margin-bottom:2px">${p.emoji} ${p.nombre}</div>
+              <input type="number" min="0" max="100" step="1" placeholder="auto" value="${val}"
+                style="width:60px;padding:3px 6px;text-align:center;border:1px solid var(--border);font-size:12px;font-family:'DM Mono',monospace"
+                onchange="guardarPctInline('${dep.id}',${anioVer},${pi},parseFloat(this.value)||0)"/>
+              <span style="font-size:10px;color:var(--muted)">%</span>
+            </td>`;
+          }).join('')}
         </tr>`;
       }).join('');
 
@@ -1299,6 +1327,24 @@ function addDep() {
     anioInicio, anioFin, cosechaInicio, aplicaCultivos
   });
   save(); renderDep(); toast('✓ Activo agregado');
+}
+
+function guardarPctInline(depId, anio, pi, pct) {
+  let dep = null;
+  S.predios.forEach((_,pIdx)=>{
+    const found = (S.depreciaciones[pIdx]||[]).find(d=>d.id===depId);
+    if(found) dep = found;
+  });
+  if(!dep) return;
+  if(!dep.asignaciones) dep.asignaciones = [];
+  let asig = dep.asignaciones.find(a=>a.anio===anio);
+  if(!asig) { asig={anio,prediosCosechas:[]}; dep.asignaciones.push(asig); }
+  if(!asig.pctPredio) asig.pctPredio = [];
+  const existing = asig.pctPredio.findIndex(x=>x.pi===pi);
+  if(existing>=0) asig.pctPredio[existing].pct = pct;
+  else asig.pctPredio.push({pi, pct});
+  save();
+  toast('✅ % guardado');
 }
 
 function guardarAsigInline(depId, anio, cn, newPi) {
