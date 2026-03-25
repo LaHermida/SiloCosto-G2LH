@@ -1104,8 +1104,6 @@ function renderDepContent() {
     </div>
 
     ${(()=>{
-      // ── TABLA HISTÓRICA AÑO × ACTIVO ──
-      // Collect all deps across all predios
       const todosActivos = [];
       S.predios.forEach((pr,pIdx)=>{
         (S.depreciaciones[pIdx]||[]).forEach(dep=>{
@@ -1114,57 +1112,73 @@ function renderDepContent() {
       });
       if(!todosActivos.length) return '';
 
-      // Get all years that appear in asignaciones
-      const aniosSet = new Set();
-      const curYear = new Date().getFullYear();
-      aniosSet.add(curYear);
-      aniosSet.add(curYear-1);
-      todosActivos.forEach(({dep})=>{
-        (dep.asignaciones||[]).forEach(a=>aniosSet.add(a.anio));
-        if(dep.anioInicio) aniosSet.add(dep.anioInicio);
-      });
-      const anios = [...aniosSet].sort((a,b)=>a-b);
+      // Use current year from depreciaciones section context
+      const anioVer = new Date().getFullYear();
 
-      const headerAnios = anios.map(a=>`<th style="padding:6px 10px;text-align:center;white-space:nowrap">${a}</th>`).join('');
-      const actRows = todosActivos.map(({dep, pIdx, predioNombre, predioEmoji})=>{
-        const celdas = anios.map(anio=>{
-          const asig = (dep.asignaciones||[]).find(a=>a.anio===anio);
-          if(asig) {
-            const lines = asig.prediosCosechas.map(pc=>{
-              const pr = S.predios[pc.pi];
-              return `<div style="font-size:10px;white-space:nowrap">${pr?.emoji||''} ${pr?.nombre||''}: C${(pc.cosechas||[]).join(',')}</div>`;
-            }).join('');
-            return `<td style="padding:5px 8px;background:#eef8f2;border:1px solid var(--border)">${lines}</td>`;
+      // Helper: get predio label for a dep in a given year+cosecha
+      function getCeldaPredioCn(dep, pIdx, predioNombre, predioEmoji, anio, cn) {
+        const asig = (dep.asignaciones||[]).find(a=>a.anio===anio);
+        const vigente = (!dep.anioInicio||anio>=dep.anioInicio) && (!dep.anioFin||anio<=dep.anioFin);
+        if(!vigente) return `<td style="padding:6px 10px;text-align:center;color:var(--muted);font-size:11px">—</td>`;
+        if(asig) {
+          const pc = asig.prediosCosechas.find(pc=>pc.cosechas?.includes(cn));
+          if(pc) {
+            const pr = S.predios[pc.pi];
+            const color = pc.pi===0?'#1a3d22':pc.pi===1?'#2a7a3c':'#8b4513';
+            return `<td style="padding:6px 10px;text-align:center">
+              <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:${color}">
+                <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span>
+                ${pr?.nombre||predioNombre}
+              </span>
+            </td>`;
           } else {
-            // Default: predio de origen
-            const vigente = dep.anioInicio<=anio && (!dep.anioFin||anio<=dep.anioFin);
-            return `<td style="padding:5px 8px;text-align:center;font-size:11px;color:var(--muted)">${vigente?`${predioEmoji} ${predioNombre}<br><span style="font-size:9px">default</span>`:'—'}</td>`;
+            return `<td style="padding:6px 10px;text-align:center;color:var(--muted);font-size:11px">—</td>`;
           }
-        }).join('');
+        } else {
+          // default
+          const color = pIdx===0?'#1a3d22':pIdx===1?'#2a7a3c':'#8b4513';
+          return `<td style="padding:6px 10px;text-align:center">
+            <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:${color};opacity:0.7">
+              <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span>
+              ${predioNombre}
+            </span>
+            <div style="font-size:9px;color:var(--muted)">default</div>
+          </td>`;
+        }
+      }
+
+      const actRows = todosActivos.map(({dep, pIdx, predioNombre, predioEmoji})=>{
+        const cultivosLabel = dep.aplicaCultivos==='principales'?'🌽 Maíz/Sorgo':dep.aplicaCultivos==='triticale'?'🌾 Triticale':'🌱 Todos';
         return `<tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:6px 12px;font-weight:600;white-space:nowrap">${dep.nombre}</td>
-          <td style="padding:6px 10px;font-size:11px;color:var(--muted)">${dep.tipo_activo}</td>
-          <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--amber)">${fmt(dep.costoAnual)}/año</td>
-          ${celdas}
-          <td style="padding:5px 6px"><button class="btn btn-s" style="font-size:10px;padding:3px 8px" onclick="abrirAsignacion('${dep.id}',${pIdx})">✏️ Asignar</button></td>
+          <td style="padding:7px 12px;font-weight:600;white-space:nowrap">${dep.nombre}</td>
+          <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${dep.tipo_activo}</td>
+          <td style="padding:7px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);white-space:nowrap">${fmt(dep.costoAnual)}/año</td>
+          <td style="padding:7px 10px;font-size:11px">${cultivosLabel}</td>
+          ${getCeldaPredioCn(dep,pIdx,predioNombre,predioEmoji,anioVer,1)}
+          ${getCeldaPredioCn(dep,pIdx,predioNombre,predioEmoji,anioVer,2)}
+          ${getCeldaPredioCn(dep,pIdx,predioNombre,predioEmoji,anioVer,3)}
+          <td style="padding:5px 8px"><button class="btn btn-s" style="font-size:11px;padding:4px 10px;white-space:nowrap" onclick="abrirAsignacion('${dep.id}',${pIdx})">✏️ Asignar</button></td>
         </tr>`;
       }).join('');
 
       return `<div class="card">
-        <div class="card-head">📅 Asignación anual — Activo × Año × Predio</div>
+        <div class="card-head">📅 Asignación ${anioVer} — Activo × Cosecha × Predio</div>
         <div style="overflow-x:auto">
-        <table style="border-collapse:collapse;font-size:13px;min-width:500px">
+        <table style="border-collapse:collapse;font-size:13px;width:100%">
           <thead><tr style="background:var(--earth);color:#fff">
-            <th style="padding:6px 12px;text-align:left">Activo</th>
-            <th style="padding:6px 10px;text-align:left">Tipo</th>
-            <th style="padding:6px 10px;text-align:left">Costo</th>
-            ${headerAnios}
+            <th style="padding:7px 12px;text-align:left">Activo</th>
+            <th style="padding:7px 10px;text-align:left">Tipo</th>
+            <th style="padding:7px 10px;text-align:left">Costo</th>
+            <th style="padding:7px 10px;text-align:left">Cultivo</th>
+            <th style="padding:7px 14px;text-align:center">C1</th>
+            <th style="padding:7px 14px;text-align:center">C2</th>
+            <th style="padding:7px 14px;text-align:center">C3</th>
             <th></th>
           </tr></thead>
           <tbody>${actRows}</tbody>
         </table></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:8px;padding:0 4px">
-          Las celdas en verde tienen asignación manual. Las grises usan el predio de origen por defecto.
+        <div style="font-size:11px;color:var(--muted);margin-top:8px">
+          Mostrando año ${anioVer}. Los nombres en negrita tienen asignación manual, los tenues usan el predio de origen.
         </div>
       </div>
 
@@ -1272,7 +1286,6 @@ function abrirAsignacion(depId, originPi) {
   card.style.display = 'block';
   card.scrollIntoView({behavior:'smooth', block:'nearest'});
 
-  // Find dep across all predios
   let dep = null;
   S.predios.forEach((_,pIdx)=>{
     const found = (S.depreciaciones[pIdx]||[]).find(d=>d.id===depId);
@@ -1281,40 +1294,70 @@ function abrirAsignacion(depId, originPi) {
   if(!dep) return;
 
   const curYear = new Date().getFullYear();
-  const anios = [curYear-1, curYear, curYear+1];
+  let anioForm = curYear;
 
-  const predioChecks = (anio) => S.predios.map((p,pi)=>{
+  function renderForm() {
+    const anio = anioForm;
     const asig = (dep.asignaciones||[]).find(a=>a.anio===anio);
-    const pc = asig?.prediosCosechas?.find(pc=>pc.pi===pi);
-    return `<div style="margin-bottom:8px">
-      <div style="font-size:12px;font-weight:600;margin-bottom:4px">${p.emoji} ${p.nombre}</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
+    const predioRows = S.predios.map((p,pi)=>{
+      const pc = asig?.prediosCosechas?.find(pc=>pc.pi===pi);
+      const color = pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 14px;font-weight:600;color:${color}">${p.emoji} ${p.nombre}</td>
         ${[1,2,3].map(cn=>{
-          const checked = pc?.cosechas?.includes(cn) || (!asig && pi===originPi);
-          return `<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer">
-            <input type="checkbox" class="asig-check" data-anio="${anio}" data-pi="${pi}" data-cn="${cn}" ${checked?'checked':''}/>
-            Cosecha ${cn}
-          </label>`;
+          const checked = pc?.cosechas?.includes(cn) ?? (!asig && pi===originPi);
+          return `<td style="padding:8px 14px;text-align:center">
+            <input type="checkbox" class="asig-check" data-pi="${pi}" data-cn="${cn}" ${checked?'checked':''}
+              style="width:16px;height:16px;cursor:pointer"/>
+          </td>`;
         }).join('')}
-      </div>
-    </div>`;
-  }).join('');
+      </tr>`;
+    }).join('');
 
-  form.innerHTML = `
-    <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--soil)">${dep.nombre} — ${dep.tipo_activo} · ${fmt(dep.costoAnual)}/año</div>
-    ${anios.map(anio=>`
-      <div style="margin-bottom:16px;padding:12px;background:var(--cream);border:1px solid var(--border)">
-        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">📅 ${anio}</div>
-        ${predioChecks(anio)}
+    const anioOpts = Array.from({length:13},(_,i)=>2020+i).map(y=>
+      `<option value="${y}" ${y===anio?'selected':''}>${y}</option>`
+    ).join('');
+
+    form.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:600;color:var(--soil)">${dep.nombre}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--amber)">${fmt(dep.costoAnual)}/año</span>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+          <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</label>
+          <select style="padding:5px 10px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid var(--border)"
+            onchange="anioFormDep=parseInt(this.value);renderDepAsigForm('${depId}',${originPi},anioFormDep)">
+            ${anioOpts}
+          </select>
+        </div>
       </div>
-    `).join('')}
-    <div class="btn-row">
-      <button class="btn btn-p" onclick="guardarAsignacion('${depId}')">💾 Guardar asignación</button>
-      <button class="btn btn-s" onclick="document.getElementById('card-asignacion').style.display='none'">Cancelar</button>
-    </div>`;
+      <div style="overflow-x:auto">
+      <table style="border-collapse:collapse;font-size:13px;width:100%">
+        <thead><tr style="background:var(--earth);color:#fff">
+          <th style="padding:8px 14px;text-align:left">Predio</th>
+          <th style="padding:8px 14px;text-align:center">C1 · Dic-Feb</th>
+          <th style="padding:8px 14px;text-align:center">C2 · Mar-Jul</th>
+          <th style="padding:8px 14px;text-align:center">C3 · Ago-Nov</th>
+        </tr></thead>
+        <tbody>${predioRows}</tbody>
+      </table></div>
+      <div style="font-size:11px;color:var(--muted);margin:10px 0">
+        Marca las cosechas donde este activo trabaja en cada predio en ${anio}. La depreciación se divide proporcionalmente entre las cosechas marcadas.
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-p" onclick="guardarAsignacion('${depId}',${anio})">💾 Guardar ${anio}</button>
+        <button class="btn btn-s" onclick="document.getElementById('card-asignacion').style.display='none'">Cancelar</button>
+      </div>`;
+  }
+
+  window.anioFormDep = curYear;
+  window.renderDepAsigForm = function(dId, oPi, anio) {
+    anioForm = anio;
+    renderForm();
+  };
+  renderForm();
 }
 
-function guardarAsignacion(depId) {
+function guardarAsignacion(depId, anio) {
   let dep = null;
   S.predios.forEach((_,pIdx)=>{
     const found = (S.depreciaciones[pIdx]||[]).find(d=>d.id===depId);
@@ -1323,27 +1366,22 @@ function guardarAsignacion(depId) {
   if(!dep) return;
   if(!dep.asignaciones) dep.asignaciones = [];
 
-  // Collect all checked boxes
   const checks = document.querySelectorAll('.asig-check');
-  const byAnio = {};
+  const predioMap = {};
   checks.forEach(cb=>{
-    const anio = parseInt(cb.dataset.anio);
-    const pi   = parseInt(cb.dataset.pi);
-    const cn   = parseInt(cb.dataset.cn);
-    if(!byAnio[anio]) byAnio[anio] = {};
-    if(!byAnio[anio][pi]) byAnio[anio][pi] = [];
-    if(cb.checked) byAnio[anio][pi].push(cn);
+    const pi = parseInt(cb.dataset.pi);
+    const cn = parseInt(cb.dataset.cn);
+    if(!predioMap[pi]) predioMap[pi] = [];
+    if(cb.checked) predioMap[pi].push(cn);
   });
 
-  Object.entries(byAnio).forEach(([anioStr, predioMap])=>{
-    const anio = parseInt(anioStr);
-    const prediosCosechas = Object.entries(predioMap)
-      .filter(([,cosechas])=>cosechas.length>0)
-      .map(([piStr,cosechas])=>({pi:parseInt(piStr), cosechas}));
-    const existing = dep.asignaciones.findIndex(a=>a.anio===anio);
-    if(existing>=0) dep.asignaciones[existing] = {anio, prediosCosechas};
-    else dep.asignaciones.push({anio, prediosCosechas});
-  });
+  const prediosCosechas = Object.entries(predioMap)
+    .filter(([,cosechas])=>cosechas.length>0)
+    .map(([piStr,cosechas])=>({pi:parseInt(piStr), cosechas}));
+
+  const existing = dep.asignaciones.findIndex(a=>a.anio===anio);
+  if(existing>=0) dep.asignaciones[existing] = {anio, prediosCosechas};
+  else dep.asignaciones.push({anio, prediosCosechas});
 
   save();
   document.getElementById('card-asignacion').style.display='none';
