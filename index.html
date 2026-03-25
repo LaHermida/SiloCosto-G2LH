@@ -1223,10 +1223,15 @@ function renderDepContent() {
         for(let y=2023;y<=2032;y++) anios.push(y);
         const todosActivos2 = [];
         S.predios.forEach((pr,pIdx)=>{
-          if(pIdx !== curPredioDep) return; // solo predio activo
           (S.depreciaciones[pIdx]||[]).forEach(dep=>{
-            dep._originPi = pIdx; // mark origin for calcDepActivo
-            todosActivos2.push({dep,pIdx,pr});
+            dep._originPi = pIdx;
+            // Mostrar si es del predio activo O si tiene asignación a él
+            const tieneAsig = (dep.asignaciones||[]).some(a=>
+              (a.pctPredio||[]).some(x=>x.pi===curPredioDep&&parseFloat(x.pct)>0) ||
+              (a.prediosCosechas||[]).some(pc=>pc.pi===curPredioDep&&(pc.cosechas||[]).length>0)
+            );
+            if(pIdx === curPredioDep || tieneAsig)
+              todosActivos2.push({dep,pIdx,pr});
           });
         });
         if(!todosActivos2.length) return '';
