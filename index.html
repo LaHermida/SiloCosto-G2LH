@@ -1376,6 +1376,8 @@ function renderReg() {
 
   // Collect years that have consumos for this predio
   const aniosSet = new Set([new Date().getFullYear()]);
+  // Rango fijo siempre disponible
+  for(let y=2020; y<=2032; y++) aniosSet.add(y);
   // Años de las metas de cosecha
   [1,2,3].forEach(c=>{ const y = getCosechaMeta(pi,c).year; if(y) aniosSet.add(y); });
   // Años de consumos registrados
