@@ -1127,7 +1127,7 @@ function renderDepContent() {
         return originPi; // default
       }
 
-      const actRows = todosActivos.map(({dep, pIdx, predioNombre})=>{
+      const actRows = todosActivos.map(({dep, pIdx, predioNombre, predioEmoji})=>{
         const cultivosLabel = dep.aplicaCultivos==='principales'?'🌽 Maíz/Sorgo':dep.aplicaCultivos==='triticale'?'🌾 Triticale':'🌱 Todos';
         const vigente = (!dep.anioInicio||anioVer>=dep.anioInicio)&&(!dep.anioFin||anioVer<=dep.anioFin);
 
