@@ -1378,12 +1378,20 @@ function toggleAsigCheck(depId, anio, cn, pi, checked) {
   if(!dep) return;
   if(!dep.asignaciones) dep.asignaciones=[];
   let asig = dep.asignaciones.find(a=>a.anio===anio);
-  if(!asig) { asig={anio,prediosCosechas:[]}; dep.asignaciones.push(asig); }
-  asig.prediosCosechas.forEach(pc=>{ pc.cosechas=(pc.cosechas||[]).filter(c=>c!==cn); });
+  if(!asig) {
+    // Initialize from default (origin predio gets all cosechas)
+    let originPi = 0;
+    S.predios.forEach((_,pIdx)=>{ if((S.depreciaciones[pIdx]||[]).find(d=>d.id===depId)) originPi=pIdx; });
+    asig = {anio, prediosCosechas: [{pi:originPi, cosechas:[1,2,3]}]};
+    dep.asignaciones.push(asig);
+  }
+  // Just toggle this specific predio+cosecha
+  let pc = asig.prediosCosechas.find(pc=>pc.pi===pi);
   if(checked) {
-    let pc = asig.prediosCosechas.find(pc=>pc.pi===pi);
     if(!pc) { pc={pi,cosechas:[]}; asig.prediosCosechas.push(pc); }
     if(!pc.cosechas.includes(cn)) pc.cosechas.push(cn);
+  } else {
+    if(pc) pc.cosechas = pc.cosechas.filter(c=>c!==cn);
   }
   asig.prediosCosechas = asig.prediosCosechas.filter(pc=>(pc.cosechas||[]).length>0);
   save(); toast('Guardado');
