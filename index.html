@@ -808,6 +808,7 @@ let curAnioDep = new Date().getFullYear();
 let curCosechaReg=1, curCosechaRep=1;
 let curTablaReg=0, curTablaRep=-1;
 let curAnioReg = new Date().getFullYear();
+let curAnioRep = new Date().getFullYear();
 
 function goSec(sec) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -1721,27 +1722,50 @@ function renderRep() {
   document.getElementById('rep-ptabs').innerHTML = S.predios.map((p,i)=>
     `<button class="ptab ${i===curPredioRep?'active':''}" onclick="curPredioRep=${i};curCosechaRep=1;curTablaRep=-1;renderRep()">${p.emoji} ${p.nombre}</button>`
   ).join('');
+
   const pi = curPredioRep;
   const p = S.predios[pi];
   const ciclos = p.ciclos||3;
   const cosechas = ciclos===1?[1]:[1,2,3];
   if(!cosechas.includes(curCosechaRep)) curCosechaRep=1;
   if(curTablaRep>=p.tablas.length) curTablaRep=0;
-
-  document.getElementById('rep-ctabs').innerHTML = [
-    ...cosechas.map(c=>{
-      const m=getCosechaMeta(pi,c);
-      const tag=m.closed?'🔒 ':'✓ ';
-      return `<button class="ctab ${c===curCosechaRep&&curTablaRep===-1?'active':''}" onclick="curCosechaRep=${c};curTablaRep=-1;renderRep()">${tag}C${c} ${m.year} (Predio)</button>`;
-    }),
-    ...cosechas.map(c=>{
-      const m=getCosechaMeta(pi,c);
-      const tag=m.closed?'🔒 ':'✓ ';
-      return `<button class="ctab ${c===curCosechaRep&&curTablaRep>=0?'active':''}" onclick="curCosechaRep=${c};curTablaRep=0;renderRep()">${tag}C${c} ${m.year} (x Tabla)</button>`;
-    })
-  ].join('');
-
   if(curTablaRep===undefined) curTablaRep=-1;
+
+  // Collect available years from meta
+  const aniosSet = new Set([new Date().getFullYear()]);
+  cosechas.forEach(c=>{ const y=getCosechaMeta(pi,c).year; if(y) aniosSet.add(y); });
+  for(let y=2020;y<=2032;y++) aniosSet.add(y);
+  const anios = [...aniosSet].sort((a,b)=>a-b);
+
+  // Sync meta year
+  getCosechaMeta(pi, curCosechaRep).year = curAnioRep;
+
+  const anioOpts = anios.map(y=>
+    `<option value="${y}" ${y===curAnioRep?'selected':''}>${y}</option>`
+  ).join('');
+
+  const cicloButtons = cosechas.map(c=>{
+    const active = c===curCosechaRep;
+    return `<button class="ctab ${active?'active':''}" onclick="curCosechaRep=${c};getCosechaMeta(${pi},${c}).year=curAnioRep;save();renderRep()">C${c}</button>`;
+  }).join('');
+
+  const tipoButtons = `
+    <button class="ctab ${curTablaRep===-1?'active':''}" onclick="curTablaRep=-1;renderRep()">📊 Predio completo</button>
+    <button class="ctab ${curTablaRep>=0?'active':''}" onclick="curTablaRep=0;renderRep()">📋 Por tabla</button>`;
+
+  document.getElementById('rep-ctabs').innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:6px 0">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</span>
+        <select style="padding:5px 10px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid var(--border);background:#fff;color:var(--text)"
+          onchange="curAnioRep=parseInt(this.value);getCosechaMeta(${pi},${curCosechaRep}).year=curAnioRep;save();renderRep()">
+          ${anioOpts}
+        </select>
+      </div>
+      <div style="display:flex;gap:0">${cicloButtons}</div>
+      <div style="display:flex;gap:0">${tipoButtons}</div>
+    </div>`;
+
   renderRepContent();
 }
 
