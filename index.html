@@ -1401,9 +1401,6 @@ function renderReg() {
   if(!cosechas.includes(curCosechaReg)) curCosechaReg=1;
   if(curTablaReg>=p.tablas.length) curTablaReg=0;
 
-  // Sync meta.year with curAnioReg
-  getCosechaMeta(pi, curCosechaReg).year = curAnioReg;
-  save();
 
   // Collect years that have consumos for this predio
   const aniosSet = new Set([new Date().getFullYear()]);
@@ -1428,10 +1425,10 @@ function renderReg() {
 
   document.getElementById('reg-ctabs').innerHTML =
     cosechas.map(c=>
-      `<button class="ctab ${c===curCosechaReg?'active':''}" onclick="curCosechaReg=${c};getCosechaMeta(${pi},${c}).year=curAnioReg;save();renderReg()">Cosecha ${c}</button>`
+      `<button class="ctab ${c===curCosechaReg?'active':''}" onclick="curCosechaReg=${c};renderReg()">Cosecha ${c}</button>`
     ).join('') +
     `<select style="margin-left:14px;padding:5px 10px;font-family:'DM Mono',monospace;font-size:12px;border:1px solid var(--border);background:#fff;color:var(--text);vertical-align:middle;cursor:pointer"
-      onchange="curAnioReg=parseInt(this.value);getCosechaMeta(${pi},${curCosechaReg}).year=curAnioReg;save();renderReg()">
+      onchange="curAnioReg=parseInt(this.value);renderReg()">
       ${anioOpts}
     </select>`;
 
@@ -1746,7 +1743,7 @@ function renderRep() {
 
   const cicloButtons = cosechas.map(c=>{
     const active = c===curCosechaRep;
-    return `<button class="ctab ${active?'active':''}" onclick="curCosechaRep=${c};getCosechaMeta(${pi},${c}).year=curAnioRep;save();renderRep()">C${c}</button>`;
+    return `<button class="ctab ${active?'active':''}" onclick="curCosechaRep=${c};renderRep()">C${c}</button>`;
   }).join('');
 
   const tipoButtons = `
@@ -1758,7 +1755,7 @@ function renderRep() {
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</span>
         <select style="padding:5px 10px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid var(--border);background:#fff;color:var(--text)"
-          onchange="curAnioRep=parseInt(this.value);getCosechaMeta(${pi},${curCosechaRep}).year=curAnioRep;save();renderRep()">
+          onchange="curAnioRep=parseInt(this.value);renderRep()">
           ${anioOpts}
         </select>
       </div>
