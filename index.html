@@ -1106,11 +1106,13 @@ function renderDepContent() {
 
     ${(()=>{
       const todosActivos = [];
+      try {
       S.predios.forEach((pr,pIdx)=>{
         (S.depreciaciones[pIdx]||[]).forEach(dep=>{
           todosActivos.push({dep, pIdx, predioNombre: pr.nombre, predioEmoji: pr.emoji});
         });
       });
+      } catch(e) {}
       if(!todosActivos.length) return '';
 
       const anioVer = curAnioDep;
@@ -1185,12 +1187,14 @@ function renderDepContent() {
         ${(()=>{
           // Show which tablas are vacantes per predio per cosecha this year
           const vacInfo = [];
+          try {
           S.predios.forEach((p,pi)=>{
             [1,2,3].forEach(cn=>{
-              const vacs = p.tablas.filter((_,ti)=>getTablaData(pi,cn,ti).sinSiembra).map(t=>t.nombre);
+              const vacs = p.tablas.filter((_,ti)=>{ try{ return getTablaData(pi,cn,ti).sinSiembra; }catch(e){ return false; } }).map(t=>t.nombre);
               if(vacs.length) vacInfo.push(`${p.emoji} ${p.nombre} C${cn}: ${vacs.join(', ')} vacantes`);
             });
           });
+          } catch(e) {}
           if(!vacInfo.length) return '';
           return `<div style="margin-top:10px;padding:8px 12px;background:#fff8e8;border:1px solid #e8c048;font-size:11px;color:var(--text)">
             <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:1px">⏸ Tablas vacantes este año — la depreciación se redistribuye a las cosechas activas:</span>
