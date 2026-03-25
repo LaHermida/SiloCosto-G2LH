@@ -1223,7 +1223,9 @@ function renderDepContent() {
         for(let y=2023;y<=2032;y++) anios.push(y);
         const todosActivos2 = [];
         S.predios.forEach((pr,pIdx)=>{
+          if(pIdx !== curPredioDep) return; // solo predio activo
           (S.depreciaciones[pIdx]||[]).forEach(dep=>{
+            dep._originPi = pIdx; // mark origin for calcDepActivo
             todosActivos2.push({dep,pIdx,pr});
           });
         });
@@ -1231,25 +1233,29 @@ function renderDepContent() {
 
         const colHeaders = anios.map(y=>`<th style="padding:5px 8px;text-align:right;white-space:nowrap;font-size:11px${y===curAnioDep?';background:rgba(255,255,255,0.15)':''}">${y}</th>`).join('');
 
-        // Helper: calc dep for one activo for one year — NO mutation of S
+        // Helper: calc dep for one activo for one year for a specific predio — NO mutation of S
         function calcDepActivo(dep, pIdx, anio) {
           const costoAnual = parseFloat(dep.costoAnual)||0;
           if(!costoAnual) return 0;
           const aFin = dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
           if(dep.anioInicio && anio < dep.anioInicio) return 0;
           if(aFin && anio > aFin) return 0;
-          // Check asignacion for this year
+
           const asig = (dep.asignaciones||[]).find(a=>a.anio===anio);
           if(asig) {
-            // Sum pct across assigned predios
+            // % manual por predio
             const pctPredios = asig.pctPredio||[];
-            if(pctPredios.length>0) return costoAnual;
-            // Else proportional by cosechas
+            if(pctPredios.length>0) {
+              const entry = pctPredios.find(x=>x.pi===pIdx);
+              return costoAnual * (parseFloat(entry?.pct||0)/100);
+            }
+            // Sin % manual: dividir por cosechas asignadas
             const totalCn = asig.prediosCosechas.reduce((s,pc)=>s+(pc.cosechas||[]).length,0);
-            return totalCn>0 ? costoAnual : 0;
+            const miCn = (asig.prediosCosechas.find(pc=>pc.pi===pIdx)?.cosechas||[]).length;
+            return totalCn>0 ? costoAnual*(miCn/totalCn) : 0;
           }
-          // Default: belongs to origin predio, full year
-          return costoAnual;
+          // Default: 100% al predio de origen
+          return pIdx === dep._originPi ? costoAnual : 0;
         }
 
         const rows = todosActivos2.map(({dep,pIdx,pr})=>{
@@ -1258,7 +1264,7 @@ function renderDepContent() {
           const cells = anios.map(anio=>{
             const vigente = (!dep.anioInicio||anio>=dep.anioInicio)&&(!aFin||anio<=aFin);
             if(!vigente) return `<td style="padding:5px 8px;text-align:right;color:var(--muted);font-size:11px">—</td>`;
-            const val = calcDepActivo(dep,pIdx,anio);
+            const val = calcDepActivo(dep, pIdx, anio);
             const hl = anio===curAnioDep?';background:#eef8f2;font-weight:700':'';
             return `<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px${hl}">${val?fmt(val):'—'}</td>`;
           }).join('');
