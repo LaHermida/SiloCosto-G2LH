@@ -535,7 +535,17 @@ async function save() {
   }
 }
 function uid() { return Math.random().toString(36).slice(2,9); }
-function today() { return new Date().toLocaleDateString('en-US'); }
+function today() { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function getAnioFecha(fecha) {
+  if(!fecha) return new Date().getFullYear();
+  // ISO: YYYY-MM-DD
+  if(/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return parseInt(fecha.slice(0,4));
+  // US: MM/DD/YYYY
+  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(fecha)) return parseInt(fecha.split('/')[2]);
+  // DD-MM-YYYY
+  if(/^\d{2}-\d{2}-\d{4}$/.test(fecha)) return parseInt(fecha.slice(6,10));
+  return parseInt(fecha.slice(0,4));
+}
 
 function fmt(n) {
   if(n===null||n===undefined||isNaN(n)||n==='') return '—';
@@ -1366,23 +1376,25 @@ function renderReg() {
   p.tablas.forEach((_,ti)=>{
     [1,2,3].forEach(cn=>{
       (getTablaData(pi,cn,ti).consumos||[]).forEach(c=>{
-        if(c.fecha) aniosSet.add(parseInt(c.fecha.slice(0,4)));
+        if(c.fecha) aniosSet.add(getAnioFecha(c.fecha));
       });
     });
   });
   const anios = [...aniosSet].sort((a,b)=>a-b);
   if(!anios.includes(curAnioReg)) curAnioReg = new Date().getFullYear();
 
-  const anioButtons = anios.map(a=>
-    `<button class="ctab ${a===curAnioReg?'active':''}" style="font-family:'DM Mono',monospace" onclick="curAnioReg=${a};getCosechaMeta(${pi},${curCosechaReg}).year=${a};save();renderReg()">${a}</button>`
+  const anioOpts = anios.map(a=>
+    `<option value="${a}" ${a===curAnioReg?'selected':''}>${a}</option>`
   ).join('');
 
   document.getElementById('reg-ctabs').innerHTML =
     cosechas.map(c=>
       `<button class="ctab ${c===curCosechaReg?'active':''}" onclick="curCosechaReg=${c};getCosechaMeta(${pi},${c}).year=curAnioReg;save();renderReg()">Cosecha ${c}</button>`
     ).join('') +
-    `<span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin:0 10px;vertical-align:middle">|</span>` +
-    anioButtons;
+    `<select style="margin-left:14px;padding:5px 10px;font-family:'DM Mono',monospace;font-size:12px;border:1px solid var(--border);background:#fff;color:var(--text);vertical-align:middle;cursor:pointer"
+      onchange="curAnioReg=parseInt(this.value);getCosechaMeta(${pi},${curCosechaReg}).year=curAnioReg;save();renderReg()">
+      ${anioOpts}
+    </select>`;
 
   renderRegContent();
 }
@@ -1571,7 +1583,7 @@ function renderRegContent() {
   for(let ti2=0;ti2<p.tablas.length;ti2++) {
     const td2 = getTablaData(pi,cn,ti2);
     (td2.consumos||[]).forEach((c,ci)=>{
-      const anioConsumo = c.fecha ? parseInt(c.fecha.slice(0,4)) : curAnioReg;
+      const anioConsumo = c.fecha ? getAnioFecha(c.fecha) : curAnioReg;
       if(anioConsumo === curAnioReg)
         allConsumos.push({...c, ti2, ci, tablaNombre:p.tablas[ti2].nombre});
     });
