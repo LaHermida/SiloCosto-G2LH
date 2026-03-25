@@ -1144,6 +1144,7 @@ function renderDepContent() {
 
         return `<tr style="border-bottom:1px solid var(--border)">
           <td style="padding:7px 12px;font-weight:600;white-space:nowrap">${dep.nombre}</td>
+          <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${predioEmoji} ${predioNombre}</td>
           <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${dep.tipo_activo}</td>
           <td style="padding:7px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);white-space:nowrap">${fmt(dep.costoAnual)}/año</td>
           <td style="padding:7px 10px;font-size:11px">${cultivosLabel}</td>
@@ -1170,6 +1171,7 @@ function renderDepContent() {
         <table style="border-collapse:collapse;font-size:13px;width:100%">
           <thead><tr style="background:var(--earth);color:#fff">
             <th style="padding:7px 12px;text-align:left">Activo</th>
+            <th style="padding:7px 10px;text-align:left">Origen</th>
             <th style="padding:7px 10px;text-align:left">Tipo</th>
             <th style="padding:7px 10px;text-align:left">Costo</th>
             <th style="padding:7px 10px;text-align:left">Cultivo</th>
