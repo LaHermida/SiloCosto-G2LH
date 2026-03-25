@@ -1191,119 +1191,151 @@ function renderDepContent() {
 
     <div class="card">
       <div class="card-head" style="justify-content:space-between">
-        <span>📅 Asignación anual — Activo × Cosecha × Predio</span>
+        <span>📅 Depreciación anual — Asignación y Montos</span>
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</span>
           <select style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:12px;border:1px solid var(--border)"
             onchange="curAnioDep=parseInt(this.value);renderDep()">${anioOpts}</select>
         </div>
       </div>
-      ${todosActivos.length ? `
-      <div style="overflow-x:auto">
-      <table style="border-collapse:collapse;font-size:13px;width:100%">
-        <thead><tr style="background:var(--earth);color:#fff">
-          <th style="padding:8px 12px;text-align:left">Activo</th>
-          <th style="padding:8px 14px;text-align:left">C1 · Dic-Feb</th>
-          <th style="padding:8px 14px;text-align:left">C2 · Mar-Jul</th>
-          <th style="padding:8px 14px;text-align:left">C3 · Ago-Nov</th>
-        </tr></thead>
-        <tbody>${asigRows}</tbody>
-      </table></div>
-      ${vacInfo.length ? `<div style="margin-top:10px;padding:8px 12px;background:#fff8e8;border:1px solid #e8c048;font-size:11px">
-        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:1px">⏸ Tablas vacantes — la depreciación se redistribuye a cosechas activas:</span>
-        <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">${vacInfo.map(v=>`<span style="background:#fff;border:1px solid #e8c048;padding:2px 8px;font-size:11px">${v}</span>`).join('')}</div>
-      </div>` : ''}
-      ` : ''}
-    </div>
-
-    <div class="card">
-      <div class="card-head">📊 Resumen de depreciación por año</div>
       ${(()=>{
-        const anios = [];
-        for(let y=2023;y<=2032;y++) anios.push(y);
-        const todosActivos2 = [];
+        const anioVer = curAnioDep;
+        const todosActivos3 = [];
         S.predios.forEach((pr,pIdx)=>{
           (S.depreciaciones[pIdx]||[]).forEach(dep=>{
-            dep._originPi = pIdx;
-            // Mostrar si es del predio activo O si tiene asignación a él
-            const tieneAsig = (dep.asignaciones||[]).some(a=>
-              (a.pctPredio||[]).some(x=>x.pi===curPredioDep&&parseFloat(x.pct)>0) ||
-              (a.prediosCosechas||[]).some(pc=>pc.pi===curPredioDep&&(pc.cosechas||[]).length>0)
-            );
-            if(pIdx === curPredioDep || tieneAsig)
-              todosActivos2.push({dep,pIdx,pr});
+            todosActivos3.push({dep, pIdx, pr});
           });
         });
-        if(!todosActivos2.length) return '';
+        if(!todosActivos3.length) return '<div class="empty"><div class="empty-icon">⚙️</div><div>Sin activos</div></div>';
 
-        const colHeaders = anios.map(y=>`<th style="padding:5px 8px;text-align:right;white-space:nowrap;font-size:11px${y===curAnioDep?';background:rgba(255,255,255,0.15)':''}">${y}</th>`).join('');
+        // Predio headers — checkboxes + $ columns
+        const predioCheckHeaders = S.predios.map(p=>`<th style="padding:7px 10px;text-align:center;border-left:1px solid rgba(255,255,255,0.2)">${p.emoji} ${p.nombre}<br><span style="font-size:9px;font-weight:400">Asignar</span></th>`).join('');
+        const predioMontoHeaders = S.predios.map(p=>`<th style="padding:7px 10px;text-align:right;border-left:1px solid rgba(255,255,255,0.2)">${p.emoji} ${p.nombre}<br><span style="font-size:9px;font-weight:400">$ ${anioVer}</span></th>`).join('');
 
-        // Helper: calc dep total para un activo en un año (suma todos los predios)
-        function calcDepActivo(dep, pIdx, anio) {
-          const costoAnual = parseFloat(dep.costoAnual)||0;
-          if(!costoAnual) return 0;
+        const rows = todosActivos3.map(({dep,pIdx,pr})=>{
           const aFin = dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
-          if(dep.anioInicio && anio < dep.anioInicio) return 0;
-          if(aFin && anio > aFin) return 0;
-
-          const asig = (dep.asignaciones||[]).find(a=>a.anio===anio);
-          if(asig) {
-            // Si tiene asignación con al menos un predio → devuelve costo completo
-            const totalCn = (asig.prediosCosechas||[]).reduce((s,pc)=>s+(pc.cosechas||[]).length,0);
-            return totalCn > 0 ? costoAnual : 0;
-          }
-          // Default: costo completo al predio de origen
-          return costoAnual;
-        }
-
-        const rows = todosActivos2.map(({dep,pIdx,pr})=>{
-          const aFin = dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
+          const vigente = (!dep.anioInicio||anioVer>=dep.anioInicio)&&(!aFin||anioVer<=aFin);
           const predioColor = pIdx===0?'#1a3d22':pIdx===1?'#2a7a3c':'#8b4513';
-          const cells = anios.map(anio=>{
-            const vigente = (!dep.anioInicio||anio>=dep.anioInicio)&&(!aFin||anio<=aFin);
-            if(!vigente) return `<td style="padding:5px 8px;text-align:right;color:var(--muted);font-size:11px">—</td>`;
-            const val = calcDepActivo(dep, pIdx, anio);
-            const hl = anio===curAnioDep?';background:#eef8f2;font-weight:700':'';
-            return `<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px${hl}">${val?fmt(val):'—'}</td>`;
+          const cosechaInicio = dep.cosechaInicio||1;
+
+          // Checkboxes C1/C2/C3 per predio
+          const checkCeldas = S.predios.map((p,pi)=>{
+            if(!vigente) return `<td style="padding:6px 10px;text-align:center;border-left:1px solid var(--border)">—</td>`;
+            const asig = (dep.asignaciones||[]).find(a=>a.anio===anioVer);
+            const checks = [1,2,3].map(cn=>{
+              // Block cosechas before cosechaInicio in anioInicio year
+              if(dep.anioInicio && anioVer===dep.anioInicio && cn < cosechaInicio)
+                return `<span style="font-size:10px;color:var(--muted)">—</span>`;
+              const checkedPis = asig
+                ? (asig.prediosCosechas||[]).filter(pc=>(pc.cosechas||[]).includes(cn)).map(pc=>pc.pi)
+                : [pIdx]; // default: origin predio
+              const isChk = checkedPis.includes(pi);
+              const col = pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
+              return `<label style="display:inline-flex;align-items:center;gap:2px;margin-right:4px;cursor:pointer;font-size:10px;color:${col}">
+                <input type="checkbox" ${isChk?'checked':''} style="width:13px;height:13px;accent-color:${col}"
+                  onchange="toggleAsigCheck('${dep.id}',${anioVer},${cn},${pi},this.checked)"/>C${cn}
+              </label>`;
+            }).join('');
+            return `<td style="padding:5px 10px;border-left:1px solid var(--border);white-space:nowrap">${checks}</td>`;
           }).join('');
-          return `<tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:6px 12px;font-weight:600;white-space:nowrap">${dep.nombre}</td>
-            <td style="padding:6px 10px;font-size:11px;color:${predioColor}">${pr.emoji} ${pr.nombre}</td>
-            <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--amber)">${fmt(dep.costoAnual)}/año</td>
-            ${cells}
+
+          // $ per predio for this year
+          const montoCeldas = S.predios.map((p,pi)=>{
+            if(!vigente) return `<td style="padding:6px 10px;border-left:1px solid var(--border)">—</td>`;
+            const asig = (dep.asignaciones||[]).find(a=>a.anio===anioVer);
+            let monto = 0;
+            const costoAnual = parseFloat(dep.costoAnual)||0;
+            if(asig) {
+              const pctPredios = asig.pctPredio||[];
+              if(pctPredios.length>0) {
+                const entry = pctPredios.find(x=>x.pi===pi);
+                monto = costoAnual*(parseFloat(entry?.pct||0)/100);
+              } else {
+                const totalCn = (asig.prediosCosechas||[]).reduce((s,pc)=>s+(pc.cosechas||[]).length,0);
+                const miCn = ((asig.prediosCosechas||[]).find(pc=>pc.pi===pi)?.cosechas||[]).length;
+                monto = totalCn>0 ? costoAnual*(miCn/totalCn) : 0;
+              }
+            } else {
+              monto = pi===pIdx ? costoAnual : 0;
+            }
+            return `<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);border-left:1px solid var(--border)">${monto?fmt(monto):'—'}</td>`;
+          }).join('');
+
+          return `<tr style="border-bottom:1px solid var(--border)${!vigente?';opacity:0.4':''}">
+            <td style="padding:7px 12px;font-weight:600;white-space:nowrap">${dep.nombre}</td>
+            <td style="padding:7px 10px;font-size:11px;color:${predioColor}">${pr.emoji} ${pr.nombre}</td>
+            <td style="padding:7px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--amber)">${fmt(dep.costoAnual)}/año</td>
+            ${checkCeldas}
+            ${montoCeldas}
           </tr>`;
+        }).join('');
+
+        // Totals per predio
+        const totalPredio = S.predios.map((p,pi)=>{
+          let tot = 0;
+          todosActivos3.forEach(({dep,pIdx})=>{
+            const aFin = dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
+            const vigente = (!dep.anioInicio||anioVer>=dep.anioInicio)&&(!aFin||anioVer<=aFin);
+            if(!vigente) return;
+            const costoAnual = parseFloat(dep.costoAnual)||0;
+            const asig = (dep.asignaciones||[]).find(a=>a.anio===anioVer);
+            if(asig) {
+              const pctPredios = asig.pctPredio||[];
+              if(pctPredios.length>0) {
+                const entry = pctPredios.find(x=>x.pi===pi);
+                tot += costoAnual*(parseFloat(entry?.pct||0)/100);
+              } else {
+                const totalCn = (asig.prediosCosechas||[]).reduce((s,pc)=>s+(pc.cosechas||[]).length,0);
+                const miCn = ((asig.prediosCosechas||[]).find(pc=>pc.pi===pi)?.cosechas||[]).length;
+                tot += totalCn>0 ? costoAnual*(miCn/totalCn) : 0;
+              }
+            } else {
+              if(pi===pIdx) tot += costoAnual;
+            }
+          });
+          return tot;
+        });
+
+        const totalCells = S.predios.map(()=>`<td style="padding:5px 10px;border-left:1px solid var(--border)"></td>`).join('');
+        const totalMontoCells = totalPredio.map(tot=>`<td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);font-weight:700;border-left:1px solid var(--border)">${tot?fmt(tot):'—'}</td>`).join('');
+
+        const haPrCells = S.predios.map((p,pi)=>{
+          const ha = p.tablas.reduce((s,t)=>s+t.ha,0);
+          const tot = totalPredio[pi];
+          return `<td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--straw);font-weight:700;border-left:1px solid var(--border)">${(tot&&ha)?fmt(tot/ha):'—'}</td>`;
         }).join('');
 
         return `<div style="overflow-x:auto">
           <table style="border-collapse:collapse;font-size:13px;width:100%">
-            <thead><tr style="background:var(--earth);color:#fff">
-              <th style="padding:6px 12px;text-align:left">Activo</th>
-              <th style="padding:6px 10px;text-align:left">Predio origen</th>
-              <th style="padding:6px 10px;text-align:left">Costo/año</th>
-              ${colHeaders}
-            </tr></thead>
+            <thead>
+              <tr style="background:var(--earth);color:#fff">
+                <th style="padding:7px 12px;text-align:left">Activo</th>
+                <th style="padding:7px 10px;text-align:left">Predio</th>
+                <th style="padding:7px 10px;text-align:left">Costo/año</th>
+                <th colspan="${S.predios.length}" style="padding:7px 10px;text-align:center;border-left:1px solid rgba(255,255,255,0.2)">Asignación C1/C2/C3</th>
+                <th colspan="${S.predios.length}" style="padding:7px 10px;text-align:center;border-left:1px solid rgba(255,255,255,0.2)">Monto ${anioVer}</th>
+              </tr>
+              <tr style="background:var(--soil);color:#d0f0d0;font-size:11px">
+                <th colspan="3"></th>
+                ${predioCheckHeaders}
+                ${predioMontoHeaders}
+              </tr>
+            </thead>
             <tbody>${rows}</tbody>
             <tfoot>
               <tr style="background:var(--cream);font-weight:700;border-top:2px solid var(--border)">
-                <td colspan="3" style="padding:6px 12px">TOTAL</td>
-                ${anios.map(anio=>{
-                  const tot = todosActivos2.reduce((s,{dep,pIdx})=>s+calcDepActivo(dep,pIdx,anio),0);
-                  const hl = anio===curAnioDep?';color:var(--amber)':'';
-                  return `<td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px${hl}">${tot?fmt(tot):'—'}</td>`;
-                }).join('')}
+                <td colspan="3" style="padding:7px 12px">TOTAL</td>
+                ${totalCells}
+                ${totalMontoCells}
               </tr>
               <tr style="background:var(--soil);color:#fff">
-                <td colspan="3" style="padding:6px 12px;font-family:'DM Mono',monospace;font-size:11px">$/HA · ${fmtN(S.predios[curPredioDep].tablas.reduce((s,t)=>s+t.ha,0),2)} ha</td>
-                ${anios.map(anio=>{
-                  const tot = todosActivos2.reduce((s,{dep,pIdx})=>s+calcDepActivo(dep,pIdx,anio),0);
-                  const totalHa = S.predios[curPredioDep].tablas.reduce((s,t)=>s+t.ha,0);
-                  const hl = anio===curAnioDep?';color:var(--straw);font-weight:700':'';
-                  return `<td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px${hl}">${(tot&&totalHa)?fmt(tot/totalHa):'—'}</td>`;
-                }).join('')}
+                <td colspan="3" style="padding:7px 12px;font-family:'DM Mono',monospace;font-size:11px">$/HA</td>
+                ${S.predios.map(()=>`<td style="border-left:1px solid rgba(255,255,255,0.2)"></td>`).join('')}
+                ${haPrCells}
               </tr>
             </tfoot>
           </table></div>
-          <div style="font-size:11px;color:var(--muted);margin-top:8px">Columna verde = año seleccionado. — = activo no vigente ese año.</div>`;
+          <div style="font-size:11px;color:var(--muted);margin-top:8px">Marca C1/C2/C3 por predio para asignar la depreciación. Los montos se calculan automáticamente.</div>`;
       })()}
     </div>
 
