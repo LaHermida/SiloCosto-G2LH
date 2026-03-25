@@ -1051,245 +1051,180 @@ function renderDep() {
 }
 
 function renderDepContent() {
-  const pi = curPredioDep;
-  const p = S.predios[pi];
-  const deps = S.depreciaciones[pi];
-  const totalAnual = calcDepAnualTotal(pi);
-
-  const tablaCheckboxes = p.tablas.map((t,i)=>
-    `<label class="check-row">
-      <input type="checkbox" class="dep-tabla-check" value="${i}" /> ${t.nombre} (${t.ha} ha)
-    </label>`
-  ).join('');
+  // ── Todos los activos de todos los predios ──
+  const todosActivos = [];
+  S.predios.forEach((pr,pIdx)=>{
+    (S.depreciaciones[pIdx]||[]).forEach((d,i)=>{
+      todosActivos.push({d, pIdx, pr, i});
+    });
+  });
 
   const curYear = new Date().getFullYear();
-  const depRows = deps.map((d,i)=>{
+  const anioVer = curAnioDep;
+
+  // ── Tabla de activos (todos juntos) ──
+  const totalGlobal = todosActivos.reduce((s,{d})=>s+(parseFloat(d.costoAnual)||0),0);
+
+  const depRows = todosActivos.map(({d,pIdx,pr,i})=>{
     const tablas = d.alcance==='tablas'
-      ? (d.tablasIdx||[]).map(ti=>p.tablas[ti]?.nombre).filter(Boolean).join(', ')
+      ? (d.tablasIdx||[]).map(ti=>pr.tablas[ti]?.nombre).filter(Boolean).join(', ')
       : 'Todo el predio';
     const aFin = d.anioFin || (d.anioInicio ? d.anioInicio + Math.floor(d.vidaUtil) : null);
     const vigente = aFin ? curYear <= aFin : true;
     const anioStr = d.anioInicio ? `${d.anioInicio} → ${aFin}` : '—';
     const anioColor = d.anioInicio ? (vigente ? 'var(--green)' : 'var(--red)') : 'var(--muted)';
     const anioMark = d.anioInicio ? (vigente ? ' ✓' : ' vencida') : '';
-    const cultivosLabel = d.aplicaCultivos==='principales'?'🌽🌿 Principales':d.aplicaCultivos==='triticale'?'🌾 Triticale':'Todos';
+    const cultivosLabel = d.aplicaCultivos==='principales'?'🌽 Maíz/Sorgo':d.aplicaCultivos==='triticale'?'🌾 Triticale':'Todos';
     const cosIniLabel = d.cosechaInicio && d.cosechaInicio>1 ? ` · desde C${d.cosechaInicio}` : '';
+    const predioColor = pIdx===0?'#1a3d22':pIdx===1?'#2a7a3c':'#8b4513';
     return `<tr>
-      <td><strong>${d.nombre}</strong></td>
-      <td>${d.tipo_activo}</td>
-      <td><span class="dep-badge ${d.alcance==='general'?'dep-general':'dep-tabla'}">${d.alcance==='general'?'General':'Por tabla'}</span></td>
-      <td style="font-size:12px;color:var(--muted)">${tablas}</td>
-      <td class="mono tr">${fmt(d.valorActivo)}</td>
-      <td class="mono tr">${d.vidaUtil} años</td>
-      <td class="mono" style="font-size:11px;color:${anioColor}">${anioStr}${anioMark}${cosIniLabel}</td>
-      <td style="font-size:11px;color:var(--muted)">${cultivosLabel}</td>
-      <td class="mono tr amber">${fmt(d.costoAnual)}</td>
-      <td><button class="btn btn-d" onclick="delDep(${i})">✕</button></td>
+      <td style="padding:7px 12px"><strong>${d.nombre}</strong></td>
+      <td style="padding:7px 10px;font-size:11px"><span style="color:${predioColor};font-weight:600">${pr.emoji} ${pr.nombre}</span></td>
+      <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${d.tipo_activo}</td>
+      <td style="padding:7px 10px"><span class="dep-badge ${d.alcance==='general'?'dep-general':'dep-tabla'}">${d.alcance==='general'?'General':'Por tabla'}</span></td>
+      <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${tablas}</td>
+      <td class="mono tr" style="padding:7px 10px">${fmt(d.valorActivo)}</td>
+      <td class="mono tr" style="padding:7px 10px">${d.vidaUtil} años</td>
+      <td class="mono" style="padding:7px 10px;font-size:11px;color:${anioColor}">${anioStr}${anioMark}${cosIniLabel}</td>
+      <td style="padding:7px 10px;font-size:11px">${cultivosLabel}</td>
+      <td class="mono tr amber" style="padding:7px 10px">${fmt(d.costoAnual)}</td>
+      <td style="padding:4px 6px;white-space:nowrap">
+        <button class="btn btn-s" style="font-size:10px;padding:3px 8px;margin-right:3px" onclick="editarDep('${d.id}',${pIdx})">✏️</button>
+        <button class="btn btn-d" style="font-size:10px;padding:3px 6px" onclick="delDepById('${d.id}',${pIdx})">✕</button>
+      </td>
     </tr>`;
   }).join('');
 
+  // ── Grid de asignación: filas=activos, cols=C1/C2/C3 ──
+  function getAsigChecks(d, pIdx, anio, cn) {
+    const asig = (d.asignaciones||[]).find(a=>a.anio===anio);
+    // Default: predio de origen en todas las cosechas vigentes
+    if(!asig) return [pIdx];
+    return (asig.prediosCosechas||[]).filter(pc=>(pc.cosechas||[]).includes(cn)).map(pc=>pc.pi);
+  }
+
+  const asigRows = todosActivos.map(({d,pIdx,pr})=>{
+    const aFin = d.anioFin || (d.anioInicio ? d.anioInicio + Math.floor(d.vidaUtil) : null);
+    const vigente = (!d.anioInicio||anioVer>=d.anioInicio)&&(!aFin||anioVer<=aFin);
+    const cosechaInicio = d.cosechaInicio || 1;
+    const predioColor = pIdx===0?'#1a3d22':pIdx===1?'#2a7a3c':'#8b4513';
+
+    const celdas = [1,2,3].map(cn=>{
+      if(!vigente) return `<td style="padding:8px 12px;text-align:center;color:var(--muted)">—</td>`;
+      if(d.anioInicio && anioVer===d.anioInicio && cn < cosechaInicio)
+        return `<td style="padding:8px 12px;text-align:center;color:var(--muted)">—</td>`;
+      const checkedPis = getAsigChecks(d, pIdx, anioVer, cn);
+      const checks = S.predios.map((p,pi)=>{
+        const isChk = checkedPis.includes(pi);
+        const col = pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
+        return `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;margin-bottom:2px">
+          <input type="checkbox" ${isChk?'checked':''} style="width:14px;height:14px;cursor:pointer;accent-color:${col}"
+            onchange="toggleAsigCheck('${d.id}',${anioVer},${cn},${pi},this.checked)"/>
+          <span style="font-size:11px;color:${col};font-weight:600">${p.emoji} ${p.nombre}</span>
+        </label>`;
+      }).join('');
+      return `<td style="padding:6px 12px;vertical-align:top">${checks}</td>`;
+    }).join('');
+
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${d.nombre}<br>
+        <span style="font-size:10px;color:${predioColor};font-weight:400">${pr.emoji} ${pr.nombre}</span></td>
+      ${celdas}
+    </tr>`;
+  }).join('');
+
+  // ── Año selector options ──
+  const anioOpts = Array.from({length:13},(_,i)=>2020+i).map(y=>
+    `<option value="${y}" ${y===anioVer?'selected':''}>${y}</option>`
+  ).join('');
+
+  // ── Tablas vacantes info ──
+  const vacInfo = [];
+  try {
+    S.predios.forEach((p,pi)=>{
+      [1,2,3].forEach(cn=>{
+        const vacs = p.tablas.filter((_,ti)=>{ try{ return getTablaData(pi,cn,ti).sinSiembra; }catch(e){ return false; } }).map(t=>t.nombre);
+        if(vacs.length) vacInfo.push(`${p.emoji} ${p.nombre} C${cn}: ${vacs.join(', ')}`);
+      });
+    });
+  } catch(e) {}
+
+  // ── Render ──
+  const p = S.predios[curPredioDep];
+  const tablaCheckboxes = p.tablas.map((t,i)=>
+    `<label class="check-row"><input type="checkbox" class="dep-tabla-check" value="${i}"/> ${t.nombre} (${t.ha} ha)</label>`
+  ).join('');
+
   document.getElementById('dep-content').innerHTML = `
     <div class="card">
-      <div class="card-head">⚙️ Activos de ${p.emoji} ${p.nombre}
-        <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Total anual: ${fmt(totalAnual)}</span>
+      <div class="card-head">⚙️ Todos los activos
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Total global/año: ${fmt(totalGlobal)}</span>
       </div>
-      ${deps.length ? `
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>Activo</th><th>Tipo</th><th>Alcance</th><th>Tablas</th><th>Valor</th><th>Vida útil</th><th>Período</th><th>Cultivos</th><th>Costo anual</th><th></th></tr></thead>
+      ${todosActivos.length ? `
+        <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr><th>Activo</th><th>Predio</th><th>Tipo</th><th>Alcance</th><th>Tablas</th><th class="tr">Valor</th><th class="tr">Vida útil</th><th>Período</th><th>Cultivos</th><th class="tr">Costo anual</th><th></th></tr></thead>
           <tbody>${depRows}</tbody>
-        </table></div>
-        <div class="result">
-          <div><div class="res-lbl">Total anual depreciaciones</div><div class="res-val">${fmt(totalAnual)}</div></div>
-          <div><div class="res-lbl">Distribución</div><div class="res-sub" style="font-size:13px;color:var(--straw)">
-            ${p.ciclos===1?'100% en ciclo único':'🌾 Triticale 20% · 🌽 Maíz 40% · 🌿 Sorgo 40%'}<br>
-            Prorrateado por hectárea entre tablas
-          </div></div>
-        </div>
-      ` : `<div class="empty"><div class="empty-icon">⚙️</div><div>Sin activos. Agrega maquinaria, norias, terraplenes...</div></div>`}
+        </table></div>` :
+        `<div class="empty"><div class="empty-icon">⚙️</div><div>Sin activos registrados.</div></div>`}
     </div>
 
-    ${(()=>{
-      const todosActivos = [];
-      try {
-      S.predios.forEach((pr,pIdx)=>{
-        (S.depreciaciones[pIdx]||[]).forEach(dep=>{
-          todosActivos.push({dep, pIdx, predioNombre: pr.nombre, predioEmoji: pr.emoji});
-        });
-      });
-      } catch(e) {}
-      if(!todosActivos.length) return '';
+    <div class="card" id="card-editar-dep" style="display:none">
+      <div class="card-head">✏️ Editar activo</div>
+      <div id="editar-dep-form"></div>
+    </div>
 
-      const anioVer = curAnioDep;
-      const predioOpts = ['— default —',...S.predios.map(p=>p.nombre)];
-
-      function getAsigPi(dep, originPi, anio, cn) {
-        const asig = (dep.asignaciones||[]).find(a=>a.anio===anio);
-        if(asig) {
-          const pc = asig.prediosCosechas.find(pc=>(pc.cosechas||[]).includes(cn));
-          return pc ? pc.pi : -1;
-        }
-        return originPi; // default
-      }
-
-      const actRows = todosActivos.map(({dep, pIdx, predioNombre, predioEmoji})=>{
-        const cultivosLabel = dep.aplicaCultivos==='principales'?'🌽 Maíz/Sorgo':dep.aplicaCultivos==='triticale'?'🌾 Triticale':'🌱 Todos';
-        const vigente = (!dep.anioInicio||anioVer>=dep.anioInicio)&&(!dep.anioFin||anioVer<=dep.anioFin);
-
-        const celdas = [1,2,3].map(cn=>{
-          if(!vigente) return `<td style="padding:6px 10px;text-align:center;color:var(--muted)">—</td>`;
-          // Block cosechas before cosechaInicio in the starting year
-          const cosechaInicio = dep.cosechaInicio || 1;
-          if(dep.anioInicio && anioVer === dep.anioInicio && cn < cosechaInicio)
-            return `<td style="padding:6px 10px;text-align:center;font-size:11px;color:var(--muted)">—</td>`;
-          const selPi = getAsigPi(dep, pIdx, anioVer, cn);
-          const opts = S.predios.map((p,pi)=>`<option value="${pi}" ${pi===selPi?'selected':''}>${p.emoji} ${p.nombre}</option>`).join('');
-          const color = selPi===0?'#1a3d22':selPi===1?'#2a7a3c':selPi===2?'#8b4513':'#888';
-          return `<td style="padding:4px 8px;text-align:center">
-            <select style="padding:4px 6px;font-size:12px;border:1px solid var(--border);color:${color};font-weight:600;background:#fff;cursor:pointer;max-width:130px"
-              onchange="guardarAsigInline('${dep.id}',${anioVer},${cn},parseInt(this.value));this.style.color=['#1a3d22','#2a7a3c','#8b4513'][this.value]||'#888'">
-              ${opts}
-            </select>
-          </td>`;
-        }).join('');
-
-        return `<tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:7px 12px;font-weight:600;white-space:nowrap">${dep.nombre}</td>
-          <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${predioEmoji} ${predioNombre}</td>
-          <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${dep.tipo_activo}</td>
-          <td style="padding:7px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);white-space:nowrap">${fmt(dep.costoAnual)}/año</td>
-          <td style="padding:7px 10px;font-size:11px">${cultivosLabel}</td>
-          ${celdas}
-        </tr>
-        <tr style="border-bottom:2px solid var(--border);background:var(--cream)">
-          <td colspan="5" style="padding:4px 12px;font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:1px">% del costo anual por predio</td>
-          ${S.predios.map((p,pi)=>{
-            const asig = (dep.asignaciones||[]).find(a=>a.anio===anioVer);
-            const pctEntry = (asig?.pctPredio||[]).find(x=>x.pi===pi);
-            // Default: distribute by cosechas assigned
-            let defaultPct = '';
-            if(asig && asig.prediosCosechas) {
-              let totalCn = 0;
-              asig.prediosCosechas.forEach(pc=>{ totalCn += (pc.cosechas||[]).length; });
-              const miCn = (asig.prediosCosechas.find(pc=>pc.pi===pi)?.cosechas||[]).length;
-              if(totalCn > 0) defaultPct = Math.round(miCn/totalCn*100);
-            }
-            const val = pctEntry ? pctEntry.pct : (defaultPct||'');
-            const color = pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
-            return `<td colspan="1" style="padding:3px 8px;text-align:center">
-              <div style="font-size:10px;color:${color};font-weight:600;margin-bottom:2px">${p.emoji} ${p.nombre}</div>
-              <input type="number" min="0" max="100" step="1" placeholder="auto" value="${val}"
-                style="width:60px;padding:3px 6px;text-align:center;border:1px solid var(--border);font-size:12px;font-family:'DM Mono',monospace"
-                onchange="guardarPctInline('${dep.id}',${anioVer},${pi},parseFloat(this.value)||0)"/>
-              <span style="font-size:10px;color:var(--muted)">%</span>
-            </td>`;
-          }).join('')}
-        </tr>`;
-      }).join('');
-
-      const anioOpts = Array.from({length:13},(_,i)=>2020+i).map(y=>
-        `<option value="${y}" ${y===anioVer?'selected':''}>${y}</option>`
-      ).join('');
-
-      return `<div class="card">
-        <div class="card-head" style="justify-content:space-between">
-          <span>📅 Asignación — Activo × Cosecha × Predio</span>
-          <div style="display:flex;align-items:center;gap:6px">
-            <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</span>
-            <select style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:12px;border:1px solid var(--border)"
-              onchange="curAnioDep=parseInt(this.value);renderDep()">
-              ${anioOpts}
-            </select>
-          </div>
+    <div class="card">
+      <div class="card-head" style="justify-content:space-between">
+        <span>📅 Asignación anual — Activo × Cosecha × Predio</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</span>
+          <select style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:12px;border:1px solid var(--border)"
+            onchange="curAnioDep=parseInt(this.value);renderDep()">${anioOpts}</select>
         </div>
-        <div style="overflow-x:auto">
-        <table style="border-collapse:collapse;font-size:13px;width:100%">
-          <thead><tr style="background:var(--earth);color:#fff">
-            <th style="padding:7px 12px;text-align:left">Activo</th>
-            <th style="padding:7px 10px;text-align:left">Origen</th>
-            <th style="padding:7px 10px;text-align:left">Tipo</th>
-            <th style="padding:7px 10px;text-align:left">Costo</th>
-            <th style="padding:7px 10px;text-align:left">Cultivo</th>
-            <th style="padding:7px 14px;text-align:center">C1 · Dic-Feb</th>
-            <th style="padding:7px 14px;text-align:center">C2 · Mar-Jul</th>
-            <th style="padding:7px 14px;text-align:center">C3 · Ago-Nov</th>
-          </tr></thead>
-          <tbody>${actRows}</tbody>
-        </table></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:8px">Cambios se guardan al seleccionar.</div>
-        ${(()=>{
-          // Show which tablas are vacantes per predio per cosecha this year
-          const vacInfo = [];
-          try {
-          S.predios.forEach((p,pi)=>{
-            [1,2,3].forEach(cn=>{
-              const vacs = p.tablas.filter((_,ti)=>{ try{ return getTablaData(pi,cn,ti).sinSiembra; }catch(e){ return false; } }).map(t=>t.nombre);
-              if(vacs.length) vacInfo.push(`${p.emoji} ${p.nombre} C${cn}: ${vacs.join(', ')} vacantes`);
-            });
-          });
-          } catch(e) {}
-          if(!vacInfo.length) return '';
-          return `<div style="margin-top:10px;padding:8px 12px;background:#fff8e8;border:1px solid #e8c048;font-size:11px;color:var(--text)">
-            <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:1px">⏸ Tablas vacantes este año — la depreciación se redistribuye a las cosechas activas:</span>
-            <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:8px">
-              ${vacInfo.map(v=>`<span style="background:#fff;border:1px solid #e8c048;padding:2px 8px;border-radius:3px">${v}</span>`).join('')}
-            </div>
-          </div>`;
-        })()}
-      </div>`;
-    })()}
+      </div>
+      ${todosActivos.length ? `
+      <div style="overflow-x:auto">
+      <table style="border-collapse:collapse;font-size:13px;width:100%">
+        <thead><tr style="background:var(--earth);color:#fff">
+          <th style="padding:8px 12px;text-align:left">Activo</th>
+          <th style="padding:8px 14px;text-align:left">C1 · Dic-Feb</th>
+          <th style="padding:8px 14px;text-align:left">C2 · Mar-Jul</th>
+          <th style="padding:8px 14px;text-align:left">C3 · Ago-Nov</th>
+        </tr></thead>
+        <tbody>${asigRows}</tbody>
+      </table></div>
+      ${vacInfo.length ? `<div style="margin-top:10px;padding:8px 12px;background:#fff8e8;border:1px solid #e8c048;font-size:11px">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber);text-transform:uppercase;letter-spacing:1px">⏸ Tablas vacantes — la depreciación se redistribuye a cosechas activas:</span>
+        <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">${vacInfo.map(v=>`<span style="background:#fff;border:1px solid #e8c048;padding:2px 8px;font-size:11px">${v}</span>`).join('')}</div>
+      </div>` : ''}
+      ` : ''}
+    </div>
 
     <div class="card">
       <div class="card-head">➕ Agregar activo depreciable</div>
       <div class="fg3">
-        <div class="field">
-          <label>Nombre del activo</label>
-          <input type="text" id="dep-nom" placeholder="Ej: Tractor, Noria..."/>
+        <div class="field"><label>Nombre del activo</label><input type="text" id="dep-nom" placeholder="Ej: Tractor, Noria..."/></div>
+        <div class="field"><label>Tipo</label>
+          <select id="dep-tipo"><option>Maquinaria</option><option>Noria</option><option>Terraplén</option><option>Infraestructura</option><option>Vehículo</option><option>Otro</option></select>
         </div>
-        <div class="field">
-          <label>Tipo</label>
-          <select id="dep-tipo">
-            <option>Maquinaria</option><option>Noria</option><option>Terraplén</option>
-            <option>Infraestructura</option><option>Vehículo</option><option>Otro</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Alcance</label>
+        <div class="field"><label>Alcance</label>
           <select id="dep-alcance" onchange="toggleTablasSel(this.value)">
             <option value="general">General — todo el predio</option>
             <option value="tablas">Solo ciertas tablas</option>
           </select>
         </div>
-        <div class="field">
-          <label>Valor activo ($)</label>
-          <input type="number" id="dep-val" placeholder="0"/>
+        <div class="field"><label>Valor activo ($)</label><input type="number" id="dep-val" placeholder="0"/></div>
+        <div class="field"><label>Vida útil (años)</label><input type="number" id="dep-vida" placeholder="10"/></div>
+        <div class="field"><label>Año de inicio</label><input type="number" id="dep-anio" placeholder="2024" min="2000" max="2100"/></div>
+        <div class="field"><label>Cosecha de inicio</label>
+          <select id="dep-cosecha-inicio"><option value="1">Cosecha 1 (Dic)</option><option value="2">Cosecha 2 (Mar)</option><option value="3">Cosecha 3 (Ago)</option></select>
         </div>
-        <div class="field">
-          <label>Vida útil (años)</label>
-          <input type="number" id="dep-vida" placeholder="10"/>
-        </div>
-        <div class="field">
-          <label>Año de inicio</label>
-          <input type="number" id="dep-anio" placeholder="2024" min="2000" max="2100"/>
-        </div>
-        <div class="field">
-          <label>Cosecha de inicio</label>
-          <select id="dep-cosecha-inicio">
-            <option value="1">Cosecha 1 (Dic)</option>
-            <option value="2">Cosecha 2 (Mar)</option>
-            <option value="3">Cosecha 3 (Ago)</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Aplica a cultivos</label>
-          <select id="dep-cultivos">
-            <option value="todos">Todos (40-40-20)</option>
-            <option value="principales">Solo principales (Maíz/Sorgo)</option>
-            <option value="triticale">Solo Triticale</option>
-          </select>
+        <div class="field"><label>Aplica a cultivos</label>
+          <select id="dep-cultivos"><option value="todos">Todos (40-40-20)</option><option value="principales">Solo principales (Maíz/Sorgo)</option><option value="triticale">Solo Triticale</option></select>
         </div>
       </div>
       <div id="dep-tablas-sel" style="display:none;margin-top:12px;padding:14px;background:var(--cream);border:1px solid var(--border)">
-        <label style="margin-bottom:8px;display:block">Selecciona las tablas donde aplica esta depreciación:</label>
+        <label style="margin-bottom:8px;display:block">Selecciona las tablas donde aplica:</label>
         ${tablaCheckboxes}
       </div>
       <div class="btn-row">
@@ -1297,6 +1232,74 @@ function renderDepContent() {
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">Costo anual = Valor ÷ Vida útil</span>
       </div>
     </div>`;
+}
+function toggleAsigCheck(depId, anio, cn, pi, checked) {
+  let dep = null;
+  S.predios.forEach((_,pIdx)=>{ const f=(S.depreciaciones[pIdx]||[]).find(d=>d.id===depId); if(f) dep=f; });
+  if(!dep) return;
+  if(!dep.asignaciones) dep.asignaciones=[];
+  let asig = dep.asignaciones.find(a=>a.anio===anio);
+  if(!asig) { asig={anio,prediosCosechas:[]}; dep.asignaciones.push(asig); }
+  asig.prediosCosechas.forEach(pc=>{ pc.cosechas=(pc.cosechas||[]).filter(c=>c!==cn); });
+  if(checked) {
+    let pc = asig.prediosCosechas.find(pc=>pc.pi===pi);
+    if(!pc) { pc={pi,cosechas:[]}; asig.prediosCosechas.push(pc); }
+    if(!pc.cosechas.includes(cn)) pc.cosechas.push(cn);
+  }
+  asig.prediosCosechas = asig.prediosCosechas.filter(pc=>(pc.cosechas||[]).length>0);
+  save(); toast('Guardado');
+}
+
+function delDepById(depId, pIdx) {
+  S.depreciaciones[pIdx] = (S.depreciaciones[pIdx]||[]).filter(d=>d.id!==depId);
+  save(); renderDep(); toast('Eliminado');
+}
+
+function editarDep(depId, pIdx) {
+  let dep = null;
+  (S.depreciaciones[pIdx]||[]).forEach(d=>{ if(d.id===depId) dep=d; });
+  if(!dep) return;
+  const card = document.getElementById('card-editar-dep');
+  const form = document.getElementById('editar-dep-form');
+  if(!card||!form) return;
+  card.style.display='block';
+  card.scrollIntoView({behavior:'smooth',block:'nearest'});
+  form.innerHTML = `
+    <div class="fg3">
+      <div class="field"><label>Nombre</label><input type="text" id="edit-dep-nom" value="${dep.nombre}"/></div>
+      <div class="field"><label>Tipo</label>
+        <select id="edit-dep-tipo">${['Maquinaria','Noria','Terraplén','Infraestructura','Vehículo','Otro'].map(t=>`<option ${dep.tipo_activo===t?'selected':''}>${t}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>Valor activo ($)</label><input type="number" id="edit-dep-val" value="${dep.valorActivo}"/></div>
+      <div class="field"><label>Vida útil (años)</label><input type="number" id="edit-dep-vida" value="${dep.vidaUtil}"/></div>
+      <div class="field"><label>Aplica a cultivos</label>
+        <select id="edit-dep-cultivos">
+          <option value="todos" ${dep.aplicaCultivos==='todos'?'selected':''}>Todos</option>
+          <option value="principales" ${dep.aplicaCultivos==='principales'?'selected':''}>Solo principales</option>
+          <option value="triticale" ${dep.aplicaCultivos==='triticale'?'selected':''}>Solo Triticale</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-p" onclick="guardarEditDep('${depId}',${pIdx})">Guardar</button>
+      <button class="btn btn-s" onclick="document.getElementById('card-editar-dep').style.display='none'">Cancelar</button>
+    </div>`;
+}
+
+function guardarEditDep(depId, pIdx) {
+  const dep = (S.depreciaciones[pIdx]||[]).find(d=>d.id===depId);
+  if(!dep) return;
+  dep.nombre       = document.getElementById('edit-dep-nom').value.trim() || dep.nombre;
+  dep.tipo_activo  = document.getElementById('edit-dep-tipo').value;
+  dep.valorActivo  = parseFloat(document.getElementById('edit-dep-val').value)||dep.valorActivo;
+  dep.vidaUtil     = parseFloat(document.getElementById('edit-dep-vida').value)||dep.vidaUtil;
+  dep.costoAnual   = dep.valorActivo / dep.vidaUtil;
+  dep.anioFin      = dep.anioInicio + Math.floor(dep.vidaUtil);
+  dep.aplicaCultivos = document.getElementById('edit-dep-cultivos').value;
+  save();
+  document.getElementById('card-editar-dep').style.display='none';
+  renderDep();
+  toast('Activo actualizado');
 }
 
 function toggleTablasSel(val) {
