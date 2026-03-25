@@ -2821,12 +2821,6 @@ function renderGastos() {
         })() }`;
     }
 
-  } else if(gastosTab === 'ensilada') {,
-            g => { const obj={}; obj[g.equipo||'Sin noria']=parseFloat(g.monto||0); return obj; },
-            uniqueNorias.map(([nombre])=>({key:nombre, label:nombre})));
-        })() }`;
-    }
-
   } else if(gastosTab === 'ensilada') {
     const artsEnsilada = S.articulos.filter(a=>a.categoria==='Materiales de ensilada');
     const nomEnsiladaVal = gastosGridDraft['nom_ensilada'] || '';
