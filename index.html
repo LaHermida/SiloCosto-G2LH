@@ -728,9 +728,15 @@ function calcDepTabla(pi, cn, ti) {
         if(dep.anioInicio && yearC < dep.anioInicio) continue;
         if(dep.anioInicio && yearC === dep.anioInicio && c < cosechaInicio) continue;
         if(dep.anioFin && yearC > dep.anioFin) continue;
+        // Solo contar tablas que aplican Y no están vacantes en esta cosecha
+        const tablasCandidatas = dep.alcance==='tablas'
+          ? (dep.tablasIdx||[])
+          : predio.tablas.map((_,idx)=>idx);
         let pesoCosecha = 0; let tablasCounted = 0;
-        for(let t=0;t<predio.tablas.length;t++) {
-          const cv = getTablaData(pi,c,t).cultivo||'maiz';
+        for(let t of tablasCandidatas) {
+          const tdC = getTablaData(pi,c,t);
+          if(tdC.sinSiembra) continue; // vacante — no asume depreciación
+          const cv = tdC.cultivo||'maiz';
           const esPrincipalC = cv==='maiz'||cv==='sorgo';
           const esTriticaleC = cv==='trigo'||cv==='triticale'||cv==='triticale_heno';
           if(aplicaCultivos==='principales' && !esPrincipalC) continue;
