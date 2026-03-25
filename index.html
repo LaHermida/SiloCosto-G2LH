@@ -602,9 +602,7 @@ function getTablaData(pi, cn, ti) {
 
 function getCosechaMeta(pi, cn) {
   if(!S.cosechas[pi][cn]) S.cosechas[pi][cn] = {};
-  if(!S.cosechas[pi][cn]._meta) S.cosechas[pi][cn]._meta = {
-    year: new Date().getFullYear(), closed: false, closedDate: null
-  };
+  if(!S.cosechas[pi][cn]._meta) S.cosechas[pi][cn]._meta = {closed: false, closedDate: null};
   return S.cosechas[pi][cn]._meta;
 }
 
@@ -651,7 +649,7 @@ function calcDepTabla(pi, cn, ti) {
   const ciclos = predio.ciclos || 3;
   const cultivo = td.cultivo || 'maiz';
   const metaCn = getCosechaMeta(pi, cn);
-  const metaYear = metaCn.year || new Date().getFullYear();
+  const metaYear = curAnioReg;
 
   // Collect all deps from ALL predios (for cross-predio assets)
   const allDeps = [];
@@ -743,7 +741,7 @@ function calcDepTabla(pi, cn, ti) {
       let pesoTotal = 0;
       for(let c=1;c<=3;c++) {
         const metaC = getCosechaMeta(pi,c);
-        const yearC = metaC.year || new Date().getFullYear();
+        const yearC = curAnioReg;
         if(dep.anioInicio && yearC < dep.anioInicio) continue;
         if(dep.anioInicio && yearC === dep.anioInicio && c < cosechaInicio) continue;
         if(dep.anioFin && yearC > dep.anioFin) continue;
@@ -887,7 +885,7 @@ function renderDash() {
       }).join('');
 
       cards += `<div class="stat ${colors[pi%3]}" style="min-width:0">
-        <div class="stat-lbl">${p.emoji} ${p.nombre} · Cosecha ${cn} ${meta.closed?'🔒':''} · ${meta.year}</div>
+        <div class="stat-lbl">${p.emoji} ${p.nombre} · Cosecha ${cn} ${meta.closed?'🔒':''} · ${curAnioReg}</div>
         ${cultivoRows || '<div style="color:var(--muted);font-size:12px;margin-top:8px">Sin datos</div>'}
       </div>`;
     });
@@ -1553,7 +1551,7 @@ function renderReg() {
   // Rango fijo siempre disponible
   for(let y=2020; y<=2032; y++) aniosSet.add(y);
   // Años de las metas de cosecha
-  [1,2,3].forEach(c=>{ const y = getCosechaMeta(pi,c).year; if(y) aniosSet.add(y); });
+  
   // Años de consumos registrados
   p.tablas.forEach((_,ti)=>{
     [1,2,3].forEach(cn=>{
@@ -1681,12 +1679,12 @@ function renderRegContent() {
 
   document.getElementById('reg-content').innerHTML = `
     ${isClosed ? `<div style="background:#7a1f1f;color:white;padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
-      <span>🔒 <strong>Cosecha cerrada</strong> — Archivada el ${meta.closedDate} · Año ${meta.year}</span>
+      <span>🔒 <strong>Cosecha cerrada</strong> — Archivada el ${meta.closedDate} · Año ${curAnioRep}</span>
       <button class="btn" style="background:white;color:#7a1f1f;font-size:12px" onclick="toggleCosechaClosed(${pi},${cn})">🔓 Reabrir</button>
     </div>` : ''}
     <div class="card">
       <div class="card-head" style="justify-content:space-between">
-        <span>🗺️ ${p.nombre} · Cosecha ${cn} · ${meta.year}</span>
+        <span>🗺️ ${p.nombre} · Cosecha ${cn} · ${curAnioRep}</span>
         <div style="display:flex;align-items:center;gap:10px">
           ${!isClosed ? `<button class="btn" style="background:#1a3d22;color:#eef8f2;font-size:11px;padding:6px 14px" onclick="toggleCosechaClosed(${pi},${cn})">🔒 Cerrar cosecha</button>` : ''}
         </div>
@@ -1876,7 +1874,7 @@ function renderRep() {
 
   // Collect available years from meta
   const aniosSet = new Set([new Date().getFullYear()]);
-  cosechas.forEach(c=>{ const y=getCosechaMeta(pi,c).year; if(y) aniosSet.add(y); });
+  
   for(let y=2020;y<=2032;y++) aniosSet.add(y);
   const anios = [...aniosSet].sort((a,b)=>a-b);
 
@@ -1994,7 +1992,7 @@ function renderRepContent() {
         </div>
         <div style="text-align:center;padding:14px;background:var(--soil);color:var(--cream);margin-bottom:14px">
           <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700">GASTOS TOTALES — ${p.nombre}</div>
-          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);margin-top:4px">Cosecha ${cn} · Año ${getCosechaMeta(pi,cn).year} · ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha ${getCosechaMeta(pi,cn).closed?'· 🔒 CERRADA':'· ✓ Abierta'}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);margin-top:4px">Cosecha ${cn} · Año ${curAnioRep} · ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha ${getCosechaMeta(pi,cn).closed?'· 🔒 CERRADA':'· ✓ Abierta'}</div>
         </div>
         ${(()=>{
           const tablasFechas = p.tablas.map((t,ti)=>{
