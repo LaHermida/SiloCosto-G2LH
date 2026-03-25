@@ -1217,6 +1217,82 @@ function renderDepContent() {
     </div>
 
     <div class="card">
+      <div class="card-head">📊 Resumen de depreciación por año</div>
+      ${(()=>{
+        const anios = [];
+        for(let y=2023;y<=2032;y++) anios.push(y);
+        const todosActivos2 = [];
+        S.predios.forEach((pr,pIdx)=>{
+          (S.depreciaciones[pIdx]||[]).forEach(dep=>{
+            todosActivos2.push({dep,pIdx,pr});
+          });
+        });
+        if(!todosActivos2.length) return '';
+
+        const colHeaders = anios.map(y=>`<th style="padding:5px 8px;text-align:right;white-space:nowrap;font-size:11px${y===curAnioDep?';background:rgba(255,255,255,0.15)':''}">${y}</th>`).join('');
+
+        // Helper: calc dep for one activo for one year
+        function calcDepActivo(dep, pIdx, anio) {
+          const origYears = {};
+          S.predios.forEach((_,pi2)=>{
+            [1,2,3].forEach(cn2=>{
+              const m = S.cosechas[pi2]?.[cn2]?._meta;
+              if(m) { origYears[pi2+'_'+cn2] = m.year; m.year = anio; }
+            });
+          });
+          // Isolate dep
+          const savedDeps = S.predios.map((_,px)=>[...(S.depreciaciones[px]||[])]);
+          S.predios.forEach((_,px)=>{ S.depreciaciones[px]=[]; });
+          S.depreciaciones[pIdx] = [dep];
+          let total = 0;
+          S.predios.forEach((p2,pi2)=>{
+            [1,2,3].forEach(cn2=>{
+              p2.tablas.forEach((_,ti2)=>{ total += calcDepTabla(pi2,cn2,ti2); });
+            });
+          });
+          savedDeps.forEach((deps,px)=>{ S.depreciaciones[px]=deps; });
+          S.predios.forEach((_,pi2)=>{
+            [1,2,3].forEach(cn2=>{
+              const m = S.cosechas[pi2]?.[cn2]?._meta;
+              if(m && origYears[pi2+'_'+cn2]!==undefined) m.year = origYears[pi2+'_'+cn2];
+            });
+          });
+          return total;
+        }
+
+        const rows = todosActivos2.map(({dep,pIdx,pr})=>{
+          const aFin = dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
+          const predioColor = pIdx===0?'#1a3d22':pIdx===1?'#2a7a3c':'#8b4513';
+          const cells = anios.map(anio=>{
+            const vigente = (!dep.anioInicio||anio>=dep.anioInicio)&&(!aFin||anio<=aFin);
+            if(!vigente) return `<td style="padding:5px 8px;text-align:right;color:var(--muted);font-size:11px">—</td>`;
+            const val = calcDepActivo(dep,pIdx,anio);
+            const hl = anio===curAnioDep?';background:#eef8f2;font-weight:700':'';
+            return `<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px${hl}">${val?fmt(val):'—'}</td>`;
+          }).join('');
+          return `<tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:6px 12px;font-weight:600;white-space:nowrap">${dep.nombre}</td>
+            <td style="padding:6px 10px;font-size:11px;color:${predioColor}">${pr.emoji} ${pr.nombre}</td>
+            <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--amber)">${fmt(dep.costoAnual)}/año</td>
+            ${cells}
+          </tr>`;
+        }).join('');
+
+        return `<div style="overflow-x:auto">
+          <table style="border-collapse:collapse;font-size:13px;width:100%">
+            <thead><tr style="background:var(--earth);color:#fff">
+              <th style="padding:6px 12px;text-align:left">Activo</th>
+              <th style="padding:6px 10px;text-align:left">Predio origen</th>
+              <th style="padding:6px 10px;text-align:left">Costo/año</th>
+              ${colHeaders}
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:8px">Columna verde = año seleccionado. — = activo no vigente ese año.</div>`;
+      })()}
+    </div>
+
+    <div class="card">
       <div class="card-head">➕ Agregar activo depreciable</div>
       <div class="fg3">
         <div class="field"><label>Nombre del activo</label><input type="text" id="dep-nom" placeholder="Ej: Tractor, Noria..."/></div>
@@ -2654,105 +2730,109 @@ function renderGastos() {
 
   } else if(gastosTab === 'luz') {
     if(!S.luzPct) S.luzPct = {};
-    if(!S.luzNoriaPredios) S.luzNoriaPredios = {}; // {noriaId: {pi: pct}} % por predio
+    if(!S.luzNoriaPredios) S.luzNoriaPredios = {};
 
-    // Collect unique norias (by nombre) across all predios
-    const noriaMap = {}; // {nombre: [{pi, pt}]}
+    const noriaMap = {};
     S.predios.forEach((p,pi)=>{
       (S.equipos[pi]||[]).filter(e=>e.tipo==='luz').forEach(pt=>{
         if(!noriaMap[pt.nombre]) noriaMap[pt.nombre] = [];
         noriaMap[pt.nombre].push({pi,p,pt});
       });
     });
-    const uniqueNorias = Object.entries(noriaMap); // [[nombre, [{pi,p,pt}]]]
+    const uniqueNorias = Object.entries(noriaMap);
 
     const configLuz = isAdmin ? `
       <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">⚙️ Agregar noria:</div>
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar noria:</span>
         <input type="text" id="eq-nombre-luz" placeholder="Ej: Noria 212, Rebombeo..." style="padding:5px;width:180px;font-size:13px"/>
         <button class="btn btn-s" onclick="addEquipoLuzMulti()">+ Agregar</button>
-        <span style="font-size:11px;color:var(--muted)">Se agrega a todos los predios, configura % abajo</span>
       </div>` : '';
-
-    const mesActual = parseInt(gastosGridDraft['mes']||new Date().getMonth()+1);
-    const mesSelector = `
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:#f0fdf4;border:1px solid #7ec89a">
-        <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">MES</div>
-          <select style="padding:5px" onchange="gastosGridDraft['mes']=this.value;renderGastos()">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActual===i+1?'selected':''}>${m}</option>`).join('')}</select>
-        </div>
-        <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">2ª COSECHA (split)</div>
-          <select style="padding:5px" onchange="gastosGridDraft['cn_split_b']=this.value">${[{v:'',l:'— Solo una —'},...[1,2,3].map(c=>({v:c,l:`C${c}`}))].map(o=>`<option value="${o.v}" ${(gastosGridDraft['cn_split_b']||'')==String(o.v)?'selected':''}>${o.l}</option>`).join('')}</select>
-        </div>
-      </div>`;
 
     if(!uniqueNorias.length) {
       tabContent = `${configLuz}<div class="empty"><div class="empty-icon">💡</div><div>Sin norias configuradas</div></div>`;
     } else {
-      // Build header columns: Noria | La Hermida % | La Cruz % | Los Higos % | Luz $ | Acum C${selectedCn}
-      const predioHeaders = S.predios.map(p=>`<th style="padding:7px 10px;text-align:center">${p.emoji} ${p.nombre} %</th>`).join('');
-      const luzRows = uniqueNorias.map(([nombre, entries])=>{
-        const firstEntry = entries[0];
-        const noriaId = firstEntry.pt.id;
-        // % por predio — stored in S.luzNoriaPredios[noriaId][pi]
-        const prediosPct = S.predios.map((p,pi)=>{
-          const key = `${noriaId}_${pi}`;
-          const pct = (S.luzNoriaPredios[key] !== undefined) ? S.luzNoriaPredios[key] : (entries.find(e=>e.pi===pi) ? Math.round(100/entries.length) : 0);
-          return `<td style="padding:4px 6px;text-align:center">
-            <input type="number" min="0" max="100" step="1" value="${pct}"
-              style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px"
-              onchange="if(!S.luzNoriaPredios)S.luzNoriaPredios={};S.luzNoriaPredios['${noriaId}_${pi}']=parseFloat(this.value)||0;save()"/>
+      const mesesCn = getMesesCn(selectedCn);
+      // Headers: Mes | Noria1 % C1 | Noria1 % C2? | ... | Acum
+      const noriaHeaders = uniqueNorias.map(([nombre])=>`<th style="padding:7px 12px;text-align:center">${nombre}<br><span style="font-size:9px;font-weight:400">%C1 / %C2 / %C3</span></th>`).join('');
+
+      const luzRows = mesesCn.map(mes=>{
+        const mesLabel = MESES[mes-1];
+        const celdas = uniqueNorias.map(([nombre, entries])=>{
+          const noriaId = entries[0].pt.id;
+          const val = gastosGridDraft[`luz_${noriaId}_${mes}`] || '';
+          const c1pct = gastosGridDraft[`luz_c1pct_${noriaId}_${mes}`] ?? 100;
+          const c2pct = gastosGridDraft[`luz_c2pct_${noriaId}_${mes}`] ?? 0;
+          const c3pct = gastosGridDraft[`luz_c3pct_${noriaId}_${mes}`] ?? 0;
+          const hist = (S.gastosGenerales||[]).filter(g=>g.categoria==='Luz'&&g.equipo===nombre&&(g.mes===mes||g.mes===String(mes))&&getGastoCosecha(g)===selectedCn);
+          const acum = hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+          return `<td style="padding:4px 8px;text-align:center">
+            <input type="number" min="0" step="1" placeholder="—" value="${val}"
+              style="width:90px;padding:4px 6px;text-align:right;border:1px solid var(--border);font-size:13px;display:block;margin:0 auto 4px"
+              onchange="gastosGridDraft['luz_${noriaId}_${mes}']=this.value"/>
+            <div style="display:flex;gap:3px;justify-content:center;font-size:10px">
+              <input type="number" min="0" max="100" step="1" value="${c1pct}" title="% C1"
+                style="width:34px;padding:2px;text-align:center;border:1px solid var(--border);font-size:10px"
+                onchange="gastosGridDraft['luz_c1pct_${noriaId}_${mes}']=this.value"/>
+              <input type="number" min="0" max="100" step="1" value="${c2pct}" title="% C2"
+                style="width:34px;padding:2px;text-align:center;border:1px solid var(--border);font-size:10px"
+                onchange="gastosGridDraft['luz_c2pct_${noriaId}_${mes}']=this.value"/>
+              <input type="number" min="0" max="100" step="1" value="${c3pct}" title="% C3"
+                style="width:34px;padding:2px;text-align:center;border:1px solid var(--border);font-size:10px"
+                onchange="gastosGridDraft['luz_c3pct_${noriaId}_${mes}']=this.value"/>
+            </div>
+            <div style="font-size:10px;color:var(--amber);margin-top:2px">${acum?fmt(acum):''}</div>
           </td>`;
         }).join('');
-
-        const val = gastosGridDraft[`luz_${noriaId}`] || '';
-        const histN = (S.gastosGenerales||[]).filter(g=>g.categoria==='Luz'&&g.equipo===nombre&&getGastoCosecha(g)===selectedCn);
-        const acumTotal = histN.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-        const mesDetalle = {};
-        histN.forEach(g=>{ const m=g.mes||'?'; mesDetalle[m]=(mesDetalle[m]||0)+parseFloat(g.monto||0); });
-        const acumStr = Object.entries(mesDetalle).map(([m,v])=>`${MESES[(parseInt(m)||1)-1]?.slice(0,3)||m}: ${fmt(v)}`).join(' · ');
-
-        return `<tr>
-          <td style="padding:7px 12px;font-weight:600;white-space:nowrap">💡 ${nombre}</td>
-          ${prediosPct}
-          <td style="padding:4px 8px;text-align:right">
-            <input type="number" min="0" step="1" placeholder="—" value="${val}"
-              style="width:120px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:14px"
-              onchange="gastosGridDraft['luz_${noriaId}']=this.value"/>
-          </td>
-          <td style="padding:7px 12px;text-align:right">
-            <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumTotal?fmt(acumTotal):'—'}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:2px">${acumStr}</div>
-          </td>
-          ${isAdmin?`<td style="padding:4px"><button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delNoriaByNombre('${nombre}')">✕</button></td>`:'<td></td>'}
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:7px 12px;font-weight:600">${mesLabel}</td>
+          ${celdas}
         </tr>`;
+      }).join('');
+
+      // % por predio de cada noria (config)
+      const noriasPredioConfig = uniqueNorias.map(([nombre, entries])=>{
+        const noriaId = entries[0].pt.id;
+        const pcts = S.predios.map((p,pi)=>{
+          const key = `${noriaId}_${pi}`;
+          const pct = S.luzNoriaPredios[key] !== undefined ? S.luzNoriaPredios[key] : (entries.find(e=>e.pi===pi)?Math.round(100/entries.length):0);
+          return `<span style="font-size:11px;margin-right:8px">${p.emoji} <input type="number" min="0" max="100" step="1" value="${pct}"
+            style="width:45px;padding:2px 4px;border:1px solid var(--border);font-size:11px;text-align:center"
+            onchange="if(!S.luzNoriaPredios)S.luzNoriaPredios={};S.luzNoriaPredios['${noriaId}_${pi}']=parseFloat(this.value)||0;save()"/> %</span>`;
+        }).join('');
+        return `<div style="margin-bottom:6px"><span style="font-size:11px;font-weight:600;margin-right:8px">💡 ${nombre}:</span>${pcts}
+          ${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delNoriaByNombre('${nombre}')">✕</button>`:''}
+        </div>`;
       }).join('');
 
       tabContent = `
         ${configLuz}
-        ${mesSelector}
+        <div style="padding:8px 12px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">% por predio por noria</div>
+          ${noriasPredioConfig}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Ingresa el monto por mes. Los % C1/C2/C3 indican cómo distribuir meses que caen entre cosechas.</div>
         <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead><tr style="background:var(--earth);color:#ffffff">
-            <th style="padding:7px 12px;text-align:left">Equipo</th>
-            ${predioHeaders}
-            <th style="padding:7px 12px;text-align:right">Luz $</th>
-            <th style="padding:7px 12px;text-align:right">Acum. C${selectedCn}</th>
-            <th></th>
+            <th style="padding:7px 12px;text-align:left">Mes</th>
+            ${noriaHeaders}
           </tr></thead>
           <tbody>${luzRows}</tbody>
         </table></div>
         ${ (()=>{
           const histLuz = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.categoria==='Luz');
           if(!histLuz.length) return '';
-          return gridHistorial(
-            'Historial Luz C'+selectedCn+' — Mes x Noria',
-            histLuz,
+          return gridHistorial('Historial Luz C'+selectedCn+' — Mes x Noria', histLuz,
             g => MESES[(parseInt(g.mes||1))-1],
             g => { const obj={}; obj[g.equipo||'Sin noria']=parseFloat(g.monto||0); return obj; },
-            uniqueNorias.map(([nombre])=>({key:nombre, label:nombre}))
-          );
-        })() }
-        `;
+            uniqueNorias.map(([nombre])=>({key:nombre, label:nombre})));
+        })() }`;
+    }
+
+  } else if(gastosTab === 'ensilada') {,
+            g => { const obj={}; obj[g.equipo||'Sin noria']=parseFloat(g.monto||0); return obj; },
+            uniqueNorias.map(([nombre])=>({key:nombre, label:nombre})));
+        })() }`;
     }
 
   } else if(gastosTab === 'ensilada') {
@@ -3196,63 +3276,63 @@ function renderGastos() {
       `;
 
   } else if(gastosTab === 'nomina') {
-    // Formato tipo Excel: Mes | $ | C1% | C2% | C3%
-    const predioOptsNom = S.predios.map((p,i)=>`<option value="${i}" ${(gastosGridDraft['nom_pi']||'0')==String(i)?'selected':''}>${p.emoji} ${p.nombre}</option>`).join('');
-    const mesActualNom = parseInt(gastosGridDraft['mes']||new Date().getMonth()+1);
-    const montoNom = gastosGridDraft['nom_monto'] || '';
-    const c1pct = gastosGridDraft['nom_c1pct'] !== undefined ? gastosGridDraft['nom_c1pct'] : '';
-    const c2pct = gastosGridDraft['nom_c2pct'] !== undefined ? gastosGridDraft['nom_c2pct'] : '';
-    const c3pct = gastosGridDraft['nom_c3pct'] !== undefined ? gastosGridDraft['nom_c3pct'] : '';
+    const mesesCn = getMesesCn(selectedCn);
+    const predioHeaders = S.predios.map(p=>`<th style="padding:7px 12px;text-align:center">${p.emoji} ${p.nombre}<br><span style="font-size:9px;font-weight:400">$ / %C1 / %C2 / %C3</span></th>`).join('');
 
-    // Historial por cosecha
+    const nomRows = mesesCn.map(mes=>{
+      const mesLabel = MESES[mes-1];
+      const celdas = S.predios.map((p,pi)=>{
+        const val = gastosGridDraft[`nom_${pi}_${mes}`] || '';
+        const c1pct = gastosGridDraft[`nom_c1pct_${pi}_${mes}`] ?? 100;
+        const c2pct = gastosGridDraft[`nom_c2pct_${pi}_${mes}`] ?? 0;
+        const c3pct = gastosGridDraft[`nom_c3pct_${pi}_${mes}`] ?? 0;
+        const hist = (S.gastosGenerales||[]).filter(g=>g.categoria==='Nómina y gastos admin'&&g.actividad!=='Ensilada'&&(g.mes===mes||g.mes===String(mes))&&(g.prediosIdx||[]).includes(pi));
+        const acum = hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        return `<td style="padding:4px 8px;text-align:center">
+          <input type="number" min="0" step="1" placeholder="—" value="${val}"
+            style="width:110px;padding:4px 6px;text-align:right;border:1px solid var(--border);font-size:13px;display:block;margin:0 auto 4px"
+            onchange="gastosGridDraft['nom_${pi}_${mes}']=this.value"/>
+          <div style="display:flex;gap:3px;justify-content:center">
+            <input type="number" min="0" max="100" step="1" value="${c1pct}" title="% C1"
+              style="width:34px;padding:2px;text-align:center;border:1px solid var(--border);font-size:10px"
+              onchange="gastosGridDraft['nom_c1pct_${pi}_${mes}']=this.value"/>
+            <input type="number" min="0" max="100" step="1" value="${c2pct}" title="% C2"
+              style="width:34px;padding:2px;text-align:center;border:1px solid var(--border);font-size:10px"
+              onchange="gastosGridDraft['nom_c2pct_${pi}_${mes}']=this.value"/>
+            <input type="number" min="0" max="100" step="1" value="${c3pct}" title="% C3"
+              style="width:34px;padding:2px;text-align:center;border:1px solid var(--border);font-size:10px"
+              onchange="gastosGridDraft['nom_c3pct_${pi}_${mes}']=this.value"/>
+          </div>
+          <div style="font-size:10px;color:var(--amber);margin-top:2px">${acum?fmt(acum):''}</div>
+        </td>`;
+      }).join('');
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:7px 12px;font-weight:600">${mesLabel}</td>
+        ${celdas}
+      </tr>`;
+    }).join('');
+
     const histNomAll = (S.gastosGenerales||[]).filter(g=>g.categoria==='Nómina y gastos admin'&&g.actividad!=='Ensilada');
-    const nomPorCosecha = {1:0,2:0,3:0};
-    histNomAll.forEach(g=>{ nomPorCosecha[getGastoCosecha(g)] += parseFloat(g.monto||0); });
-
-    // Tabla de registros históricos
-    const histNomRows = histNomAll.map(g=>`<tr style="font-size:12px">
-      <td style="padding:5px 10px">${g.mes ? MESES[(parseInt(g.mes)||1)-1] : '—'}</td>
-      <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
-      <td style="padding:5px 10px;text-align:center"><span style="background:#e8f5e8;color:#1a3d22;padding:2px 6px;font-size:10px">C${getGastoCosecha(g)}</span></td>
-      <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
-      <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${S.gastosGenerales.indexOf(g)})">✕</button>`:''}</td>
-    </tr>`).join('');
 
     tabContent = `
-      <div style="overflow-x:auto;margin-bottom:8px">
-      <table style="border-collapse:collapse;font-size:13px;min-width:600px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">% C1/C2/C3 — si un mes cae entre cosechas define cuánto % va a cada una. Deben sumar 100.</div>
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="background:var(--earth);color:#ffffff">
-          <th style="padding:7px 12px;text-align:left">Predio</th>
           <th style="padding:7px 12px;text-align:left">Mes</th>
-          <th style="padding:7px 12px;text-align:right">Cantidad $</th>
-          <th style="padding:7px 10px;text-align:center">C1 %</th>
-          <th style="padding:7px 10px;text-align:center">C2 %</th>
-          <th style="padding:7px 10px;text-align:center">C3 %</th>
+          ${predioHeaders}
         </tr></thead>
-        <tbody><tr>
-          <td style="padding:4px 8px"><select style="padding:5px;font-size:13px" onchange="gastosGridDraft['nom_pi']=this.value">${predioOptsNom}</select></td>
-          <td style="padding:4px 8px"><select style="padding:5px" onchange="gastosGridDraft['mes']=this.value">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActualNom===i+1?'selected':''}>${m}</option>`).join('')}</select></td>
-          <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${montoNom}" style="width:140px;padding:5px 8px;text-align:right;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['nom_monto']=this.value"/></td>
-          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c1pct}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['nom_c1pct']=this.value"/></td>
-          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c2pct}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['nom_c2pct']=this.value"/></td>
-          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c3pct}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['nom_c3pct']=this.value"/></td>
-        </tr></tbody>
+        <tbody>${nomRows}</tbody>
       </table></div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Los % deben sumar 100. Si un mes aplica 100% a C1, pon 100 en C1 y deja C2/C3 en 0.</div>
-
       ${ (()=>{
         if(!histNomAll.length) return '';
-        const mesesAll = [1,2,3,4,5,6,7,8,9,10,11,12];
-        return gridHistorial(
-          'Historial Nómina — Mes × Predio',
-          histNomAll,
+        return gridHistorial('Historial Nómina — Mes × Predio', histNomAll,
           g => MESES[(parseInt(g.mes||1))-1],
           g => { const obj={}; (g.prediosIdx||[]).forEach(pi=>{ obj[S.predios[pi]?.nombre||'Predio']=(parseFloat(g.monto||0)/(g.prediosIdx.length||1)); }); return obj; },
-          S.predios.map(p=>({key:p.nombre, label:p.emoji+' '+p.nombre}))
-        );
+          S.predios.map(p=>({key:p.nombre, label:p.emoji+' '+p.nombre})));
       })() }`;
 
-  } else if(gastosTab === 'reparaciones') {
+  } else if(gastosTab === 'reparaciones') {  } else if(gastosTab === 'reparaciones') {
     // ── Sección 1: Norias (igual que Luz, con % por predio) ──
     if(!S.luzPct) S.luzPct = {};
     // Group norias by nombre (same as Luz tab)
@@ -3893,10 +3973,8 @@ function capturarGastos() {
     });
 
   } else if(gastosTab === 'luz') {
-    const mes = parseInt(gastosGridDraft['mes'] || new Date().getMonth()+1);
-    const cnB = gastosGridDraft['cn_split_b'] ? parseInt(gastosGridDraft['cn_split_b']) : null;
     if(!S.luzNoriaPredios) S.luzNoriaPredios = {};
-    // Collect unique norias
+    const mesesCnCap = getMesesCn(cn);
     const noriaMapCap = {};
     S.predios.forEach((p,pi)=>{
       (S.equipos[pi]||[]).filter(e=>e.tipo==='luz').forEach(pt=>{
@@ -3904,23 +3982,26 @@ function capturarGastos() {
         noriaMapCap[pt.nombre].entries.push({pi,pt});
       });
     });
-    Object.entries(noriaMapCap).forEach(([nombre, {id:noriaId, entries}])=>{
-      const monto = parseFloat(gastosGridDraft[`luz_${noriaId}`]);
-      if(!monto||monto<=0) return;
-      // Distribute by predio % 
-      S.predios.forEach((p,pi)=>{
-        const pctKey = `${noriaId}_${pi}`;
-        const pct = (S.luzNoriaPredios[pctKey] !== undefined ? parseFloat(S.luzNoriaPredios[pctKey]) : (entries.find(e=>e.pi===pi) ? Math.round(100/entries.length) : 0)) / 100;
-        if(!pct) return;
-        const montoPreio = monto * pct;
-        if(cnB) {
-          const pctCnA = 1; // full amount to cn, split is cosecha-based
-          S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Luz',equipo:nombre,mes,monto:montoPreio,prediosIdx:[pi],fecha:today()});
-          total++;
-        } else {
-          S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Luz',equipo:nombre,mes,monto:montoPreio,prediosIdx:[pi],fecha:today()});
-          total++;
-        }
+    mesesCnCap.forEach(mes=>{
+      Object.entries(noriaMapCap).forEach(([nombre, {id:noriaId, entries}])=>{
+        const monto = parseFloat(gastosGridDraft[`luz_${noriaId}_${mes}`]);
+        if(!monto||monto<=0) return;
+        const c1pct = parseFloat(gastosGridDraft[`luz_c1pct_${noriaId}_${mes}`]??100)/100;
+        const c2pct = parseFloat(gastosGridDraft[`luz_c2pct_${noriaId}_${mes}`]??0)/100;
+        const c3pct = parseFloat(gastosGridDraft[`luz_c3pct_${noriaId}_${mes}`]??0)/100;
+        const pctByCn = {1:c1pct, 2:c2pct, 3:c3pct};
+        // Distribute by predio %
+        S.predios.forEach((p,pi)=>{
+          const pctKey = `${noriaId}_${pi}`;
+          const predPct = (S.luzNoriaPredios[pctKey]!==undefined ? parseFloat(S.luzNoriaPredios[pctKey]) : (entries.find(e=>e.pi===pi)?Math.round(100/entries.length):0))/100;
+          if(!predPct) return;
+          [1,2,3].forEach(cnX=>{
+            const fracCn = pctByCn[cnX]||0;
+            if(!fracCn) return;
+            S.gastosGenerales.push({id:uid(),cosecha:cnX,anio,categoria:'Luz',equipo:nombre,mes,monto:monto*predPct*fracCn,prediosIdx:[pi],fecha:today()});
+            total++;
+          });
+        });
       });
     });
 
@@ -4076,20 +4157,20 @@ function capturarGastos() {
     }
 
   } else if(gastosTab === 'nomina') {
-    const mes = parseInt(gastosGridDraft['mes'] || new Date().getMonth()+1);
-    const nomPi = parseInt(gastosGridDraft['nom_pi'] || 0);
-    const monto = parseFloat(gastosGridDraft['nom_monto']);
-    if(monto>0) {
-      const c1pct = (parseFloat(gastosGridDraft['nom_c1pct'])||0)/100;
-      const c2pct = (parseFloat(gastosGridDraft['nom_c2pct'])||0)/100;
-      const c3pct = (parseFloat(gastosGridDraft['nom_c3pct'])||0)/100;
-      if(c1pct>0) { S.gastosGenerales.push({id:uid(),cosecha:1,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto:monto*c1pct,prediosIdx:[nomPi],fecha:today()}); total++; }
-      if(c2pct>0) { S.gastosGenerales.push({id:uid(),cosecha:2,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto:monto*c2pct,prediosIdx:[nomPi],fecha:today()}); total++; }
-      if(c3pct>0) { S.gastosGenerales.push({id:uid(),cosecha:3,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto:monto*c3pct,prediosIdx:[nomPi],fecha:today()}); total++; }
-      if(!c1pct&&!c2pct&&!c3pct) { // fallback: assign to selected cosecha
-        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto,prediosIdx:[nomPi],fecha:today()}); total++;
-      }
-    }
+    const mesesCnCap = getMesesCn(cn);
+    mesesCnCap.forEach(mes=>{
+      S.predios.forEach((p,pi)=>{
+        const monto = parseFloat(gastosGridDraft[`nom_${pi}_${mes}`]);
+        if(!monto||monto<=0) return;
+        const c1pct = (parseFloat(gastosGridDraft[`nom_c1pct_${pi}_${mes}`]??100))/100;
+        const c2pct = (parseFloat(gastosGridDraft[`nom_c2pct_${pi}_${mes}`]??0))/100;
+        const c3pct = (parseFloat(gastosGridDraft[`nom_c3pct_${pi}_${mes}`]??0))/100;
+        if(c1pct>0) { S.gastosGenerales.push({id:uid(),cosecha:1,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto:monto*c1pct,prediosIdx:[pi],fecha:today()}); total++; }
+        if(c2pct>0) { S.gastosGenerales.push({id:uid(),cosecha:2,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto:monto*c2pct,prediosIdx:[pi],fecha:today()}); total++; }
+        if(c3pct>0) { S.gastosGenerales.push({id:uid(),cosecha:3,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto:monto*c3pct,prediosIdx:[pi],fecha:today()}); total++; }
+        if(!c1pct&&!c2pct&&!c3pct) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto,prediosIdx:[pi],fecha:today()}); total++; }
+      });
+    });
 
   } else if(gastosTab === 'reparaciones') {
     // Norias reparaciones — agrupadas por nombre, predios via checkboxes
