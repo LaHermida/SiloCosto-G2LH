@@ -1133,6 +1133,10 @@ function renderDepContent() {
 
         const celdas = [1,2,3].map(cn=>{
           if(!vigente) return `<td style="padding:6px 10px;text-align:center;color:var(--muted)">—</td>`;
+          // Block cosechas before cosechaInicio in the starting year
+          const cosechaInicio = dep.cosechaInicio || 1;
+          if(dep.anioInicio && anioVer === dep.anioInicio && cn < cosechaInicio)
+            return `<td style="padding:6px 10px;text-align:center;font-size:11px;color:var(--muted)">—</td>`;
           const selPi = getAsigPi(dep, pIdx, anioVer, cn);
           const opts = S.predios.map((p,pi)=>`<option value="${pi}" ${pi===selPi?'selected':''}>${p.emoji} ${p.nombre}</option>`).join('');
           const color = selPi===0?'#1a3d22':selPi===1?'#2a7a3c':selPi===2?'#8b4513':'#888';
