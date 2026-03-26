@@ -476,7 +476,6 @@ function defaultState() {
     gastosGenerales: [],
     // equipos = {pi: [{id, nombre, tipo:'tractor'|'noria'|'luz'}]}
     equipos: {},
-    tractores: [], // [{id, nombre, tipo, predios:[0,1,2]}]
     // equiposEnsilada = [{id, nombre, tipo:'tractor'|'cosechadora'}] — lista independiente
     equiposEnsilada: []
   };
@@ -495,20 +494,6 @@ async function loadState() {
     if(r) S = JSON.parse(r);
   } catch(e){ S = defaultState(); }
   // Ensure equiposEnsilada exists
-  if(!S.tractores) {
-    // Migrate from per-predio equipos to global tractores list
-    S.tractores = [];
-    S.predios.forEach((p,pi)=>{
-      (S.equipos[pi]||[]).filter(e=>e.tipo==='tractor'||e.tipo==='implemento'||e.tipo==='camioneta').forEach(eq=>{
-        const existing = S.tractores.find(t=>t.nombre===eq.nombre&&t.tipo===eq.tipo);
-        if(existing) {
-          if(!existing.predios.includes(pi)) existing.predios.push(pi);
-        } else {
-          S.tractores.push({id:eq.id, nombre:eq.nombre, tipo:eq.tipo, predios:[pi]});
-        }
-      });
-    });
-  }
   if(!S.equiposEnsilada) S.equiposEnsilada = [];
   if(!S.equiposEmpaque) S.equiposEmpaque = [];
   if(!S.equiposCorte) S.equiposCorte = [];
@@ -550,17 +535,7 @@ async function save() {
   }
 }
 function uid() { return Math.random().toString(36).slice(2,9); }
-function today() { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-function getAnioFecha(fecha) {
-  if(!fecha) return new Date().getFullYear();
-  // ISO: YYYY-MM-DD
-  if(/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return parseInt(fecha.slice(0,4));
-  // US: MM/DD/YYYY
-  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(fecha)) return parseInt(fecha.split('/')[2]);
-  // DD-MM-YYYY
-  if(/^\d{2}-\d{2}-\d{4}$/.test(fecha)) return parseInt(fecha.slice(6,10));
-  return parseInt(fecha.slice(0,4));
-}
+function today() { return new Date().toLocaleDateString('en-US'); }
 
 function fmt(n) {
   if(n===null||n===undefined||isNaN(n)||n==='') return '—';
@@ -602,7 +577,9 @@ function getTablaData(pi, cn, ti) {
 
 function getCosechaMeta(pi, cn) {
   if(!S.cosechas[pi][cn]) S.cosechas[pi][cn] = {};
-  if(!S.cosechas[pi][cn]._meta) S.cosechas[pi][cn]._meta = {closed: false, closedDate: null};
+  if(!S.cosechas[pi][cn]._meta) S.cosechas[pi][cn]._meta = {
+    year: new Date().getFullYear(), closed: false, closedDate: null
+  };
   return S.cosechas[pi][cn]._meta;
 }
 
@@ -636,137 +613,68 @@ function getCurrentPrice(artId) {
 
 // ── DEPRECIATION CALC ──
 // For a given predio + cosecha + tabla, sum up applicable depreciations
-function calcDepTabla(pi, cn, ti, anioOverride) {
+function calcDepTabla(pi, cn, ti) {
   const predio = S.predios[pi];
   const td = getTablaData(pi,cn,ti);
+  // Si la tabla está marcada sin siembra, no asume ningún costo
   if(td.sinSiembra) return 0;
+  // Use haSembradas if set, otherwise fall back to tabla's total ha
   const tablaHa = parseFloat(td.haSembradas) || predio.tablas[ti]?.ha || 0;
+  // Total ha for this cosecha = sum of haSembradas (or default ha) across active tablas only
   const totalHa = predio.tablas.reduce((s,t,idx)=>{
     const tdx = getTablaData(pi,cn,idx);
     if(tdx.sinSiembra) return s;
     return s + (parseFloat(tdx.haSembradas) || t.ha || 0);
   },0);
   const ciclos = predio.ciclos || 3;
+  // Weight for this cosecha based on cultivo 40/20
   const cultivo = td.cultivo || 'maiz';
-  const metaCn = getCosechaMeta(pi, cn);
-  const metaYear = anioOverride || curAnioRep || curAnioReg;
-
-  // Collect all deps from ALL predios (for cross-predio assets)
-  const allDeps = [];
-  S.predios.forEach((_,pIdx)=>{
-    (S.depreciaciones[pIdx]||[]).forEach(dep=>{
-      allDeps.push({dep, originPi: pIdx});
-    });
-  });
 
   let total = 0;
-  for(const {dep, originPi} of allDeps) {
+  for(const dep of S.depreciaciones[pi]) {
     const costoAnual = parseFloat(dep.costoAnual)||0;
-    if(!costoAnual) continue;
-    if(dep.anioInicio && metaYear < dep.anioInicio) continue;
-    if(dep.anioFin && metaYear > dep.anioFin) continue;
+    // Determine this tabla's share of the annual cost
+    let tablaPct = tablaHa / totalHa; // pro-rata by ha
+
+    // Cosecha de inicio — si esta cosecha es anterior a la de inicio, no aplica
     const cosechaInicio = dep.cosechaInicio || 1;
+    // Check if this cosecha/year combo is before the start
+    // Simple check: if anioInicio is set and current cosecha year < anioInicio, skip
+    // We use meta year for each cosecha
+    const metaCn = getCosechaMeta(pi, cn);
+    const metaYear = (typeof curAnioRep !== 'undefined' ? curAnioRep : null) || (typeof curAnioReg !== 'undefined' ? curAnioReg : null) || new Date().getFullYear();
+    if(dep.anioInicio && metaYear < dep.anioInicio) continue;
     if(dep.anioInicio && metaYear === dep.anioInicio && cn < cosechaInicio) continue;
+    if(dep.anioFin && metaYear > dep.anioFin) continue;
 
-    // ── Asignación año×predio×cosecha ──
-    // Check if this dep has an assignment for this year
-    const asignAnio = (dep.asignaciones||[]).find(a=>a.anio===metaYear);
-    if(asignAnio) {
-      const asigPredio = asignAnio.prediosCosechas.find(pc=>pc.pi===pi);
-      if(!asigPredio) continue;
-      if(!(asigPredio.cosechas||[]).includes(cn)) continue;
-
-      // % del costo anual para este predio
-      const pctPredios = asignAnio.pctPredio || [];
-      let predioFraccion;
-      if(pctPredios.length > 0) {
-        const pctEntry = pctPredios.find(p=>p.pi===pi);
-        predioFraccion = (parseFloat(pctEntry?.pct||0)) / 100;
-      } else {
-        // Sin % manual: dividir por hectáreas de cada predio asignado
-        const prediosAsig = asignAnio.prediosCosechas.map(pc=>pc.pi);
-        const totalHaPredios = prediosAsig.reduce((s,pIdx2)=>{
-          return s + S.predios[pIdx2].tablas.reduce((sh,t)=>sh+t.ha,0);
-        },0);
-        const miHa = predio.tablas.reduce((s,t)=>s+t.ha,0);
-        predioFraccion = totalHaPredios > 0 ? miHa/totalHaPredios : 1/prediosAsig.length;
-      }
-      // Dividir entre cosechas usando pesos 20-40-40
-      const aplicaCultivos = dep.aplicaCultivos || 'todos';
-      const esPrincipal = cultivo==='maiz'||cultivo==='sorgo';
-      const esTriticale = cultivo==='trigo'||cultivo==='triticale'||cultivo==='triticale_heno';
-      const miPeso = CULTIVOS[cultivo]?.pct || 40;
-      let pesoTotalCosecha = 0;
-      for(let t=0; t<predio.tablas.length; t++) {
-        const tdx = getTablaData(pi,cn,t);
-        if(tdx.sinSiembra) continue;
-        const cv = tdx.cultivo||'maiz';
-        const esPrincipalC = cv==='maiz'||cv==='sorgo';
-        const esTriticaleC = cv==='trigo'||cv==='triticale'||cv==='triticale_heno';
-        if(aplicaCultivos==='principales' && !esPrincipalC) continue;
-        if(aplicaCultivos==='triticale' && !esTriticaleC) continue;
-        pesoTotalCosecha += CULTIVOS[cv]?.pct||40;
-      }
-      // Total peso de todas las cosechas asignadas a este predio
-      let pesoTotal3Cn = 0;
-      for(let c=1; c<=3; c++) {
-        if(!(asigPredio.cosechas||[]).includes(c)) continue;
-        for(let t=0; t<predio.tablas.length; t++) {
-          const tdx = getTablaData(pi,c,t);
-          if(tdx.sinSiembra) continue;
-          pesoTotal3Cn += CULTIVOS[tdx.cultivo||'maiz']?.pct||40;
-        }
-      }
-      const cultivoWeight = pesoTotalCosecha > 0 && pesoTotal3Cn > 0 ? miPeso * (pesoTotalCosecha/predio.tablas.filter((_,t)=>!getTablaData(pi,cn,t).sinSiembra).length) / pesoTotal3Cn : 0;
-      const fraccionCosecha = predioFraccion * (pesoTotalCosecha > 0 ? miPeso/pesoTotalCosecha : 0);
-
-      const tablaPct = totalHa > 0 ? tablaHa/totalHa : 0;
-      if(aplicaCultivos==='principales' && !esPrincipal) continue;
-      if(aplicaCultivos==='triticale' && !esTriticale) continue;
-
-      if(dep.alcance==='general') {
-        total += costoAnual * fraccionCosecha * tablaPct;
-      } else {
-        if((dep.tablasIdx||[]).includes(ti)) {
-          const selHaTotal = (dep.tablasIdx||[]).reduce((s,idx)=>s+(predio.tablas[idx]?.ha||0),0);
-          const myHaPct = selHaTotal > 0 ? tablaHa/selHaTotal : 0;
-          total += costoAnual * fraccionCosecha * myHaPct;
-        }
-      }
-      continue;
-    }
-
-    // ── Default (sin asignación): solo aplica al predio de origen ──
-    if(originPi !== pi) continue;
-
+    // Cultivos filter — check if this tabla's cultivo matches what dep applies to
     const aplicaCultivos = dep.aplicaCultivos || 'todos';
-    const esPrincipal = cultivo==='maiz'||cultivo==='sorgo';
-    const esTriticale = cultivo==='trigo'||cultivo==='triticale'||cultivo==='triticale_heno';
-    if(aplicaCultivos==='principales' && !esPrincipal) continue;
-    if(aplicaCultivos==='triticale' && !esTriticale) continue;
+    const esPrincipal = cultivo === 'maiz' || cultivo === 'sorgo';
+    const esTriticale = cultivo === 'trigo';
+    if(aplicaCultivos === 'principales' && !esPrincipal) continue;
+    if(aplicaCultivos === 'triticale' && !esTriticale) continue;
 
+    // Cosecha weight
     let cosechaWeight = 1;
     if(ciclos === 1) {
       cosechaWeight = cn === 1 ? 1 : 0;
     } else {
+      // Solo sumar cosechas que aplican según aplicaCultivos
       let pesoTotal = 0;
       for(let c=1;c<=3;c++) {
+        // Skip cosechas before cosechaInicio in anioInicio year
         const metaC = getCosechaMeta(pi,c);
         const yearC = metaYear;
         if(dep.anioInicio && yearC < dep.anioInicio) continue;
         if(dep.anioInicio && yearC === dep.anioInicio && c < cosechaInicio) continue;
         if(dep.anioFin && yearC > dep.anioFin) continue;
-        // Solo contar tablas que aplican Y no están vacantes en esta cosecha
-        const tablasCandidatas = dep.alcance==='tablas'
-          ? (dep.tablasIdx||[])
-          : predio.tablas.map((_,idx)=>idx);
-        let pesoCosecha = 0; let tablasCounted = 0;
-        for(let t of tablasCandidatas) {
-          const tdC = getTablaData(pi,c,t);
-          if(tdC.sinSiembra) continue; // vacante — no asume depreciación
-          const cv = tdC.cultivo||'maiz';
+
+        let pesoCosecha = 0;
+        let tablasCounted = 0;
+        for(let t=0;t<predio.tablas.length;t++) {
+          const cv = getTablaData(pi,c,t).cultivo||'maiz';
           const esPrincipalC = cv==='maiz'||cv==='sorgo';
-          const esTriticaleC = cv==='trigo'||cv==='triticale'||cv==='triticale_heno';
+          const esTriticaleC = cv==='trigo';
           if(aplicaCultivos==='principales' && !esPrincipalC) continue;
           if(aplicaCultivos==='triticale' && !esTriticaleC) continue;
           pesoCosecha += CULTIVOS[cv]?.pct||40;
@@ -774,17 +682,22 @@ function calcDepTabla(pi, cn, ti, anioOverride) {
         }
         if(tablasCounted>0) pesoTotal += pesoCosecha / tablasCounted;
       }
+      // Peso de esta tabla en esta cosecha
       const miPeso = CULTIVOS[cultivo]?.pct||40;
       cosechaWeight = pesoTotal > 0 ? miPeso / pesoTotal : 0;
     }
 
-    const tablaPct = tablaHa / totalHa;
+    // Alcance
     if(dep.alcance === 'general') {
       total += costoAnual * tablaPct * cosechaWeight;
     } else {
+      // Only if this tabla is selected
       if((dep.tablasIdx||[]).includes(ti)) {
+        // Split equally among selected tablas by ha
         const selTablas = (dep.tablasIdx||[]);
-        const selHaTotal = selTablas.reduce((s,idx)=>s+(predio.tablas[idx]?.ha||0),0);
+        const selHaTotal = selTablas.reduce((s,idx)=>{
+          return s + (predio.tablas[idx]?.ha||0);
+        },0);
         const myHaPct = selHaTotal > 0 ? tablaHa/selHaTotal : 0;
         total += costoAnual * myHaPct * cosechaWeight;
       }
@@ -792,7 +705,6 @@ function calcDepTabla(pi, cn, ti, anioOverride) {
   }
   return total;
 }
-
 
 function calcConsumosTabla(pi, cn, ti) {
   const td = getTablaData(pi,cn,ti);
@@ -828,11 +740,11 @@ function calcDepAnualTotal(pi) {
 // ══════════════════════════════════════════════
 let curSec = 'dashboard';
 let curPredioTab=0, curPredioDep=0, curPredioReg=0, curPredioMon=0, curPredioRep=0;
-let curAnioDep = new Date().getFullYear();
 let curCosechaReg=1, curCosechaRep=1;
-let curTablaReg=0, curTablaRep=-1;
 let curAnioReg = new Date().getFullYear();
 let curAnioRep = new Date().getFullYear();
+let curAnioDep = new Date().getFullYear();
+let curTablaReg=0, curTablaRep=-1;
 
 function goSec(sec) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -1076,303 +988,115 @@ function renderDep() {
 }
 
 function renderDepContent() {
-  // ── Todos los activos de todos los predios ──
-  const todosActivos = [];
-  S.predios.forEach((pr,pIdx)=>{
-    (S.depreciaciones[pIdx]||[]).forEach((d,i)=>{
-      todosActivos.push({d, pIdx, pr, i});
-    });
-  });
+  const pi = curPredioDep;
+  const p = S.predios[pi];
+  const deps = S.depreciaciones[pi];
+  const totalAnual = calcDepAnualTotal(pi);
+
+  const tablaCheckboxes = p.tablas.map((t,i)=>
+    `<label class="check-row">
+      <input type="checkbox" class="dep-tabla-check" value="${i}" /> ${t.nombre} (${t.ha} ha)
+    </label>`
+  ).join('');
 
   const curYear = new Date().getFullYear();
-  const anioVer = curAnioDep;
-
-  // ── Tabla de activos (todos juntos) ──
-  const totalGlobal = todosActivos.reduce((s,{d})=>s+(parseFloat(d.costoAnual)||0),0);
-
-  const depRows = todosActivos.map(({d,pIdx,pr,i})=>{
+  const depRows = deps.map((d,i)=>{
     const tablas = d.alcance==='tablas'
-      ? (d.tablasIdx||[]).map(ti=>pr.tablas[ti]?.nombre).filter(Boolean).join(', ')
+      ? (d.tablasIdx||[]).map(ti=>p.tablas[ti]?.nombre).filter(Boolean).join(', ')
       : 'Todo el predio';
     const aFin = d.anioFin || (d.anioInicio ? d.anioInicio + Math.floor(d.vidaUtil) : null);
     const vigente = aFin ? curYear <= aFin : true;
     const anioStr = d.anioInicio ? `${d.anioInicio} → ${aFin}` : '—';
     const anioColor = d.anioInicio ? (vigente ? 'var(--green)' : 'var(--red)') : 'var(--muted)';
     const anioMark = d.anioInicio ? (vigente ? ' ✓' : ' vencida') : '';
-    const cultivosLabel = d.aplicaCultivos==='principales'?'🌽 Maíz/Sorgo':d.aplicaCultivos==='triticale'?'🌾 Triticale':'Todos';
+    const cultivosLabel = d.aplicaCultivos==='principales'?'🌽🌿 Principales':d.aplicaCultivos==='triticale'?'🌾 Triticale':'Todos';
     const cosIniLabel = d.cosechaInicio && d.cosechaInicio>1 ? ` · desde C${d.cosechaInicio}` : '';
-    const predioColor = pIdx===0?'#1a3d22':pIdx===1?'#2a7a3c':'#8b4513';
     return `<tr>
-      <td style="padding:7px 12px"><strong>${d.nombre}</strong></td>
-      <td style="padding:7px 10px;font-size:11px"><span style="color:${predioColor};font-weight:600">${pr.emoji} ${pr.nombre}</span></td>
-      <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${d.tipo_activo}</td>
-      <td style="padding:7px 10px"><span class="dep-badge ${d.alcance==='general'?'dep-general':'dep-tabla'}">${d.alcance==='general'?'General':'Por tabla'}</span></td>
-      <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${tablas}</td>
-      <td class="mono tr" style="padding:7px 10px">${fmt(d.valorActivo)}</td>
-      <td class="mono tr" style="padding:7px 10px">${d.vidaUtil} años</td>
-      <td class="mono" style="padding:7px 10px;font-size:11px;color:${anioColor}">${anioStr}${anioMark}${cosIniLabel}</td>
-      <td style="padding:7px 10px;font-size:11px">${cultivosLabel}</td>
-      <td class="mono tr amber" style="padding:7px 10px">${fmt(d.costoAnual)}</td>
-      <td style="padding:4px 6px;white-space:nowrap">
-        <button class="btn btn-s" style="font-size:10px;padding:3px 8px;margin-right:3px" onclick="editarDep('${d.id}',${pIdx})">✏️</button>
-        <button class="btn btn-d" style="font-size:10px;padding:3px 6px" onclick="delDepById('${d.id}',${pIdx})">✕</button>
-      </td>
+      <td><strong>${d.nombre}</strong></td>
+      <td>${d.tipo_activo}</td>
+      <td><span class="dep-badge ${d.alcance==='general'?'dep-general':'dep-tabla'}">${d.alcance==='general'?'General':'Por tabla'}</span></td>
+      <td style="font-size:12px;color:var(--muted)">${tablas}</td>
+      <td class="mono tr">${fmt(d.valorActivo)}</td>
+      <td class="mono tr">${d.vidaUtil} años</td>
+      <td class="mono" style="font-size:11px;color:${anioColor}">${anioStr}${anioMark}${cosIniLabel}</td>
+      <td style="font-size:11px;color:var(--muted)">${cultivosLabel}</td>
+      <td class="mono tr amber">${fmt(d.costoAnual)}</td>
+      <td><button class="btn btn-d" onclick="delDep(${i})">✕</button></td>
     </tr>`;
   }).join('');
-
-  // ── Grid de asignación: filas=activos, cols=C1/C2/C3 ──
-  function getAsigChecks(d, pIdx, anio, cn) {
-    const asig = (d.asignaciones||[]).find(a=>a.anio===anio);
-    // Default: predio de origen en todas las cosechas vigentes
-    if(!asig) return [pIdx];
-    return (asig.prediosCosechas||[]).filter(pc=>(pc.cosechas||[]).includes(cn)).map(pc=>pc.pi);
-  }
-
-  const asigRows = todosActivos.map(({d,pIdx,pr})=>{
-    const aFin = d.anioFin || (d.anioInicio ? d.anioInicio + Math.floor(d.vidaUtil) : null);
-    const vigente = (!d.anioInicio||anioVer>=d.anioInicio)&&(!aFin||anioVer<=aFin);
-    const cosechaInicio = d.cosechaInicio || 1;
-    const predioColor = pIdx===0?'#1a3d22':pIdx===1?'#2a7a3c':'#8b4513';
-
-    const celdas = [1,2,3].map(cn=>{
-      if(!vigente) return `<td style="padding:8px 12px;text-align:center;color:var(--muted)">—</td>`;
-      if(d.anioInicio && anioVer===d.anioInicio && cn < cosechaInicio)
-        return `<td style="padding:8px 12px;text-align:center;color:var(--muted)">—</td>`;
-      const checkedPis = getAsigChecks(d, pIdx, anioVer, cn);
-      const checks = S.predios.map((p,pi)=>{
-        const isChk = checkedPis.includes(pi);
-        const col = pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
-        return `<label style="display:flex;align-items:center;gap:4px;cursor:pointer;margin-bottom:2px">
-          <input type="checkbox" ${isChk?'checked':''} style="width:14px;height:14px;cursor:pointer;accent-color:${col}"
-            onchange="toggleAsigCheck('${d.id}',${anioVer},${cn},${pi},this.checked)"/>
-          <span style="font-size:11px;color:${col};font-weight:600">${p.emoji} ${p.nombre}</span>
-        </label>`;
-      }).join('');
-      return `<td style="padding:6px 12px;vertical-align:top">${checks}</td>`;
-    }).join('');
-
-    return `<tr style="border-bottom:1px solid var(--border)">
-      <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${d.nombre}<br>
-        <span style="font-size:10px;color:${predioColor};font-weight:400">${pr.emoji} ${pr.nombre}</span></td>
-      ${celdas}
-    </tr>`;
-  }).join('');
-
-  // ── Año selector options ──
-  const anioOpts = Array.from({length:13},(_,i)=>2020+i).map(y=>
-    `<option value="${y}" ${y===anioVer?'selected':''}>${y}</option>`
-  ).join('');
-
-  // ── Tablas vacantes info ──
-  const vacInfo = [];
-  try {
-    S.predios.forEach((p,pi)=>{
-      [1,2,3].forEach(cn=>{
-        const vacs = p.tablas.filter((_,ti)=>{ try{ return getTablaData(pi,cn,ti).sinSiembra; }catch(e){ return false; } }).map(t=>t.nombre);
-        if(vacs.length) vacInfo.push(`${p.emoji} ${p.nombre} C${cn}: ${vacs.join(', ')}`);
-      });
-    });
-  } catch(e) {}
-
-  // ── Render ──
-  const p = S.predios[curPredioDep];
-  const tablaCheckboxes = p.tablas.map((t,i)=>
-    `<label class="check-row"><input type="checkbox" class="dep-tabla-check" value="${i}"/> ${t.nombre} (${t.ha} ha)</label>`
-  ).join('');
 
   document.getElementById('dep-content').innerHTML = `
     <div class="card">
-      <div class="card-head">⚙️ Todos los activos
-        <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Total global/año: ${fmt(totalGlobal)}</span>
+      <div class="card-head">⚙️ Activos de ${p.emoji} ${p.nombre}
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Total anual: ${fmt(totalAnual)}</span>
       </div>
-      ${todosActivos.length ? `
-        <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead><tr><th>Activo</th><th>Predio</th><th>Tipo</th><th>Alcance</th><th>Tablas</th><th class="tr">Valor</th><th class="tr">Vida útil</th><th>Período</th><th>Cultivos</th><th class="tr">Costo anual</th><th></th></tr></thead>
+      ${deps.length ? `
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Activo</th><th>Tipo</th><th>Alcance</th><th>Tablas</th><th>Valor</th><th>Vida útil</th><th>Período</th><th>Cultivos</th><th>Costo anual</th><th></th></tr></thead>
           <tbody>${depRows}</tbody>
-        </table></div>` :
-        `<div class="empty"><div class="empty-icon">⚙️</div><div>Sin activos registrados.</div></div>`}
-    </div>
-
-    <div class="card" id="card-editar-dep" style="display:none">
-      <div class="card-head">✏️ Editar activo</div>
-      <div id="editar-dep-form"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-head" style="justify-content:space-between">
-        <span>📅 Depreciación anual — Asignación y Montos</span>
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</span>
-          <select style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:12px;border:1px solid var(--border)"
-            onchange="curAnioDep=parseInt(this.value);renderDep()">${anioOpts}</select>
+        </table></div>
+        <div class="result">
+          <div><div class="res-lbl">Total anual depreciaciones</div><div class="res-val">${fmt(totalAnual)}</div></div>
+          <div><div class="res-lbl">Distribución</div><div class="res-sub" style="font-size:13px;color:var(--straw)">
+            ${p.ciclos===1?'100% en ciclo único':'🌾 Triticale 20% · 🌽 Maíz 40% · 🌿 Sorgo 40%'}<br>
+            Prorrateado por hectárea entre tablas
+          </div></div>
         </div>
-      </div>
-      ${(()=>{
-        const anioVer = curAnioDep;
-        const todosActivos3 = [];
-        S.predios.forEach((pr,pIdx)=>{
-          (S.depreciaciones[pIdx]||[]).forEach(dep=>{
-            todosActivos3.push({dep, pIdx, pr});
-          });
-        });
-        if(!todosActivos3.length) return '<div class="empty"><div class="empty-icon">⚙️</div><div>Sin activos</div></div>';
-
-        // Predio headers — checkboxes + $ columns
-        const predioCheckHeaders = S.predios.map(p=>`<th style="padding:7px 10px;text-align:center;border-left:1px solid rgba(255,255,255,0.2)">${p.emoji} ${p.nombre}<br><span style="font-size:9px;font-weight:400">Asignar</span></th>`).join('');
-        const predioMontoHeaders = S.predios.map(p=>`<th style="padding:7px 10px;text-align:right;border-left:1px solid rgba(255,255,255,0.2)">${p.emoji} ${p.nombre}<br><span style="font-size:9px;font-weight:400">$ ${anioVer}</span></th>`).join('');
-
-        const rows = todosActivos3.map(({dep,pIdx,pr})=>{
-          const aFin = dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
-          const vigente = (!dep.anioInicio||anioVer>=dep.anioInicio)&&(!aFin||anioVer<=aFin);
-          const predioColor = pIdx===0?'#1a3d22':pIdx===1?'#2a7a3c':'#8b4513';
-          const cosechaInicio = dep.cosechaInicio||1;
-
-          // Checkboxes C1/C2/C3 per predio
-          const checkCeldas = S.predios.map((p,pi)=>{
-            if(!vigente) return `<td style="padding:6px 10px;text-align:center;border-left:1px solid var(--border)">—</td>`;
-            const asig = (dep.asignaciones||[]).find(a=>a.anio===anioVer);
-            const checks = [1,2,3].map(cn=>{
-              // Block cosechas before cosechaInicio in anioInicio year
-              if(dep.anioInicio && anioVer===dep.anioInicio && cn < cosechaInicio)
-                return `<span style="font-size:10px;color:var(--muted)">—</span>`;
-              const checkedPis = asig
-                ? (asig.prediosCosechas||[]).filter(pc=>(pc.cosechas||[]).includes(cn)).map(pc=>pc.pi)
-                : [pIdx]; // default: origin predio
-              const isChk = checkedPis.includes(pi);
-              const col = pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
-              return `<label style="display:inline-flex;align-items:center;gap:2px;margin-right:4px;cursor:pointer;font-size:10px;color:${col}">
-                <input type="checkbox" ${isChk?'checked':''} style="width:13px;height:13px;accent-color:${col}"
-                  onchange="toggleAsigCheck('${dep.id}',${anioVer},${cn},${pi},this.checked)"/>C${cn}
-              </label>`;
-            }).join('');
-            return `<td style="padding:5px 10px;border-left:1px solid var(--border);white-space:nowrap">${checks}</td>`;
-          }).join('');
-
-          // $ per predio for this year
-          const montoCeldas = S.predios.map((p,pi)=>{
-            if(!vigente) return `<td style="padding:6px 10px;border-left:1px solid var(--border)">—</td>`;
-            const asig = (dep.asignaciones||[]).find(a=>a.anio===anioVer);
-            let monto = 0;
-            const costoAnual = parseFloat(dep.costoAnual)||0;
-            if(asig) {
-              const pctPredios = asig.pctPredio||[];
-              if(pctPredios.length>0) {
-                const entry = pctPredios.find(x=>x.pi===pi);
-                monto = costoAnual*(parseFloat(entry?.pct||0)/100);
-              } else {
-                const totalCn = (asig.prediosCosechas||[]).reduce((s,pc)=>s+(pc.cosechas||[]).length,0);
-                const miCn = ((asig.prediosCosechas||[]).find(pc=>pc.pi===pi)?.cosechas||[]).length;
-                monto = totalCn>0 ? costoAnual*(miCn/totalCn) : 0;
-              }
-            } else {
-              monto = pi===pIdx ? costoAnual : 0;
-            }
-            return `<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);border-left:1px solid var(--border)">${monto?fmt(monto):'—'}</td>`;
-          }).join('');
-
-          return `<tr style="border-bottom:1px solid var(--border)${!vigente?';opacity:0.4':''}">
-            <td style="padding:7px 12px;font-weight:600;white-space:nowrap">${dep.nombre}</td>
-            <td style="padding:7px 10px;font-size:11px;color:${predioColor}">${pr.emoji} ${pr.nombre}</td>
-            <td style="padding:7px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--amber)">${fmt(dep.costoAnual)}/año</td>
-            ${checkCeldas}
-            ${montoCeldas}
-          </tr>`;
-        }).join('');
-
-        // Totals per predio
-        const totalPredio = S.predios.map((p,pi)=>{
-          let tot = 0;
-          todosActivos3.forEach(({dep,pIdx})=>{
-            const aFin = dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
-            const vigente = (!dep.anioInicio||anioVer>=dep.anioInicio)&&(!aFin||anioVer<=aFin);
-            if(!vigente) return;
-            const costoAnual = parseFloat(dep.costoAnual)||0;
-            const asig = (dep.asignaciones||[]).find(a=>a.anio===anioVer);
-            if(asig) {
-              const pctPredios = asig.pctPredio||[];
-              if(pctPredios.length>0) {
-                const entry = pctPredios.find(x=>x.pi===pi);
-                tot += costoAnual*(parseFloat(entry?.pct||0)/100);
-              } else {
-                const totalCn = (asig.prediosCosechas||[]).reduce((s,pc)=>s+(pc.cosechas||[]).length,0);
-                const miCn = ((asig.prediosCosechas||[]).find(pc=>pc.pi===pi)?.cosechas||[]).length;
-                tot += totalCn>0 ? costoAnual*(miCn/totalCn) : 0;
-              }
-            } else {
-              if(pi===pIdx) tot += costoAnual;
-            }
-          });
-          return tot;
-        });
-
-        const totalCells = S.predios.map(()=>`<td style="padding:5px 10px;border-left:1px solid var(--border)"></td>`).join('');
-        const totalMontoCells = totalPredio.map(tot=>`<td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);font-weight:700;border-left:1px solid var(--border)">${tot?fmt(tot):'—'}</td>`).join('');
-
-        const haPrCells = S.predios.map((p,pi)=>{
-          const ha = p.tablas.reduce((s,t)=>s+t.ha,0);
-          const tot = totalPredio[pi];
-          return `<td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--straw);font-weight:700;border-left:1px solid var(--border)">${(tot&&ha)?fmt(tot/ha):'—'}</td>`;
-        }).join('');
-
-        return `<div style="overflow-x:auto">
-          <table style="border-collapse:collapse;font-size:13px;width:100%">
-            <thead>
-              <tr style="background:var(--earth);color:#fff">
-                <th style="padding:7px 12px;text-align:left">Activo</th>
-                <th style="padding:7px 10px;text-align:left">Predio</th>
-                <th style="padding:7px 10px;text-align:left">Costo/año</th>
-                <th colspan="${S.predios.length}" style="padding:7px 10px;text-align:center;border-left:1px solid rgba(255,255,255,0.2)">Asignación C1/C2/C3</th>
-                <th colspan="${S.predios.length}" style="padding:7px 10px;text-align:center;border-left:1px solid rgba(255,255,255,0.2)">Monto ${anioVer}</th>
-              </tr>
-              <tr style="background:var(--soil);color:#d0f0d0;font-size:11px">
-                <th colspan="3"></th>
-                ${predioCheckHeaders}
-                ${predioMontoHeaders}
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-            <tfoot>
-              <tr style="background:var(--cream);font-weight:700;border-top:2px solid var(--border)">
-                <td colspan="3" style="padding:7px 12px">TOTAL</td>
-                ${totalCells}
-                ${totalMontoCells}
-              </tr>
-              <tr style="background:var(--soil);color:#fff">
-                <td colspan="3" style="padding:7px 12px;font-family:'DM Mono',monospace;font-size:11px">$/HA</td>
-                ${S.predios.map(()=>`<td style="border-left:1px solid rgba(255,255,255,0.2)"></td>`).join('')}
-                ${haPrCells}
-              </tr>
-            </tfoot>
-          </table></div>
-          <div style="font-size:11px;color:var(--muted);margin-top:8px">Marca C1/C2/C3 por predio para asignar la depreciación. Los montos se calculan automáticamente.</div>`;
-      })()}
+      ` : `<div class="empty"><div class="empty-icon">⚙️</div><div>Sin activos. Agrega maquinaria, norias, terraplenes...</div></div>`}
     </div>
 
     <div class="card">
       <div class="card-head">➕ Agregar activo depreciable</div>
       <div class="fg3">
-        <div class="field"><label>Nombre del activo</label><input type="text" id="dep-nom" placeholder="Ej: Tractor, Noria..."/></div>
-        <div class="field"><label>Tipo</label>
-          <select id="dep-tipo"><option>Maquinaria</option><option>Noria</option><option>Terraplén</option><option>Infraestructura</option><option>Vehículo</option><option>Otro</option></select>
+        <div class="field">
+          <label>Nombre del activo</label>
+          <input type="text" id="dep-nom" placeholder="Ej: Tractor, Noria..."/>
         </div>
-        <div class="field"><label>Alcance</label>
+        <div class="field">
+          <label>Tipo</label>
+          <select id="dep-tipo">
+            <option>Maquinaria</option><option>Noria</option><option>Terraplén</option>
+            <option>Infraestructura</option><option>Vehículo</option><option>Otro</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Alcance</label>
           <select id="dep-alcance" onchange="toggleTablasSel(this.value)">
             <option value="general">General — todo el predio</option>
             <option value="tablas">Solo ciertas tablas</option>
           </select>
         </div>
-        <div class="field"><label>Valor activo ($)</label><input type="number" id="dep-val" placeholder="0"/></div>
-        <div class="field"><label>Vida útil (años)</label><input type="number" id="dep-vida" placeholder="10"/></div>
-        <div class="field"><label>Año de inicio</label><input type="number" id="dep-anio" placeholder="2024" min="2000" max="2100"/></div>
-        <div class="field"><label>Cosecha de inicio</label>
-          <select id="dep-cosecha-inicio"><option value="1">Cosecha 1 (Dic)</option><option value="2">Cosecha 2 (Mar)</option><option value="3">Cosecha 3 (Ago)</option></select>
+        <div class="field">
+          <label>Valor activo ($)</label>
+          <input type="number" id="dep-val" placeholder="0"/>
         </div>
-        <div class="field"><label>Aplica a cultivos</label>
-          <select id="dep-cultivos"><option value="todos">Todos (40-40-20)</option><option value="principales">Solo principales (Maíz/Sorgo)</option><option value="triticale">Solo Triticale</option></select>
+        <div class="field">
+          <label>Vida útil (años)</label>
+          <input type="number" id="dep-vida" placeholder="10"/>
+        </div>
+        <div class="field">
+          <label>Año de inicio</label>
+          <input type="number" id="dep-anio" placeholder="2024" min="2000" max="2100"/>
+        </div>
+        <div class="field">
+          <label>Cosecha de inicio</label>
+          <select id="dep-cosecha-inicio">
+            <option value="1">Cosecha 1 (Dic)</option>
+            <option value="2">Cosecha 2 (Mar)</option>
+            <option value="3">Cosecha 3 (Ago)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Aplica a cultivos</label>
+          <select id="dep-cultivos">
+            <option value="todos">Todos (40-40-20)</option>
+            <option value="principales">Solo principales (Maíz/Sorgo)</option>
+            <option value="triticale">Solo Triticale</option>
+          </select>
         </div>
       </div>
       <div id="dep-tablas-sel" style="display:none;margin-top:12px;padding:14px;background:var(--cream);border:1px solid var(--border)">
-        <label style="margin-bottom:8px;display:block">Selecciona las tablas donde aplica:</label>
+        <label style="margin-bottom:8px;display:block">Selecciona las tablas donde aplica esta depreciación:</label>
         ${tablaCheckboxes}
       </div>
       <div class="btn-row">
@@ -1380,82 +1104,6 @@ function renderDepContent() {
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">Costo anual = Valor ÷ Vida útil</span>
       </div>
     </div>`;
-}
-function toggleAsigCheck(depId, anio, cn, pi, checked) {
-  let dep = null;
-  S.predios.forEach((_,pIdx)=>{ const f=(S.depreciaciones[pIdx]||[]).find(d=>d.id===depId); if(f) dep=f; });
-  if(!dep) return;
-  if(!dep.asignaciones) dep.asignaciones=[];
-  let asig = dep.asignaciones.find(a=>a.anio===anio);
-  if(!asig) {
-    // Initialize from default (origin predio gets all cosechas)
-    let originPi = 0;
-    S.predios.forEach((_,pIdx)=>{ if((S.depreciaciones[pIdx]||[]).find(d=>d.id===depId)) originPi=pIdx; });
-    asig = {anio, prediosCosechas: [{pi:originPi, cosechas:[1,2,3]}]};
-    dep.asignaciones.push(asig);
-  }
-  // Just toggle this specific predio+cosecha
-  let pc = asig.prediosCosechas.find(pc=>pc.pi===pi);
-  if(checked) {
-    if(!pc) { pc={pi,cosechas:[]}; asig.prediosCosechas.push(pc); }
-    if(!pc.cosechas.includes(cn)) pc.cosechas.push(cn);
-  } else {
-    if(pc) pc.cosechas = pc.cosechas.filter(c=>c!==cn);
-  }
-  asig.prediosCosechas = asig.prediosCosechas.filter(pc=>(pc.cosechas||[]).length>0);
-  save(); toast('Guardado');
-}
-
-function delDepById(depId, pIdx) {
-  S.depreciaciones[pIdx] = (S.depreciaciones[pIdx]||[]).filter(d=>d.id!==depId);
-  save(); renderDep(); toast('Eliminado');
-}
-
-function editarDep(depId, pIdx) {
-  let dep = null;
-  (S.depreciaciones[pIdx]||[]).forEach(d=>{ if(d.id===depId) dep=d; });
-  if(!dep) return;
-  const card = document.getElementById('card-editar-dep');
-  const form = document.getElementById('editar-dep-form');
-  if(!card||!form) return;
-  card.style.display='block';
-  card.scrollIntoView({behavior:'smooth',block:'nearest'});
-  form.innerHTML = `
-    <div class="fg3">
-      <div class="field"><label>Nombre</label><input type="text" id="edit-dep-nom" value="${dep.nombre}"/></div>
-      <div class="field"><label>Tipo</label>
-        <select id="edit-dep-tipo">${['Maquinaria','Noria','Terraplén','Infraestructura','Vehículo','Otro'].map(t=>`<option ${dep.tipo_activo===t?'selected':''}>${t}</option>`).join('')}</select>
-      </div>
-      <div class="field"><label>Valor activo ($)</label><input type="number" id="edit-dep-val" value="${dep.valorActivo}"/></div>
-      <div class="field"><label>Vida útil (años)</label><input type="number" id="edit-dep-vida" value="${dep.vidaUtil}"/></div>
-      <div class="field"><label>Aplica a cultivos</label>
-        <select id="edit-dep-cultivos">
-          <option value="todos" ${dep.aplicaCultivos==='todos'?'selected':''}>Todos</option>
-          <option value="principales" ${dep.aplicaCultivos==='principales'?'selected':''}>Solo principales</option>
-          <option value="triticale" ${dep.aplicaCultivos==='triticale'?'selected':''}>Solo Triticale</option>
-        </select>
-      </div>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-p" onclick="guardarEditDep('${depId}',${pIdx})">Guardar</button>
-      <button class="btn btn-s" onclick="document.getElementById('card-editar-dep').style.display='none'">Cancelar</button>
-    </div>`;
-}
-
-function guardarEditDep(depId, pIdx) {
-  const dep = (S.depreciaciones[pIdx]||[]).find(d=>d.id===depId);
-  if(!dep) return;
-  dep.nombre       = document.getElementById('edit-dep-nom').value.trim() || dep.nombre;
-  dep.tipo_activo  = document.getElementById('edit-dep-tipo').value;
-  dep.valorActivo  = parseFloat(document.getElementById('edit-dep-val').value)||dep.valorActivo;
-  dep.vidaUtil     = parseFloat(document.getElementById('edit-dep-vida').value)||dep.vidaUtil;
-  dep.costoAnual   = dep.valorActivo / dep.vidaUtil;
-  dep.anioFin      = dep.anioInicio + Math.floor(dep.vidaUtil);
-  dep.aplicaCultivos = document.getElementById('edit-dep-cultivos').value;
-  save();
-  document.getElementById('card-editar-dep').style.display='none';
-  renderDep();
-  toast('Activo actualizado');
 }
 
 function toggleTablasSel(val) {
@@ -1488,55 +1136,6 @@ function addDep() {
   save(); renderDep(); toast('✓ Activo agregado');
 }
 
-function guardarPctInline(depId, anio, pi, pct) {
-  let dep = null;
-  S.predios.forEach((_,pIdx)=>{
-    const found = (S.depreciaciones[pIdx]||[]).find(d=>d.id===depId);
-    if(found) dep = found;
-  });
-  if(!dep) return;
-  if(!dep.asignaciones) dep.asignaciones = [];
-  let asig = dep.asignaciones.find(a=>a.anio===anio);
-  if(!asig) { asig={anio,prediosCosechas:[]}; dep.asignaciones.push(asig); }
-  if(!asig.pctPredio) asig.pctPredio = [];
-  const existing = asig.pctPredio.findIndex(x=>x.pi===pi);
-  if(existing>=0) asig.pctPredio[existing].pct = pct;
-  else asig.pctPredio.push({pi, pct});
-  save();
-  toast('✅ % guardado');
-}
-
-function guardarAsigInline(depId, anio, cn, newPi) {
-  let dep = null;
-  S.predios.forEach((_,pIdx)=>{
-    const found = (S.depreciaciones[pIdx]||[]).find(d=>d.id===depId);
-    if(found) dep = found;
-  });
-  if(!dep) return;
-  if(!dep.asignaciones) dep.asignaciones = [];
-
-  let asig = dep.asignaciones.find(a=>a.anio===anio);
-  if(!asig) {
-    asig = {anio, prediosCosechas:[]};
-    dep.asignaciones.push(asig);
-  }
-
-  // Remove this cn from any existing predio assignment
-  asig.prediosCosechas.forEach(pc=>{
-    pc.cosechas = (pc.cosechas||[]).filter(c=>c!==cn);
-  });
-  // Add cn to newPi
-  let pc = asig.prediosCosechas.find(pc=>pc.pi===newPi);
-  if(!pc) { pc={pi:newPi,cosechas:[]}; asig.prediosCosechas.push(pc); }
-  if(!pc.cosechas.includes(cn)) pc.cosechas.push(cn);
-  // Cleanup empty
-  asig.prediosCosechas = asig.prediosCosechas.filter(pc=>pc.cosechas.length>0);
-
-  save();
-  toast('✅ Guardado');
-}
-
-
 function delDep(i) {
   S.depreciaciones[curPredioDep].splice(i,1);
   save(); renderDep(); toast('✓ Eliminado');
@@ -1556,36 +1155,15 @@ function renderReg() {
   if(!cosechas.includes(curCosechaReg)) curCosechaReg=1;
   if(curTablaReg>=p.tablas.length) curTablaReg=0;
 
-
-  // Collect years that have consumos for this predio
-  const aniosSet = new Set([new Date().getFullYear()]);
-  // Rango fijo siempre disponible
-  for(let y=2020; y<=2032; y++) aniosSet.add(y);
-  // Años de las metas de cosecha
-  
-  // Años de consumos registrados
-  p.tablas.forEach((_,ti)=>{
-    [1,2,3].forEach(cn=>{
-      (getTablaData(pi,cn,ti).consumos||[]).forEach(c=>{
-        if(c.fecha) aniosSet.add(getAnioFecha(c.fecha));
-      });
-    });
-  });
-  const anios = [...aniosSet].sort((a,b)=>a-b);
-  if(!anios.includes(curAnioReg)) curAnioReg = new Date().getFullYear();
-
-  const anioOpts = anios.map(a=>
-    `<option value="${a}" ${a===curAnioReg?'selected':''}>${a}</option>`
-  ).join('');
-
-  document.getElementById('reg-ctabs').innerHTML =
-    cosechas.map(c=>
-      `<button class="ctab ${c===curCosechaReg?'active':''}" onclick="curCosechaReg=${c};renderReg()">Cosecha ${c}</button>`
-    ).join('') +
-    `<select style="margin-left:14px;padding:5px 10px;font-family:'DM Mono',monospace;font-size:12px;border:1px solid var(--border);background:#fff;color:var(--text);vertical-align:middle;cursor:pointer"
-      onchange="curAnioReg=parseInt(this.value);renderReg()">
-      ${anioOpts}
-    </select>`;
+  const meta = getCosechaMeta(pi, curCosechaReg);
+  document.getElementById('reg-ctabs').innerHTML = cosechas.map(c=>
+    `<button class="ctab ${c===curCosechaReg?'active':''}" onclick="curCosechaReg=${c};renderReg()">Cosecha ${c}</button>`
+  ).join('') + `<div style="display:inline-flex;align-items:center;gap:6px;margin-left:14px;vertical-align:middle">
+    <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</span>
+    <input type="number" value="${curAnioReg}" min="2000" max="2100"
+      style="width:76px;padding:4px 8px;font-size:13px;border:1px solid var(--border);background:#fff;color:var(--text)"
+      onchange="getCosechaMeta(${pi},${curCosechaReg}).year=parseInt(this.value);save()"/>
+  </div>`;
 
   renderRegContent();
 }
@@ -1594,7 +1172,7 @@ function renderRegContent() {
   const pi = curPredioReg, cn = curCosechaReg, ti = curTablaReg;
   const p = S.predios[pi];
   const td = getTablaData(pi,cn,ti);
-  const dep = calcDepTabla(pi,cn,ti,curAnioRep);
+  const dep = calcDepTabla(pi,cn,ti);
   const vars = calcConsumosTabla(pi,cn,ti);
   const total = dep+vars;
   const kilos = parseFloat(td.kilos)||0;
@@ -1728,7 +1306,7 @@ function renderRegContent() {
       <div class="card-head">🌱 Grid — Material de Cultivo · ${p.nombre} · Cosecha ${cn}</div>
       <div style="padding:8px 12px;background:#f0fdf4;border:1px solid var(--border);margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">📅 Fecha del registro:</span>
-        <input type="date" id="reg-grid-fecha" value="${curAnioReg}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}"
+        <input type="date" id="reg-grid-fecha" value="${new Date().toISOString().slice(0,10)}"
           style="padding:4px 8px;border:1px solid var(--border);font-size:13px;color:var(--text)"/>
       </div>
       <div style="overflow-x:auto">
@@ -1774,9 +1352,7 @@ function renderRegContent() {
   for(let ti2=0;ti2<p.tablas.length;ti2++) {
     const td2 = getTablaData(pi,cn,ti2);
     (td2.consumos||[]).forEach((c,ci)=>{
-      const anioConsumo = c.fecha ? getAnioFecha(c.fecha) : curAnioReg;
-      if(anioConsumo === curAnioReg)
-        allConsumos.push({...c, ti2, ci, tablaNombre:p.tablas[ti2].nombre});
+      allConsumos.push({...c, ti2, ci, tablaNombre:p.tablas[ti2].nombre});
     });
   }
   if(allConsumos.length) {
@@ -1794,7 +1370,7 @@ function renderRegContent() {
     </tr>`).join('');
     const totConsumos = allConsumos.reduce((s,c)=>s+c.cantidad*c.precioSnapshot,0);
     histEl.innerHTML = `
-      <div class="card-head">📋 Consumos registrados — ${p.nombre} · Cosecha ${cn} · ${curAnioReg}</div>
+      <div class="card-head">📋 Consumos registrados — ${p.nombre} · Cosecha ${cn}</div>
       <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr>
           <th>Fecha</th><th>Tabla</th><th>Artículo</th><th>Categoría</th>
@@ -1802,7 +1378,7 @@ function renderRegContent() {
         </tr></thead>
         <tbody>${histRows}</tbody>
         <tfoot><tr style="background:var(--earth);color:#ffffff">
-          <td colspan="6" style="padding:8px 14px;font-weight:700">TOTAL MATERIAL DE CULTIVO · ${curAnioReg}</td>
+          <td colspan="6" style="padding:8px 14px;font-weight:700">TOTAL MATERIAL DE CULTIVO</td>
           <td class="mono tr" style="padding:8px 14px;font-weight:700">${fmt(totConsumos)}</td>
           <td></td>
         </tr></tfoot>
@@ -1874,7 +1450,6 @@ function renderRep() {
   document.getElementById('rep-ptabs').innerHTML = S.predios.map((p,i)=>
     `<button class="ptab ${i===curPredioRep?'active':''}" onclick="curPredioRep=${i};curCosechaRep=1;curTablaRep=-1;renderRep()">${p.emoji} ${p.nombre}</button>`
   ).join('');
-
   const pi = curPredioRep;
   const p = S.predios[pi];
   const ciclos = p.ciclos||3;
@@ -1883,22 +1458,14 @@ function renderRep() {
   if(curTablaRep>=p.tablas.length) curTablaRep=0;
   if(curTablaRep===undefined) curTablaRep=-1;
 
-  // Collect available years from meta
-  const aniosSet = new Set([new Date().getFullYear()]);
-  
-  for(let y=2020;y<=2032;y++) aniosSet.add(y);
-  const anios = [...aniosSet].sort((a,b)=>a-b);
-
-  // Sync meta year
-  getCosechaMeta(pi, curCosechaRep).year = curAnioRep;
-
-  const anioOpts = anios.map(y=>
+  const anioOpts = Array.from({length:13},(_,i)=>2020+i).map(y=>
     `<option value="${y}" ${y===curAnioRep?'selected':''}>${y}</option>`
   ).join('');
 
   const cicloButtons = cosechas.map(c=>{
-    const active = c===curCosechaRep;
-    return `<button class="ctab ${active?'active':''}" onclick="curCosechaRep=${c};renderRep()">C${c}</button>`;
+    const m = getCosechaMeta(pi,c);
+    const tag = m.closed?'🔒 ':'';
+    return `<button class="ctab ${c===curCosechaRep&&curTablaRep===-1?'active':''}" onclick="curCosechaRep=${c};curTablaRep=-1;renderRep()">${tag}C${c}</button>`;
   }).join('');
 
   const tipoButtons = `
@@ -1909,10 +1476,8 @@ function renderRep() {
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:6px 0">
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</span>
-        <select style="padding:5px 10px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid var(--border);background:#fff;color:var(--text)"
-          onchange="curAnioRep=parseInt(this.value);renderRep()">
-          ${anioOpts}
-        </select>
+        <select style="padding:5px 10px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid var(--border)"
+          onchange="curAnioRep=parseInt(this.value);renderRep()">${anioOpts}</select>
       </div>
       <div style="display:flex;gap:0">${cicloButtons}</div>
       <div style="display:flex;gap:0">${tipoButtons}</div>
@@ -1955,7 +1520,7 @@ function renderRepContent() {
         if(td.sinSiembra) continue;
         const cv=td.cultivo||'maiz';
         if(filterCv && cv!==filterCv) continue;
-        dep+=calcDepTabla(pi,cn,ti,curAnioRep);
+        dep+=calcDepTabla(pi,cn,ti);
         kilos+=parseFloat(td.kilos)||0;
         kgMS+=(parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100);
         ha+=parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
@@ -2003,7 +1568,7 @@ function renderRepContent() {
         </div>
         <div style="text-align:center;padding:14px;background:var(--soil);color:var(--cream);margin-bottom:14px">
           <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700">GASTOS TOTALES — ${p.nombre}</div>
-          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);margin-top:4px">Cosecha ${cn} · Año ${curAnioRep} · ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha ${getCosechaMeta(pi,cn).closed?'· 🔒 CERRADA':'· ✓ Abierta'}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);margin-top:4px">Cosecha ${cn} · Año ${getCosechaMeta(pi,cn).year} · ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha ${getCosechaMeta(pi,cn).closed?'· 🔒 CERRADA':'· ✓ Abierta'}</div>
         </div>
         ${(()=>{
           const tablasFechas = p.tablas.map((t,ti)=>{
@@ -2266,7 +1831,7 @@ function printReportePredio(pi, cn) {
   // Sum consumos por tabla
   for(let ti=0;ti<p.tablas.length;ti++) {
     const td=getTablaData(pi,cn,ti);
-    totalDep+=calcDepTabla(pi,cn,ti,curAnioRep);
+    totalDep+=calcDepTabla(pi,cn,ti);
     totKilos+=parseFloat(td.kilos)||0;
     totKgMS+=((parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100));
     (td.consumos||[]).forEach(c=>{
@@ -2656,16 +2221,15 @@ function renderGastos() {
   }
 
   if(gastosTab === 'tractores') {
-    if(!S.tractores) S.tractores = [];
     const configEq = isAdmin ? `
       <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar equipo:</span>
-        <input type="text" id="eq-nombre" placeholder="Ej: Tractor 5, Rastra JD..." style="padding:5px;width:180px;font-size:13px"/>
-        <select id="eq-tipo" style="padding:5px"><option value="tractor">Tractor</option><option value="implemento">Implementos</option><option value="camioneta">Camioneta</option></select>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           ${S.predios.map((p,i)=>`<label class="check-row"><input type="checkbox" class="eq-predio-check" value="${i}" checked/> ${p.emoji} ${p.nombre}</label>`).join('')}
         </div>
-        <button class="btn btn-s" onclick="addTractorGlobal()">+ Agregar</button>
+        <input type="text" id="eq-nombre" placeholder="Ej: Tractor 5, Noria LC..." style="padding:5px;width:180px;font-size:13px"/>
+        <select id="eq-tipo" style="padding:5px"><option value="tractor">Tractor</option><option value="noria">Noria</option><option value="implemento">Implementos</option><option value="camioneta">Camioneta</option></select>
+        <button class="btn btn-s" onclick="addEquipo()">+ Agregar</button>
       </div>` : '';
 
     // Precio diesel — solo admin lo define, Naty puede capturar litros sin precio
@@ -2681,60 +2245,66 @@ function renderGastos() {
         💧 Precio diesel C${selectedCn}: ${precioDiesel ? '<strong>$'+precioDiesel+'/L</strong> — captura litros y el admin cierra el precio' : '<em>pendiente — registra litros, el admin define el precio al cierre</em>'}
       </div>`;
 
-    // ── Tabla unificada — S.tractores (lista global) ──
-    const todosEquipos = S.tractores || [];
+    // ── Tabla unificada todos los equipos de todos los predios ──
+    // Collect all tractores/implementos across all predios
+    const todosEquipos = [];
+    S.predios.forEach((p,pi)=>{
+      (S.equipos[pi]||[]).filter(e=>e.tipo==='tractor'||e.tipo==='implemento').forEach(eq=>{
+        todosEquipos.push({pi, p, eq});
+      });
+    });
 
     if(!todosEquipos.length) {
       tabContent = `${configEq}${precioDieselInput}<div class="empty"><div class="empty-icon">🚜</div><div>Sin equipos configurados</div></div>`;
     } else {
-      const predioOptsBase = S.predios.map((p,pi)=>`<option value="${pi}">${p.emoji} ${p.nombre}</option>`).join('');
-
       // ── Sección 1: Servicios y Reparaciones ──
-      const servRepRows = todosEquipos.map(eq=>{
-        const dServ = gastosGridDraft[`s_${eq.id}`] || '';
-        const dRep  = gastosGridDraft[`r_${eq.id}`] || '';
-        const selPiSR = gastosGridDraft[`sr_pi_${eq.id}`] ?? (eq.predios?.[0] ?? 0);
-        const histServ = S.gastosGenerales.filter(g=>getGastoCosecha(g)===selectedCn&&g.equipo===eq.nombre&&g.categoria==='Maquinaria');
+      const servRepRows = todosEquipos.map(({pi,p,eq})=>{
+        const dServ = gastosGridDraft[`s_${pi}_${eq.id}`] || '';
+        const dRep  = gastosGridDraft[`r_${pi}_${eq.id}`] || '';
+        const histServ = S.gastosGenerales.filter(g=>getGastoCosecha(g)===selectedCn&&g.equipo===eq.nombre&&(g.prediosIdx||[]).includes(pi)&&g.categoria==='Maquinaria');
         const totServ = histServ.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-        const predioOptsS = S.predios.map((p,pi)=>`<option value="${pi}" ${pi==selPiSR?'selected':''}>${p.emoji} ${p.nombre}</option>`).join('');
         return `<tr>
           <td style="padding:7px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
-          <td style="padding:4px 8px"><select style="padding:3px 6px;font-size:12px;border:1px solid var(--border)" onchange="gastosGridDraft['sr_pi_${eq.id}']=parseInt(this.value)">${predioOptsS}</select></td>
+          <td style="padding:7px 12px;font-size:11px;color:var(--muted)">${p.emoji} ${p.nombre}</td>
           <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dServ}"
-            style="width:120px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
-            onchange="gastosGridDraft['s_${eq.id}']=this.value"/></td>
+            style="width:130px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
+            onchange="gastosGridDraft['s_${pi}_${eq.id}']=this.value"/></td>
           <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dRep}"
-            style="width:120px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
-            onchange="gastosGridDraft['r_${eq.id}']=this.value"/></td>
+            style="width:130px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
+            onchange="gastosGridDraft['r_${pi}_${eq.id}']=this.value"/></td>
           <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber);font-size:12px">${totServ?fmt(totServ):'—'}</td>
-          <td style="padding:4px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delTractorGlobal('${eq.id}')">✕</button>`:''}</td>
+          <td style="padding:4px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delEquipoByNombre(${pi},'${eq.id}')">✕</button>`:''}</td>
         </tr>`;
       }).join('');
 
-      // ── Sección 2: Diesel ──
-      const dieselEquipos = todosEquipos.filter(eq=>eq.tipo!=='implemento');
-      const dieselRows = dieselEquipos.map(eq=>{
-        const dDiesel = gastosGridDraft[`d_${eq.id}`] || '';
-        const selPiD = gastosGridDraft[`d_pi_${eq.id}`] ?? (eq.predios?.[0] ?? 0);
-        const histDiesel = S.gastosGenerales.filter(g=>getGastoCosecha(g)===selectedCn&&g.equipo===eq.nombre&&g.categoria==='Diesel');
+      // ── Sección 2: Diesel (solo tractores, no implementos) ──
+      const dieselEquipos = todosEquipos.filter(({eq})=>eq.tipo!=='implemento');
+      const dieselRows = dieselEquipos.map(({pi,p,eq})=>{
+        const dDiesel = gastosGridDraft[`d_${pi}_${eq.id}`] || '';
+        const histDiesel = S.gastosGenerales.filter(g=>getGastoCosecha(g)===selectedCn&&g.equipo===eq.nombre&&(g.prediosIdx||[]).includes(pi)&&g.categoria==='Diesel');
         const totLitros = histDiesel.reduce((s,g)=>s+(parseFloat(g.litros||0)),0);
         const totDiesel = histDiesel.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-        const predioOptsD2 = S.predios.map((p,pi)=>`<option value="${pi}" ${pi==selPiD?'selected':''}>${p.emoji} ${p.nombre}</option>`).join('');
         return `<tr>
           <td style="padding:7px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
-          <td style="padding:4px 8px"><select style="padding:3px 6px;font-size:12px;border:1px solid var(--border)" onchange="gastosGridDraft['d_pi_${eq.id}']=parseInt(this.value)">${predioOptsD2}</select></td>
+          <td style="padding:7px 12px;font-size:11px;color:var(--muted)">${p.emoji} ${p.nombre}</td>
           <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="0.1" placeholder="—" value="${dDiesel}"
-            style="width:120px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
-            onchange="gastosGridDraft['d_${eq.id}']=this.value"/></td>
+            style="width:130px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
+            onchange="gastosGridDraft['d_${pi}_${eq.id}']=this.value"/></td>
           <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${totLitros?fmtN(totLitros,0)+' L':'—'}</td>
           <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber);font-size:12px">${totDiesel?fmt(totDiesel):'—'}</td>
-          <td style="padding:4px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delTractorGlobal('${eq.id}')">✕</button>`:''}</td>
+          <td style="padding:4px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delEquipoByNombre(${pi},'${eq.id}')">✕</button>`:''}</td>
         </tr>`;
       }).join('');
 
+      // Totales diesel
       const totDieselGlobal = S.gastosGenerales.filter(g=>getGastoCosecha(g)===selectedCn&&g.categoria==='Diesel').reduce((s,g)=>s+parseFloat(g.monto||0),0);
       const totLitrosGlobal = S.gastosGenerales.filter(g=>getGastoCosecha(g)===selectedCn&&g.categoria==='Diesel').reduce((s,g)=>s+(parseFloat(g.litros||0)),0);
       const totServRepGlobal = S.gastosGenerales.filter(g=>getGastoCosecha(g)===selectedCn&&g.categoria==='Maquinaria').reduce((s,g)=>s+parseFloat(g.monto||0),0);
+
+      const predioOptsD = S.predios.map((p,i)=>'<option value="'+i+'">'+p.emoji+' '+p.nombre+'</option>').join('');
+      const predioChecksInline = S.predios.map((p,i)=>`<label style="display:inline-flex;align-items:center;gap:3px;margin-right:6px;font-size:11px"><input type="checkbox" class="add-inline-pi" value="${i}" checked/> ${p.emoji} ${p.nombre}</label>`).join('');
+      const addDieselRow = isAdmin ? `<tr><td colspan="2" style="padding:4px 8px">${predioChecksInline}</td><td style="padding:4px 8px"><input type="text" id="add-diesel-nombre" placeholder="Nombre equipo..." style="padding:4px;width:130px;font-size:12px"/></td><td style="padding:4px 8px"><select id="add-diesel-tipo" style="padding:4px;font-size:12px"><option value="tractor">Tractor</option><option value="implemento">Implemento</option></select></td><td colspan="2" style="padding:4px 8px"><button class="btn btn-s" style="font-size:11px" onclick="addEquipoInline('diesel')">+ Agregar</button></td></tr>` : '';
+      const addServRepRow = isAdmin ? `<tr><td colspan="2" style="padding:4px 8px">${predioChecksInline}</td><td style="padding:4px 8px"><input type="text" id="add-sr-nombre" placeholder="Nombre equipo..." style="padding:4px;width:130px;font-size:12px"/></td><td style="padding:4px 8px"><select id="add-sr-tipo" style="padding:4px;font-size:12px"><option value="tractor">Tractor</option><option value="implemento">Implemento</option></select></td><td colspan="2" style="padding:4px 8px"><button class="btn btn-s" style="font-size:11px" onclick="addEquipoInline('sr')">+ Agregar</button></td></tr>` : '';
 
       tabContent = `
         ${precioDieselInput}
@@ -2750,7 +2320,7 @@ function renderGastos() {
             <th style="padding:7px 12px;text-align:right">Total $ C${selectedCn}</th>
             <th></th>
           </tr></thead>
-          <tbody>${dieselRows}</tbody>
+          <tbody>${dieselRows}${addDieselRow}</tbody>
           <tfoot><tr style="background:var(--cream);font-weight:700">
             <td colspan="3" style="padding:7px 12px">TOTAL</td>
             <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace">${totLitrosGlobal?fmtN(totLitrosGlobal,0)+' L':'—'}</td>
@@ -2771,7 +2341,7 @@ function renderGastos() {
             <th style="padding:7px 12px;text-align:right">Acumulado C${selectedCn}</th>
             <th></th>
           </tr></thead>
-          <tbody>${servRepRows}</tbody>
+          <tbody>${servRepRows}${addServRepRow}</tbody>
           <tfoot><tr style="background:var(--cream);font-weight:700">
             <td colspan="4" style="padding:7px 12px">TOTAL</td>
             <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${totServRepGlobal?fmt(totServRepGlobal):'—'}</td>
@@ -2794,103 +2364,105 @@ function renderGastos() {
 
   } else if(gastosTab === 'luz') {
     if(!S.luzPct) S.luzPct = {};
-    if(!S.luzNoriaPredios) S.luzNoriaPredios = {};
+    if(!S.luzNoriaPredios) S.luzNoriaPredios = {}; // {noriaId: {pi: pct}} % por predio
 
-    const noriaMap = {};
+    // Collect unique norias (by nombre) across all predios
+    const noriaMap = {}; // {nombre: [{pi, pt}]}
     S.predios.forEach((p,pi)=>{
       (S.equipos[pi]||[]).filter(e=>e.tipo==='luz').forEach(pt=>{
         if(!noriaMap[pt.nombre]) noriaMap[pt.nombre] = [];
         noriaMap[pt.nombre].push({pi,p,pt});
       });
     });
-    const uniqueNorias = Object.entries(noriaMap);
+    const uniqueNorias = Object.entries(noriaMap); // [[nombre, [{pi,p,pt}]]]
 
     const configLuz = isAdmin ? `
       <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar noria:</span>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">⚙️ Agregar noria:</div>
         <input type="text" id="eq-nombre-luz" placeholder="Ej: Noria 212, Rebombeo..." style="padding:5px;width:180px;font-size:13px"/>
         <button class="btn btn-s" onclick="addEquipoLuzMulti()">+ Agregar</button>
+        <span style="font-size:11px;color:var(--muted)">Se agrega a todos los predios, configura % abajo</span>
       </div>` : '';
+
+    const mesActual = parseInt(gastosGridDraft['mes']||new Date().getMonth()+1);
+    const mesSelector = `
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:#f0fdf4;border:1px solid #7ec89a">
+        <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">MES</div>
+          <select style="padding:5px" onchange="gastosGridDraft['mes']=this.value;renderGastos()">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActual===i+1?'selected':''}>${m}</option>`).join('')}</select>
+        </div>
+        <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">2ª COSECHA (split)</div>
+          <select style="padding:5px" onchange="gastosGridDraft['cn_split_b']=this.value">${[{v:'',l:'— Solo una —'},...[1,2,3].map(c=>({v:c,l:`C${c}`}))].map(o=>`<option value="${o.v}" ${(gastosGridDraft['cn_split_b']||'')==String(o.v)?'selected':''}>${o.l}</option>`).join('')}</select>
+        </div>
+      </div>`;
 
     if(!uniqueNorias.length) {
       tabContent = `${configLuz}<div class="empty"><div class="empty-icon">💡</div><div>Sin norias configuradas</div></div>`;
     } else {
-      const mesesCn = getMesesCn(selectedCn);
-      // Headers: Mes | Noria1 % C1 | Noria1 % C2? | ... | Acum
-      const noriaHeaders = uniqueNorias.map(([nombre])=>`<th style="padding:7px 12px;text-align:center">${nombre}<br><span style="font-size:9px;font-weight:400">%C1 / %C2 / %C3</span></th>`).join('');
-
-      const luzRows = mesesCn.map(mes=>{
-        const mesLabel = MESES[mes-1];
-        const celdas = uniqueNorias.map(([nombre, entries])=>{
-          const noriaId = entries[0].pt.id;
-          const val = gastosGridDraft[`luz_${noriaId}_${mes}`] || '';
-          const c1pct = gastosGridDraft[`luz_c1pct_${noriaId}_${mes}`] ?? 100;
-          const c2pct = gastosGridDraft[`luz_c2pct_${noriaId}_${mes}`] ?? 0;
-          const c3pct = gastosGridDraft[`luz_c3pct_${noriaId}_${mes}`] ?? 0;
-          const hist = (S.gastosGenerales||[]).filter(g=>g.categoria==='Luz'&&g.equipo===nombre&&(g.mes===mes||g.mes===String(mes))&&getGastoCosecha(g)===selectedCn);
-          const acum = hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-          return `<td style="padding:4px 8px;text-align:center">
-            <input type="number" min="0" step="1" placeholder="—" value="${val}"
-              style="width:90px;padding:4px 6px;text-align:right;border:1px solid var(--border);font-size:13px;display:block;margin:0 auto 4px"
-              onchange="gastosGridDraft['luz_${noriaId}_${mes}']=this.value"/>
-            <div style="display:flex;gap:3px;justify-content:center;font-size:10px">
-              <input type="number" min="0" max="100" step="1" value="${c1pct}" title="% C1"
-                style="width:34px;padding:2px;text-align:center;border:1px solid var(--border);font-size:10px"
-                onchange="gastosGridDraft['luz_c1pct_${noriaId}_${mes}']=this.value"/>
-              <input type="number" min="0" max="100" step="1" value="${c2pct}" title="% C2"
-                style="width:34px;padding:2px;text-align:center;border:1px solid var(--border);font-size:10px"
-                onchange="gastosGridDraft['luz_c2pct_${noriaId}_${mes}']=this.value"/>
-              <input type="number" min="0" max="100" step="1" value="${c3pct}" title="% C3"
-                style="width:34px;padding:2px;text-align:center;border:1px solid var(--border);font-size:10px"
-                onchange="gastosGridDraft['luz_c3pct_${noriaId}_${mes}']=this.value"/>
-            </div>
-            <div style="font-size:10px;color:var(--amber);margin-top:2px">${acum?fmt(acum):''}</div>
+      // Build header columns: Noria | La Hermida % | La Cruz % | Los Higos % | Luz $ | Acum C${selectedCn}
+      const predioHeaders = S.predios.map(p=>`<th style="padding:7px 10px;text-align:center">${p.emoji} ${p.nombre} %</th>`).join('');
+      const luzRows = uniqueNorias.map(([nombre, entries])=>{
+        const firstEntry = entries[0];
+        const noriaId = firstEntry.pt.id;
+        // % por predio — stored in S.luzNoriaPredios[noriaId][pi]
+        const prediosPct = S.predios.map((p,pi)=>{
+          const key = `${noriaId}_${pi}`;
+          const pct = (S.luzNoriaPredios[key] !== undefined) ? S.luzNoriaPredios[key] : (entries.find(e=>e.pi===pi) ? Math.round(100/entries.length) : 0);
+          return `<td style="padding:4px 6px;text-align:center">
+            <input type="number" min="0" max="100" step="1" value="${pct}"
+              style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px"
+              onchange="if(!S.luzNoriaPredios)S.luzNoriaPredios={};S.luzNoriaPredios['${noriaId}_${pi}']=parseFloat(this.value)||0;save()"/>
           </td>`;
         }).join('');
-        return `<tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:7px 12px;font-weight:600">${mesLabel}</td>
-          ${celdas}
-        </tr>`;
-      }).join('');
 
-      // % por predio de cada noria (config)
-      const noriasPredioConfig = uniqueNorias.map(([nombre, entries])=>{
-        const noriaId = entries[0].pt.id;
-        const pcts = S.predios.map((p,pi)=>{
-          const key = `${noriaId}_${pi}`;
-          const pct = S.luzNoriaPredios[key] !== undefined ? S.luzNoriaPredios[key] : (entries.find(e=>e.pi===pi)?Math.round(100/entries.length):0);
-          return `<span style="font-size:11px;margin-right:8px">${p.emoji} <input type="number" min="0" max="100" step="1" value="${pct}"
-            style="width:45px;padding:2px 4px;border:1px solid var(--border);font-size:11px;text-align:center"
-            onchange="if(!S.luzNoriaPredios)S.luzNoriaPredios={};S.luzNoriaPredios['${noriaId}_${pi}']=parseFloat(this.value)||0;save()"/> %</span>`;
-        }).join('');
-        return `<div style="margin-bottom:6px"><span style="font-size:11px;font-weight:600;margin-right:8px">💡 ${nombre}:</span>${pcts}
-          ${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delNoriaByNombre('${nombre}')">✕</button>`:''}
-        </div>`;
+        const val = gastosGridDraft[`luz_${noriaId}`] || '';
+        const histN = (S.gastosGenerales||[]).filter(g=>g.categoria==='Luz'&&g.equipo===nombre&&getGastoCosecha(g)===selectedCn);
+        const acumTotal = histN.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        const mesDetalle = {};
+        histN.forEach(g=>{ const m=g.mes||'?'; mesDetalle[m]=(mesDetalle[m]||0)+parseFloat(g.monto||0); });
+        const acumStr = Object.entries(mesDetalle).map(([m,v])=>`${MESES[(parseInt(m)||1)-1]?.slice(0,3)||m}: ${fmt(v)}`).join(' · ');
+
+        return `<tr>
+          <td style="padding:7px 12px;font-weight:600;white-space:nowrap">💡 ${nombre}</td>
+          ${prediosPct}
+          <td style="padding:4px 8px;text-align:right">
+            <input type="number" min="0" step="1" placeholder="—" value="${val}"
+              style="width:120px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:14px"
+              onchange="gastosGridDraft['luz_${noriaId}']=this.value"/>
+          </td>
+          <td style="padding:7px 12px;text-align:right">
+            <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumTotal?fmt(acumTotal):'—'}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">${acumStr}</div>
+          </td>
+          ${isAdmin?`<td style="padding:4px"><button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delNoriaByNombre('${nombre}')">✕</button></td>`:'<td></td>'}
+        </tr>`;
       }).join('');
 
       tabContent = `
         ${configLuz}
-        <div style="padding:8px 12px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px">
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">% por predio por noria</div>
-          ${noriasPredioConfig}
-        </div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Ingresa el monto por mes. Los % C1/C2/C3 indican cómo distribuir meses que caen entre cosechas.</div>
+        ${mesSelector}
         <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead><tr style="background:var(--earth);color:#ffffff">
-            <th style="padding:7px 12px;text-align:left">Mes</th>
-            ${noriaHeaders}
+            <th style="padding:7px 12px;text-align:left">Equipo</th>
+            ${predioHeaders}
+            <th style="padding:7px 12px;text-align:right">Luz $</th>
+            <th style="padding:7px 12px;text-align:right">Acum. C${selectedCn}</th>
+            <th></th>
           </tr></thead>
           <tbody>${luzRows}</tbody>
         </table></div>
         ${ (()=>{
           const histLuz = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.categoria==='Luz');
           if(!histLuz.length) return '';
-          return gridHistorial('Historial Luz C'+selectedCn+' — Mes x Noria', histLuz,
+          return gridHistorial(
+            'Historial Luz C'+selectedCn+' — Mes x Noria',
+            histLuz,
             g => MESES[(parseInt(g.mes||1))-1],
             g => { const obj={}; obj[g.equipo||'Sin noria']=parseFloat(g.monto||0); return obj; },
-            uniqueNorias.map(([nombre])=>({key:nombre, label:nombre})));
-        })() }`;
+            uniqueNorias.map(([nombre])=>({key:nombre, label:nombre}))
+          );
+        })() }
+        `;
     }
 
   } else if(gastosTab === 'ensilada') {
@@ -3334,63 +2906,63 @@ function renderGastos() {
       `;
 
   } else if(gastosTab === 'nomina') {
-    const mesesCn = getMesesCn(selectedCn);
-    const predioHeaders = S.predios.map(p=>`<th style="padding:7px 12px;text-align:center">${p.emoji} ${p.nombre}<br><span style="font-size:9px;font-weight:400">$ / %C1 / %C2 / %C3</span></th>`).join('');
+    // Formato tipo Excel: Mes | $ | C1% | C2% | C3%
+    const predioOptsNom = S.predios.map((p,i)=>`<option value="${i}" ${(gastosGridDraft['nom_pi']||'0')==String(i)?'selected':''}>${p.emoji} ${p.nombre}</option>`).join('');
+    const mesActualNom = parseInt(gastosGridDraft['mes']||new Date().getMonth()+1);
+    const montoNom = gastosGridDraft['nom_monto'] || '';
+    const c1pct = gastosGridDraft['nom_c1pct'] !== undefined ? gastosGridDraft['nom_c1pct'] : '';
+    const c2pct = gastosGridDraft['nom_c2pct'] !== undefined ? gastosGridDraft['nom_c2pct'] : '';
+    const c3pct = gastosGridDraft['nom_c3pct'] !== undefined ? gastosGridDraft['nom_c3pct'] : '';
 
-    const nomRows = mesesCn.map(mes=>{
-      const mesLabel = MESES[mes-1];
-      const celdas = S.predios.map((p,pi)=>{
-        const val = gastosGridDraft[`nom_${pi}_${mes}`] || '';
-        const c1pct = gastosGridDraft[`nom_c1pct_${pi}_${mes}`] ?? 100;
-        const c2pct = gastosGridDraft[`nom_c2pct_${pi}_${mes}`] ?? 0;
-        const c3pct = gastosGridDraft[`nom_c3pct_${pi}_${mes}`] ?? 0;
-        const hist = (S.gastosGenerales||[]).filter(g=>g.categoria==='Nómina y gastos admin'&&g.actividad!=='Ensilada'&&(g.mes===mes||g.mes===String(mes))&&(g.prediosIdx||[]).includes(pi));
-        const acum = hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-        return `<td style="padding:4px 8px;text-align:center">
-          <input type="number" min="0" step="1" placeholder="—" value="${val}"
-            style="width:110px;padding:4px 6px;text-align:right;border:1px solid var(--border);font-size:13px;display:block;margin:0 auto 4px"
-            onchange="gastosGridDraft['nom_${pi}_${mes}']=this.value"/>
-          <div style="display:flex;gap:3px;justify-content:center">
-            <input type="number" min="0" max="100" step="1" value="${c1pct}" title="% C1"
-              style="width:34px;padding:2px;text-align:center;border:1px solid var(--border);font-size:10px"
-              onchange="gastosGridDraft['nom_c1pct_${pi}_${mes}']=this.value"/>
-            <input type="number" min="0" max="100" step="1" value="${c2pct}" title="% C2"
-              style="width:34px;padding:2px;text-align:center;border:1px solid var(--border);font-size:10px"
-              onchange="gastosGridDraft['nom_c2pct_${pi}_${mes}']=this.value"/>
-            <input type="number" min="0" max="100" step="1" value="${c3pct}" title="% C3"
-              style="width:34px;padding:2px;text-align:center;border:1px solid var(--border);font-size:10px"
-              onchange="gastosGridDraft['nom_c3pct_${pi}_${mes}']=this.value"/>
-          </div>
-          <div style="font-size:10px;color:var(--amber);margin-top:2px">${acum?fmt(acum):''}</div>
-        </td>`;
-      }).join('');
-      return `<tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:7px 12px;font-weight:600">${mesLabel}</td>
-        ${celdas}
-      </tr>`;
-    }).join('');
-
+    // Historial por cosecha
     const histNomAll = (S.gastosGenerales||[]).filter(g=>g.categoria==='Nómina y gastos admin'&&g.actividad!=='Ensilada');
+    const nomPorCosecha = {1:0,2:0,3:0};
+    histNomAll.forEach(g=>{ nomPorCosecha[getGastoCosecha(g)] += parseFloat(g.monto||0); });
+
+    // Tabla de registros históricos
+    const histNomRows = histNomAll.map(g=>`<tr style="font-size:12px">
+      <td style="padding:5px 10px">${g.mes ? MESES[(parseInt(g.mes)||1)-1] : '—'}</td>
+      <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
+      <td style="padding:5px 10px;text-align:center"><span style="background:#e8f5e8;color:#1a3d22;padding:2px 6px;font-size:10px">C${getGastoCosecha(g)}</span></td>
+      <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
+      <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${S.gastosGenerales.indexOf(g)})">✕</button>`:''}</td>
+    </tr>`).join('');
 
     tabContent = `
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">% C1/C2/C3 — si un mes cae entre cosechas define cuánto % va a cada una. Deben sumar 100.</div>
-      <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <div style="overflow-x:auto;margin-bottom:8px">
+      <table style="border-collapse:collapse;font-size:13px;min-width:600px">
         <thead><tr style="background:var(--earth);color:#ffffff">
+          <th style="padding:7px 12px;text-align:left">Predio</th>
           <th style="padding:7px 12px;text-align:left">Mes</th>
-          ${predioHeaders}
+          <th style="padding:7px 12px;text-align:right">Cantidad $</th>
+          <th style="padding:7px 10px;text-align:center">C1 %</th>
+          <th style="padding:7px 10px;text-align:center">C2 %</th>
+          <th style="padding:7px 10px;text-align:center">C3 %</th>
         </tr></thead>
-        <tbody>${nomRows}</tbody>
+        <tbody><tr>
+          <td style="padding:4px 8px"><select style="padding:5px;font-size:13px" onchange="gastosGridDraft['nom_pi']=this.value">${predioOptsNom}</select></td>
+          <td style="padding:4px 8px"><select style="padding:5px" onchange="gastosGridDraft['mes']=this.value">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActualNom===i+1?'selected':''}>${m}</option>`).join('')}</select></td>
+          <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${montoNom}" style="width:140px;padding:5px 8px;text-align:right;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['nom_monto']=this.value"/></td>
+          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c1pct}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['nom_c1pct']=this.value"/></td>
+          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c2pct}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['nom_c2pct']=this.value"/></td>
+          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c3pct}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['nom_c3pct']=this.value"/></td>
+        </tr></tbody>
       </table></div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Los % deben sumar 100. Si un mes aplica 100% a C1, pon 100 en C1 y deja C2/C3 en 0.</div>
+
       ${ (()=>{
         if(!histNomAll.length) return '';
-        return gridHistorial('Historial Nómina — Mes × Predio', histNomAll,
+        const mesesAll = [1,2,3,4,5,6,7,8,9,10,11,12];
+        return gridHistorial(
+          'Historial Nómina — Mes × Predio',
+          histNomAll,
           g => MESES[(parseInt(g.mes||1))-1],
           g => { const obj={}; (g.prediosIdx||[]).forEach(pi=>{ obj[S.predios[pi]?.nombre||'Predio']=(parseFloat(g.monto||0)/(g.prediosIdx.length||1)); }); return obj; },
-          S.predios.map(p=>({key:p.nombre, label:p.emoji+' '+p.nombre})));
+          S.predios.map(p=>({key:p.nombre, label:p.emoji+' '+p.nombre}))
+        );
       })() }`;
 
-  } else if(gastosTab === 'reparaciones') {  } else if(gastosTab === 'reparaciones') {
+  } else if(gastosTab === 'reparaciones') {
     // ── Sección 1: Norias (igual que Luz, con % por predio) ──
     if(!S.luzPct) S.luzPct = {};
     // Group norias by nombre (same as Luz tab)
@@ -3761,25 +3333,6 @@ function renderEquiposList() {
   </table>`;
 }
 
-function addTractorGlobal() {
-  const nombre = document.getElementById('eq-nombre')?.value.trim();
-  const tipo = document.getElementById('eq-tipo')?.value;
-  if(!nombre) { toast('⚠️ Ingresa el nombre',true); return; }
-  if(!S.tractores) S.tractores = [];
-  if(S.tractores.find(t=>t.nombre===nombre)) { toast('⚠️ Ya existe',true); return; }
-  const predios = [];
-  document.querySelectorAll('.eq-predio-check:checked').forEach(cb=>predios.push(parseInt(cb.value)));
-  S.tractores.push({id:uid(), nombre, tipo, predios});
-  if(document.getElementById('eq-nombre')) document.getElementById('eq-nombre').value='';
-  save(); renderGastos(); toast('✓ Equipo agregado');
-}
-
-function delTractorGlobal(eqId) {
-  if(!confirm('¿Eliminar este equipo? Los gastos registrados se conservan.')) return;
-  S.tractores = (S.tractores||[]).filter(t=>t.id!==eqId);
-  save(); renderGastos(); toast('✓ Eliminado');
-}
-
 function addEquipo() {
   const nombre = document.getElementById('eq-nombre')?.value.trim();
   const tipo = document.getElementById('eq-tipo')?.value;
@@ -4015,24 +3568,27 @@ function capturarGastos() {
 
   if(gastosTab === 'tractores') {
     const precioDieselCn = (S.precioDiesel && S.precioDiesel[cn]) || 0;
-    (S.tractores||[]).forEach(eq=>{
-      const litros = parseFloat(gastosGridDraft[`d_${eq.id}`]);
-      const serv   = parseFloat(gastosGridDraft[`s_${eq.id}`]);
-      const rep    = parseFloat(gastosGridDraft[`r_${eq.id}`]);
-      const piDiesel = parseInt(gastosGridDraft[`d_pi_${eq.id}`] ?? eq.predios?.[0] ?? 0);
-      const piSR     = parseInt(gastosGridDraft[`sr_pi_${eq.id}`] ?? eq.predios?.[0] ?? 0);
-      if(litros>0) {
-        const montoDiesel = precioDieselCn ? litros * precioDieselCn : litros;
-        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel',equipo:eq.nombre,litros,precioPorLitro:precioDieselCn,monto:montoDiesel,prediosIdx:[piDiesel],fecha:today()});
-        total++;
-      }
-      if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx:[piSR],fecha:today()}); total++; }
-      if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx:[piSR],fecha:today()}); total++; }
+    S.predios.forEach((p,pi)=>{
+      if(!prediosIdx.includes(pi)) return;
+      (S.equipos[pi]||[]).filter(e=>e.tipo==='tractor'||e.tipo==='implemento'||e.tipo==='noria').forEach(eq=>{
+        const litros = parseFloat(gastosGridDraft[`d_${pi}_${eq.id}`]);
+        const serv   = parseFloat(gastosGridDraft[`s_${pi}_${eq.id}`]);
+        const rep    = parseFloat(gastosGridDraft[`r_${pi}_${eq.id}`]);
+        if(litros>0) {
+          const montoDiesel = precioDieselCn ? litros * precioDieselCn : litros;
+          S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel',equipo:eq.nombre,litros,precioPorLitro:precioDieselCn,monto:montoDiesel,prediosIdx:[pi],fecha:today()});
+          total++;
+        }
+        if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx:[pi],fecha:today()}); total++; }
+        if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx:[pi],fecha:today()}); total++; }
+      });
     });
 
   } else if(gastosTab === 'luz') {
+    const mes = parseInt(gastosGridDraft['mes'] || new Date().getMonth()+1);
+    const cnB = gastosGridDraft['cn_split_b'] ? parseInt(gastosGridDraft['cn_split_b']) : null;
     if(!S.luzNoriaPredios) S.luzNoriaPredios = {};
-    const mesesCnCap = getMesesCn(cn);
+    // Collect unique norias
     const noriaMapCap = {};
     S.predios.forEach((p,pi)=>{
       (S.equipos[pi]||[]).filter(e=>e.tipo==='luz').forEach(pt=>{
@@ -4040,26 +3596,23 @@ function capturarGastos() {
         noriaMapCap[pt.nombre].entries.push({pi,pt});
       });
     });
-    mesesCnCap.forEach(mes=>{
-      Object.entries(noriaMapCap).forEach(([nombre, {id:noriaId, entries}])=>{
-        const monto = parseFloat(gastosGridDraft[`luz_${noriaId}_${mes}`]);
-        if(!monto||monto<=0) return;
-        const c1pct = parseFloat(gastosGridDraft[`luz_c1pct_${noriaId}_${mes}`]??100)/100;
-        const c2pct = parseFloat(gastosGridDraft[`luz_c2pct_${noriaId}_${mes}`]??0)/100;
-        const c3pct = parseFloat(gastosGridDraft[`luz_c3pct_${noriaId}_${mes}`]??0)/100;
-        const pctByCn = {1:c1pct, 2:c2pct, 3:c3pct};
-        // Distribute by predio %
-        S.predios.forEach((p,pi)=>{
-          const pctKey = `${noriaId}_${pi}`;
-          const predPct = (S.luzNoriaPredios[pctKey]!==undefined ? parseFloat(S.luzNoriaPredios[pctKey]) : (entries.find(e=>e.pi===pi)?Math.round(100/entries.length):0))/100;
-          if(!predPct) return;
-          [1,2,3].forEach(cnX=>{
-            const fracCn = pctByCn[cnX]||0;
-            if(!fracCn) return;
-            S.gastosGenerales.push({id:uid(),cosecha:cnX,anio,categoria:'Luz',equipo:nombre,mes,monto:monto*predPct*fracCn,prediosIdx:[pi],fecha:today()});
-            total++;
-          });
-        });
+    Object.entries(noriaMapCap).forEach(([nombre, {id:noriaId, entries}])=>{
+      const monto = parseFloat(gastosGridDraft[`luz_${noriaId}`]);
+      if(!monto||monto<=0) return;
+      // Distribute by predio % 
+      S.predios.forEach((p,pi)=>{
+        const pctKey = `${noriaId}_${pi}`;
+        const pct = (S.luzNoriaPredios[pctKey] !== undefined ? parseFloat(S.luzNoriaPredios[pctKey]) : (entries.find(e=>e.pi===pi) ? Math.round(100/entries.length) : 0)) / 100;
+        if(!pct) return;
+        const montoPreio = monto * pct;
+        if(cnB) {
+          const pctCnA = 1; // full amount to cn, split is cosecha-based
+          S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Luz',equipo:nombre,mes,monto:montoPreio,prediosIdx:[pi],fecha:today()});
+          total++;
+        } else {
+          S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Luz',equipo:nombre,mes,monto:montoPreio,prediosIdx:[pi],fecha:today()});
+          total++;
+        }
       });
     });
 
@@ -4215,20 +3768,20 @@ function capturarGastos() {
     }
 
   } else if(gastosTab === 'nomina') {
-    const mesesCnCap = getMesesCn(cn);
-    mesesCnCap.forEach(mes=>{
-      S.predios.forEach((p,pi)=>{
-        const monto = parseFloat(gastosGridDraft[`nom_${pi}_${mes}`]);
-        if(!monto||monto<=0) return;
-        const c1pct = (parseFloat(gastosGridDraft[`nom_c1pct_${pi}_${mes}`]??100))/100;
-        const c2pct = (parseFloat(gastosGridDraft[`nom_c2pct_${pi}_${mes}`]??0))/100;
-        const c3pct = (parseFloat(gastosGridDraft[`nom_c3pct_${pi}_${mes}`]??0))/100;
-        if(c1pct>0) { S.gastosGenerales.push({id:uid(),cosecha:1,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto:monto*c1pct,prediosIdx:[pi],fecha:today()}); total++; }
-        if(c2pct>0) { S.gastosGenerales.push({id:uid(),cosecha:2,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto:monto*c2pct,prediosIdx:[pi],fecha:today()}); total++; }
-        if(c3pct>0) { S.gastosGenerales.push({id:uid(),cosecha:3,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto:monto*c3pct,prediosIdx:[pi],fecha:today()}); total++; }
-        if(!c1pct&&!c2pct&&!c3pct) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto,prediosIdx:[pi],fecha:today()}); total++; }
-      });
-    });
+    const mes = parseInt(gastosGridDraft['mes'] || new Date().getMonth()+1);
+    const nomPi = parseInt(gastosGridDraft['nom_pi'] || 0);
+    const monto = parseFloat(gastosGridDraft['nom_monto']);
+    if(monto>0) {
+      const c1pct = (parseFloat(gastosGridDraft['nom_c1pct'])||0)/100;
+      const c2pct = (parseFloat(gastosGridDraft['nom_c2pct'])||0)/100;
+      const c3pct = (parseFloat(gastosGridDraft['nom_c3pct'])||0)/100;
+      if(c1pct>0) { S.gastosGenerales.push({id:uid(),cosecha:1,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto:monto*c1pct,prediosIdx:[nomPi],fecha:today()}); total++; }
+      if(c2pct>0) { S.gastosGenerales.push({id:uid(),cosecha:2,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto:monto*c2pct,prediosIdx:[nomPi],fecha:today()}); total++; }
+      if(c3pct>0) { S.gastosGenerales.push({id:uid(),cosecha:3,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto:monto*c3pct,prediosIdx:[nomPi],fecha:today()}); total++; }
+      if(!c1pct&&!c2pct&&!c3pct) { // fallback: assign to selected cosecha
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina y gastos admin',actividad:'Labor',mes,monto,prediosIdx:[nomPi],fecha:today()}); total++;
+      }
+    }
 
   } else if(gastosTab === 'reparaciones') {
     // Norias reparaciones — agrupadas por nombre, predios via checkboxes
