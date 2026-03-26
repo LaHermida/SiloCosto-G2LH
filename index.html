@@ -613,7 +613,7 @@ function getCurrentPrice(artId) {
 
 // ── DEPRECIATION CALC ──
 // For a given predio + cosecha + tabla, sum up applicable depreciations
-function calcDepTabla(pi, cn, ti) {
+function calcDepTabla(pi, cn, ti, anio) {
   const predio = S.predios[pi];
   const td = getTablaData(pi,cn,ti);
   // Si la tabla está marcada sin siembra, no asume ningún costo
@@ -642,7 +642,7 @@ function calcDepTabla(pi, cn, ti) {
     // Simple check: if anioInicio is set and current cosecha year < anioInicio, skip
     // We use meta year for each cosecha
     const metaCn = getCosechaMeta(pi, cn);
-    const metaYear = (typeof curAnioRep !== 'undefined' ? curAnioRep : null) || (typeof curAnioReg !== 'undefined' ? curAnioReg : null) || new Date().getFullYear();
+    const metaYear = anio || curAnioRep || curAnioReg || new Date().getFullYear();
     if(dep.anioInicio && metaYear < dep.anioInicio) continue;
     if(dep.anioInicio && metaYear === dep.anioInicio && cn < cosechaInicio) continue;
     if(dep.anioFin && metaYear > dep.anioFin) continue;
@@ -712,14 +712,14 @@ function calcConsumosTabla(pi, cn, ti) {
 }
 
 function calcTotalTabla(pi, cn, ti) {
-  return calcDepTabla(pi,cn,ti) + calcConsumosTabla(pi,cn,ti) + calcGastosGeneralesTabla(pi,cn,ti);
+  return calcDepTabla(pi,cn,ti,curAnioRep) + calcConsumosTabla(pi,cn,ti) + calcGastosGeneralesTabla(pi,cn,ti);
 }
 
 function calcCPK(pi, cn, ti) {
   const td = getTablaData(pi,cn,ti);
   const kilos = parseFloat(td.kilos)||0;
   if(!kilos) return null;
-  return calcTotalTabla(pi,cn,ti)/kilos;
+  return calcTotalTabla(pi,cn,ti,curAnioRep)/kilos;
 }
 
 function calcCPKMS(pi, cn, ti) {
@@ -728,7 +728,7 @@ function calcCPKMS(pi, cn, ti) {
   const pct = parseFloat(td.pctMS)||0;
   if(!kilos||!pct) return null;
   const kgMS = kilos*(pct/100);
-  return calcTotalTabla(pi,cn,ti)/kgMS;
+  return calcTotalTabla(pi,cn,ti,curAnioRep)/kgMS;
 }
 
 function calcDepAnualTotal(pi) {
@@ -784,7 +784,7 @@ function renderDash() {
         if(td.sinSiembra) continue;
         const cv = td.cultivo||'maiz';
         if(!cultivoMap[cv]) cultivoMap[cv] = {cost:0,kilos:0,kgMS:0};
-        cultivoMap[cv].cost += calcTotalTabla(pi,cn,ti);
+        cultivoMap[cv].cost += calcTotalTabla(pi,cn,ti,curAnioRep);
         const kilos = parseFloat(td.kilos)||0;
         cultivoMap[cv].kilos += kilos;
         cultivoMap[cv].kgMS += kilos*((parseFloat(td.pctMS)||0)/100);
@@ -833,7 +833,7 @@ function renderDash() {
         const haTabla = parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
         const kilos = parseFloat(td.kilos)||0;
         const kgMS = kilos*((parseFloat(td.pctMS)||0)/100);
-        const total = calcTotalTabla(pi,cn,ti);
+        const total = calcTotalTabla(pi,cn,ti,curAnioRep);
         if(haTabla>0||total>0) {
           cvGroups[cv].tablas.push(p.tablas[ti].nombre);
           cvGroups[cv].ha += haTabla;
@@ -1172,7 +1172,7 @@ function renderRegContent() {
   const pi = curPredioReg, cn = curCosechaReg, ti = curTablaReg;
   const p = S.predios[pi];
   const td = getTablaData(pi,cn,ti);
-  const dep = calcDepTabla(pi,cn,ti);
+  const dep = calcDepTabla(pi,cn,ti,curAnioRep);
   const vars = calcConsumosTabla(pi,cn,ti);
   const total = dep+vars;
   const kilos = parseFloat(td.kilos)||0;
@@ -1520,7 +1520,7 @@ function renderRepContent() {
         if(td.sinSiembra) continue;
         const cv=td.cultivo||'maiz';
         if(filterCv && cv!==filterCv) continue;
-        dep+=calcDepTabla(pi,cn,ti);
+        dep+=calcDepTabla(pi,cn,ti,curAnioRep);
         kilos+=parseFloat(td.kilos)||0;
         kgMS+=(parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100);
         ha+=parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
@@ -1706,7 +1706,7 @@ function renderRepContent() {
 
     const ti = curTablaRep>=0?curTablaRep:0;
     const td = getTablaData(pi,cn,ti);
-    const dep = calcDepTabla(pi,cn,ti);
+    const dep = calcDepTabla(pi,cn,ti,curAnioRep);
     const vars = calcConsumosTabla(pi,cn,ti);
     const total = dep+vars;
     const kilos = parseFloat(td.kilos)||0;
@@ -1831,7 +1831,7 @@ function printReportePredio(pi, cn) {
   // Sum consumos por tabla
   for(let ti=0;ti<p.tablas.length;ti++) {
     const td=getTablaData(pi,cn,ti);
-    totalDep+=calcDepTabla(pi,cn,ti);
+    totalDep+=calcDepTabla(pi,cn,ti,curAnioRep);
     totKilos+=parseFloat(td.kilos)||0;
     totKgMS+=((parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100));
     (td.consumos||[]).forEach(c=>{
@@ -1878,7 +1878,7 @@ function printReporteTabla(pi, cn, ti) {
   const p=S.predios[pi];
   const t=p.tablas[ti];
   const td=getTablaData(pi,cn,ti);
-  const dep=calcDepTabla(pi,cn,ti);
+  const dep=calcDepTabla(pi,cn,ti,curAnioRep);
   const vars=calcConsumosTabla(pi,cn,ti);
   const total=dep+vars;
   const kilos=parseFloat(td.kilos)||0;
