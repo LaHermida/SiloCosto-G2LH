@@ -1010,9 +1010,7 @@ function delArticulo(id) {
 // DEPRECIACIONES
 // ══════════════════════════════════════════════
 function renderDep() {
-  document.getElementById('dep-ptabs').innerHTML = S.predios.map((p,i)=>
-    `<button class="ptab ${i===curPredioDep?'active':''}" onclick="curPredioDep=${i};renderDep()">${p.emoji} ${p.nombre}</button>`
-  ).join('');
+  document.getElementById('dep-ptabs').innerHTML = '';
   renderDepContent();
 }
 
@@ -1082,12 +1080,31 @@ function renderDepContent() {
           <thead><tr><th>Activo</th><th>Predio</th><th>Tipo</th><th>Alcance</th><th>Tablas</th><th>Valor</th><th>Vida útil</th><th>Período</th><th>Cultivos</th><th>Costo anual</th><th></th></tr></thead>
           <tbody>${depRows}</tbody>
         </table></div>
-        <div class="result">
-          <div><div class="res-lbl">Total anual todos los predios</div><div class="res-val">${fmt(totalGlobal)}</div></div>
-          <div><div class="res-lbl">Distribución</div><div class="res-sub" style="font-size:13px;color:var(--straw)">
-            ${p.ciclos===1?'100% en ciclo único':'🌾 Triticale 20% · 🌽 Maíz 40% · 🌿 Sorgo 40%'}<br>
-            Prorrateado por hectárea entre tablas
-          </div></div>
+        <div style="overflow-x:auto;margin-top:12px">
+          <table style="border-collapse:collapse;font-size:13px;width:100%">
+            <thead><tr style="background:var(--soil);color:#fff">
+              <th style="padding:7px 14px;text-align:left">Predio</th>
+              <th style="padding:7px 14px;text-align:right">Total anual</th>
+              <th style="padding:7px 14px;text-align:right">$/Ha</th>
+            </tr></thead>
+            <tbody>
+            ${S.predios.map((pr,pIdx)=>{
+              const tot = (S.depreciaciones[pIdx]||[]).reduce((s,d)=>s+(parseFloat(d.costoAnual)||0),0);
+              const ha = pr.tablas.reduce((s,t)=>s+t.ha,0);
+              const predioColor = pIdx===0?'#1a3d22':pIdx===1?'#2a7a3c':'#8b4513';
+              return `<tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:7px 14px;font-weight:600;color:${predioColor}">${pr.emoji} ${pr.nombre}</td>
+                <td style="padding:7px 14px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${fmt(tot)}</td>
+                <td style="padding:7px 14px;text-align:right;font-family:'DM Mono',monospace;color:var(--muted)">${ha?fmt(tot/ha):'-'}/ha</td>
+              </tr>`;
+            }).join('')}
+            <tr style="background:var(--cream);font-weight:700">
+              <td style="padding:7px 14px">TOTAL</td>
+              <td style="padding:7px 14px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${fmt(totalGlobal)}</td>
+              <td></td>
+            </tr>
+            </tbody>
+          </table>
         </div>
       ` : `<div class="empty"><div class="empty-icon">⚙️</div><div>Sin activos. Agrega maquinaria, norias, terraplenes...</div></div>`}
     </div>
