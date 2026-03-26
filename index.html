@@ -279,7 +279,15 @@ tr:hover td { background:var(--cream); }
           <label>Cultivo</label>
           <select id="art-cultivo">
             <option value="todos">Todos</option>
-            ${Object.entries(CULTIVOS).map(([k,v])=>`<option value="${k}">${v.icon} ${v.label}</option>`).join('')}
+            <option value="maiz">🌽 Maíz</option>
+            <option value="sorgo">🌿 Sorgo</option>
+            <option value="trigo">🌾 Triticale</option>
+            <option value="triticale_heno">🌾 Triticale Heno</option>
+            <option value="alfalfa">🟢 Alfalfa</option>
+            <option value="alfalfa_heno">🟡 Alfalfa Heno</option>
+            <option value="nuez">🥜 Nuez</option>
+            <option value="higo">🍃 Higo</option>
+            <option value="otro">🌱 Otro</option>
           </select>
         </div>
         <div class="field">
