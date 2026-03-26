@@ -1019,8 +1019,6 @@ function renderDep() {
 function renderDepContent() {
   const pi = curPredioDep;
   const p = S.predios[pi];
-  const deps = S.depreciaciones[pi];
-  const totalAnual = calcDepAnualTotal(pi);
 
   const tablaCheckboxes = p.tablas.map((t,i)=>
     `<label class="check-row">
@@ -1028,10 +1026,21 @@ function renderDepContent() {
     </label>`
   ).join('');
 
+  // Collect ALL activos from ALL predios, sorted by anioInicio
+  const todosActivos = [];
+  S.predios.forEach((pr,pIdx)=>{
+    (S.depreciaciones[pIdx]||[]).forEach((d,i)=>{
+      todosActivos.push({d, i, pIdx, pr});
+    });
+  });
+  todosActivos.sort((a,b)=>(a.d.anioInicio||0)-(b.d.anioInicio||0));
+
+  const totalGlobal = todosActivos.reduce((s,{d})=>s+(parseFloat(d.costoAnual)||0),0);
   const curYear = new Date().getFullYear();
-  const depRows = deps.map((d,i)=>{
+
+  const depRows = todosActivos.map(({d,i,pIdx,pr})=>{
     const tablas = d.alcance==='tablas'
-      ? (d.tablasIdx||[]).map(ti=>p.tablas[ti]?.nombre).filter(Boolean).join(', ')
+      ? (d.tablasIdx||[]).map(ti=>pr.tablas[ti]?.nombre).filter(Boolean).join(', ')
       : 'Todo el predio';
     const aFin = d.anioFin || (d.anioInicio ? d.anioInicio + Math.floor(d.vidaUtil) : null);
     const vigente = aFin ? curYear <= aFin : true;
@@ -1040,8 +1049,10 @@ function renderDepContent() {
     const anioMark = d.anioInicio ? (vigente ? ' ✓' : ' vencida') : '';
     const cultivosLabel = d.aplicaCultivos==='principales'?'🌽🌿 Principales':d.aplicaCultivos==='triticale'?'🌾 Triticale':'Todos';
     const cosIniLabel = d.cosechaInicio && d.cosechaInicio>1 ? ` · desde C${d.cosechaInicio}` : '';
+    const predioColor = pIdx===0?'#1a3d22':pIdx===1?'#2a7a3c':'#8b4513';
     return `<tr>
       <td><strong>${d.nombre}</strong></td>
+      <td style="font-size:11px;color:${predioColor}">${pr.emoji} ${pr.nombre}</td>
       <td>${d.tipo_activo}</td>
       <td><span class="dep-badge ${d.alcance==='general'?'dep-general':'dep-tabla'}">${d.alcance==='general'?'General':'Por tabla'}</span></td>
       <td style="font-size:12px;color:var(--muted)">${tablas}</td>
@@ -1051,8 +1062,8 @@ function renderDepContent() {
       <td style="font-size:11px;color:var(--muted)">${cultivosLabel}</td>
       <td class="mono tr amber">${fmt(d.costoAnual)}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-s" style="font-size:10px;padding:2px 7px;margin-right:3px" onclick="editarDep('${d.id}',${pi})">✏️</button>
-        <button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delDep(${i})">✕</button>
+        <button class="btn btn-s" style="font-size:10px;padding:2px 7px;margin-right:3px" onclick="editarDep('${d.id}',${pIdx})">✏️</button>
+        <button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delDepById('${d.id}',${pIdx})">✕</button>
       </td>
     </tr>`;
   }).join('');
@@ -1063,16 +1074,16 @@ function renderDepContent() {
       <div id="editar-dep-form"></div>
     </div>
     <div class="card">
-      <div class="card-head">⚙️ Activos de ${p.emoji} ${p.nombre}
-        <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Total anual: ${fmt(totalAnual)}</span>
+      <div class="card-head">⚙️ Todos los activos
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Total anual: ${fmt(totalGlobal)}</span>
       </div>
-      ${deps.length ? `
+      ${todosActivos.length ? `
         <div class="tbl-wrap"><table>
-          <thead><tr><th>Activo</th><th>Tipo</th><th>Alcance</th><th>Tablas</th><th>Valor</th><th>Vida útil</th><th>Período</th><th>Cultivos</th><th>Costo anual</th><th></th></tr></thead>
+          <thead><tr><th>Activo</th><th>Predio</th><th>Tipo</th><th>Alcance</th><th>Tablas</th><th>Valor</th><th>Vida útil</th><th>Período</th><th>Cultivos</th><th>Costo anual</th><th></th></tr></thead>
           <tbody>${depRows}</tbody>
         </table></div>
         <div class="result">
-          <div><div class="res-lbl">Total anual depreciaciones</div><div class="res-val">${fmt(totalAnual)}</div></div>
+          <div><div class="res-lbl">Total anual todos los predios</div><div class="res-val">${fmt(totalGlobal)}</div></div>
           <div><div class="res-lbl">Distribución</div><div class="res-sub" style="font-size:13px;color:var(--straw)">
             ${p.ciclos===1?'100% en ciclo único':'🌾 Triticale 20% · 🌽 Maíz 40% · 🌿 Sorgo 40%'}<br>
             Prorrateado por hectárea entre tablas
@@ -1109,6 +1120,7 @@ function renderDepContent() {
               todosActivos.push({dep,pIdx,pr});
             });
           });
+          todosActivos.sort((a,b)=>(a.dep.anioInicio||0)-(b.dep.anioInicio||0));
           return todosActivos.map(({dep,pIdx,pr})=>{
             const aFin = dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
             const vigente = (!dep.anioInicio||curAnioDep>=dep.anioInicio)&&(!aFin||curAnioDep<=aFin);
@@ -1444,6 +1456,11 @@ function addDep() {
 
 function delDep(i) {
   S.depreciaciones[curPredioDep].splice(i,1);
+  save(); renderDep(); toast('✓ Eliminado');
+}
+
+function delDepById(depId, pIdx) {
+  S.depreciaciones[pIdx] = (S.depreciaciones[pIdx]||[]).filter(d=>d.id!==depId);
   save(); renderDep(); toast('✓ Eliminado');
 }
 
