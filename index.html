@@ -1536,9 +1536,21 @@ function renderReg() {
   if(!cosechas.includes(curCosechaReg)) curCosechaReg=1;
   if(curTablaReg>=p.tablas.length) curTablaReg=0;
 
-  document.getElementById('reg-ctabs').innerHTML = cosechas.map(c=>
-    `<button class="ctab ${c===curCosechaReg?'active':''}" onclick="curCosechaReg=${c};renderReg()">Cosecha ${c}</button>`
+  const anioOptsReg = Array.from({length:13},(_,i)=>2020+i).map(y=>
+    `<option value="${y}" ${y===curAnioReg?'selected':''}>${y}</option>`
   ).join('');
+
+  document.getElementById('reg-ctabs').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:4px 0">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</span>
+        <select style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid var(--border)"
+          onchange="curAnioReg=parseInt(this.value);renderReg()">${anioOptsReg}</select>
+      </div>
+      <div style="display:flex;gap:0">
+        ${cosechas.map(c=>`<button class="ctab ${c===curCosechaReg?'active':''}" onclick="curCosechaReg=${c};renderReg()">C${c}</button>`).join('')}
+      </div>
+    </div>`;
 
   renderRegContent();
 }
@@ -1651,8 +1663,7 @@ function renderRegContent() {
         <span>🗺️ ${p.nombre} · Cosecha ${cn}</span>
         <div style="display:flex;align-items:center;gap:10px">
           <div style="display:flex;align-items:center;gap:6px">
-            <label style="font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0">Año:</label>
-            <input type="number" value="${meta.year}" min="2000" max="2100" style="width:80px;padding:4px 8px;font-size:13px" ${isClosed?'disabled':''} onchange="getCosechaMeta(${pi},${cn}).year=parseInt(this.value);save()"/>
+            <label style="font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0">Año: ${curAnioReg}</label>
           </div>
           ${!isClosed ? `<button class="btn" style="background:#1a3d22;color:#eef8f2;font-size:11px;padding:6px 14px" onclick="toggleCosechaClosed(${pi},${cn})">🔒 Cerrar cosecha</button>` : ''}
         </div>
