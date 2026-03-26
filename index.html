@@ -691,22 +691,10 @@ function calcDepTabla(pi, cn, ti, anioOverride) {
         const miHa = predio.tablas.reduce((s,t)=>s+t.ha,0);
         predioFraccion = totalHaPredios > 0 ? miHa/totalHaPredios : 1/prediosAsig.length;
       }
-      // Dividir entre cosechas de este predio
-      const cosechasEstePredio = (asigPredio.cosechas||[]).length;
-      // Total cosechas posibles (3 por defecto para predios con 3 ciclos)
-      const totalCosechasEstePredio = predio.ciclos || 3;
-      const fraccionCosecha = totalCosechasEstePredio > 0 ? predioFraccion / totalCosechasEstePredio : 0;
-
-      const tablaPct = totalHa > 0 ? tablaHa/totalHa : 0;
-      const aplicaCultivos = dep.aplicaCultivos || 'todos';
-      const esPrincipal = cultivo==='maiz'||cultivo==='sorgo';
-      const esTriticale = cultivo==='trigo'||cultivo==='triticale'||cultivo==='triticale_heno';
-      if(aplicaCultivos==='principales' && !esPrincipal) continue;
-      if(aplicaCultivos==='triticale' && !esTriticale) continue;
-
-      const miPeso = CULTIVOS[cultivo]?.pct||40;
+      // Dividir entre cosechas usando pesos 20-40-40
+      const miPeso = CULTIVOS[cultivo]?.pct || 40;
       let pesoTotalCosecha = 0;
-      for(let t=0;t<predio.tablas.length;t++) {
+      for(let t=0; t<predio.tablas.length; t++) {
         const tdx = getTablaData(pi,cn,t);
         if(tdx.sinSiembra) continue;
         const cv = tdx.cultivo||'maiz';
@@ -716,15 +704,33 @@ function calcDepTabla(pi, cn, ti, anioOverride) {
         if(aplicaCultivos==='triticale' && !esTriticaleC) continue;
         pesoTotalCosecha += CULTIVOS[cv]?.pct||40;
       }
-      const cultivoWeight = pesoTotalCosecha > 0 ? miPeso/pesoTotalCosecha : 0;
+      // Total peso de todas las cosechas asignadas a este predio
+      let pesoTotal3Cn = 0;
+      for(let c=1; c<=3; c++) {
+        if(!(asigPredio.cosechas||[]).includes(c)) continue;
+        for(let t=0; t<predio.tablas.length; t++) {
+          const tdx = getTablaData(pi,c,t);
+          if(tdx.sinSiembra) continue;
+          pesoTotal3Cn += CULTIVOS[tdx.cultivo||'maiz']?.pct||40;
+        }
+      }
+      const cultivoWeight = pesoTotalCosecha > 0 && pesoTotal3Cn > 0 ? miPeso * (pesoTotalCosecha/predio.tablas.filter((_,t)=>!getTablaData(pi,cn,t).sinSiembra).length) / pesoTotal3Cn : 0;
+      const fraccionCosecha = predioFraccion * (pesoTotalCosecha > 0 ? miPeso/pesoTotalCosecha : 0);
+
+      const tablaPct = totalHa > 0 ? tablaHa/totalHa : 0;
+      const aplicaCultivos = dep.aplicaCultivos || 'todos';
+      const esPrincipal = cultivo==='maiz'||cultivo==='sorgo';
+      const esTriticale = cultivo==='trigo'||cultivo==='triticale'||cultivo==='triticale_heno';
+      if(aplicaCultivos==='principales' && !esPrincipal) continue;
+      if(aplicaCultivos==='triticale' && !esTriticale) continue;
 
       if(dep.alcance==='general') {
-        total += costoAnual * fraccionCosecha * tablaPct * cultivoWeight;
+        total += costoAnual * fraccionCosecha * tablaPct;
       } else {
         if((dep.tablasIdx||[]).includes(ti)) {
           const selHaTotal = (dep.tablasIdx||[]).reduce((s,idx)=>s+(predio.tablas[idx]?.ha||0),0);
           const myHaPct = selHaTotal > 0 ? tablaHa/selHaTotal : 0;
-          total += costoAnual * fraccionCosecha * myHaPct * cultivoWeight;
+          total += costoAnual * fraccionCosecha * myHaPct;
         }
       }
       continue;
