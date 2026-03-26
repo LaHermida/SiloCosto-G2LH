@@ -654,27 +654,23 @@ function calcDepTabla(pi, cn, ti, anio) {
     if(aplicaCultivos === 'principales' && !esPrincipal) continue;
     if(aplicaCultivos === 'triticale' && !esTriticale) continue;
 
-    // Cosecha weight
+    // Cosecha weight — 20-40-40 basado en cultivos, independiente del año del selector
     let cosechaWeight = 1;
     if(ciclos === 1) {
       cosechaWeight = cn === 1 ? 1 : 0;
     } else {
-      // Solo sumar cosechas que aplican según aplicaCultivos
       let pesoTotal = 0;
       for(let c=1;c<=3;c++) {
-        // Skip cosechas before cosechaInicio in anioInicio year
-        const metaC = getCosechaMeta(pi,c);
-        const yearC = metaYear;
-        if(dep.anioInicio && yearC < dep.anioInicio) continue;
-        if(dep.anioInicio && yearC === dep.anioInicio && c < cosechaInicio) continue;
-        if(dep.anioFin && yearC > dep.anioFin) continue;
-
+        // Solo skip cosechas antes de cosechaInicio en el año de inicio del activo
+        if(dep.anioInicio && dep.anioInicio === metaYear && c < cosechaInicio) continue;
         let pesoCosecha = 0;
         let tablasCounted = 0;
         for(let t=0;t<predio.tablas.length;t++) {
-          const cv = getTablaData(pi,c,t).cultivo||'maiz';
+          const tdC = getTablaData(pi,c,t);
+          if(tdC.sinSiembra) continue;
+          const cv = tdC.cultivo||'maiz';
           const esPrincipalC = cv==='maiz'||cv==='sorgo';
-          const esTriticaleC = cv==='trigo';
+          const esTriticaleC = cv==='trigo'||cv==='triticale'||cv==='triticale_heno';
           if(aplicaCultivos==='principales' && !esPrincipalC) continue;
           if(aplicaCultivos==='triticale' && !esTriticaleC) continue;
           pesoCosecha += CULTIVOS[cv]?.pct||40;
@@ -682,7 +678,6 @@ function calcDepTabla(pi, cn, ti, anio) {
         }
         if(tablasCounted>0) pesoTotal += pesoCosecha / tablasCounted;
       }
-      // Peso de esta tabla en esta cosecha
       const miPeso = CULTIVOS[cultivo]?.pct||40;
       cosechaWeight = pesoTotal > 0 ? miPeso / pesoTotal : 0;
     }
