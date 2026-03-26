@@ -1015,11 +1015,18 @@ function renderDepContent() {
       <td class="mono" style="font-size:11px;color:${anioColor}">${anioStr}${anioMark}${cosIniLabel}</td>
       <td style="font-size:11px;color:var(--muted)">${cultivosLabel}</td>
       <td class="mono tr amber">${fmt(d.costoAnual)}</td>
-      <td><button class="btn btn-d" onclick="delDep(${i})">✕</button></td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-s" style="font-size:10px;padding:2px 7px;margin-right:3px" onclick="editarDep('${d.id}',${pi})">✏️</button>
+        <button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delDep(${i})">✕</button>
+      </td>
     </tr>`;
   }).join('');
 
   document.getElementById('dep-content').innerHTML = `
+    <div class="card" id="card-editar-dep" style="display:none">
+      <div class="card-head">✏️ Editar activo</div>
+      <div id="editar-dep-form"></div>
+    </div>
     <div class="card">
       <div class="card-head">⚙️ Activos de ${p.emoji} ${p.nombre}
         <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Total anual: ${fmt(totalAnual)}</span>
@@ -1129,8 +1136,29 @@ function renderDepContent() {
           <td colspan="3" style="padding:7px 12px">TOTAL C${curCnDep} ${curAnioDep}</td>
           ${S.predios.map(()=>`<td></td>`).join('')}
           ${S.predios.map((p2,pi)=>{
+            const cnPct = curCnDep===1?20:40;
             let tot = 0;
-            p2.tablas.forEach((_,ti2)=>{ tot += calcDepTabla(pi,curCnDep,ti2,curAnioDep); });
+            S.predios.forEach((pr,pIdx)=>{
+              (S.depreciaciones[pIdx]||[]).forEach(dep=>{
+                const aFin = dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
+                const vigente = (!dep.anioInicio||curAnioDep>=dep.anioInicio)&&(!aFin||curAnioDep<=aFin);
+                if(!vigente) return;
+                const costoAnual = parseFloat(dep.costoAnual)||0;
+                const asig = (dep.asignaciones||[]).find(a=>a.anio===curAnioDep);
+                const isAssigned = asig
+                  ? (asig.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(curCnDep))
+                  : pi===pIdx;
+                if(!isAssigned) return;
+                let predioFraccion = 1;
+                if(asig) {
+                  const prediosAsig = (asig.prediosCosechas||[]).map(pc=>pc.pi);
+                  const totalHaAsig = prediosAsig.reduce((s,pIdx2)=>s+S.predios[pIdx2].tablas.reduce((sh,t)=>sh+t.ha,0),0);
+                  const miHa = p2.tablas.reduce((s,t)=>s+t.ha,0);
+                  predioFraccion = totalHaAsig>0 ? miHa/totalHaAsig : 1/prediosAsig.length;
+                }
+                tot += costoAnual * (cnPct/100) * predioFraccion;
+              });
+            });
             const ha = p2.tablas.reduce((s,t)=>s+t.ha,0);
             return `<td style="padding:7px 10px;border-left:1px solid var(--border)">
               <div style="text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${tot?fmt(tot):'—'}</div>
@@ -1222,6 +1250,74 @@ function toggleAsigDep(depId, originPi, anio, cn, pi, checked) {
   }
   asig.prediosCosechas = asig.prediosCosechas.filter(pc=>(pc.cosechas||[]).length>0);
   save(); renderDepContent(); toast('✓ Guardado');
+}
+
+function editarDep(depId, pi) {
+  const dep = (S.depreciaciones[pi]||[]).find(d=>d.id===depId);
+  if(!dep) return;
+  const card = document.getElementById('card-editar-dep');
+  const form = document.getElementById('editar-dep-form');
+  if(!card||!form) return;
+  card.style.display = 'block';
+  card.scrollIntoView({behavior:'smooth', block:'nearest'});
+  const p = S.predios[pi];
+  const tablaChecks = p.tablas.map((t,ti)=>
+    `<label class="check-row"><input type="checkbox" class="edit-dep-tabla" value="${ti}" ${(dep.tablasIdx||[]).includes(ti)?'checked':''}/> ${t.nombre} (${t.ha} ha)</label>`
+  ).join('');
+  form.innerHTML = `
+    <div class="fg3">
+      <div class="field"><label>Nombre</label><input type="text" id="edit-dep-nom" value="${dep.nombre}"/></div>
+      <div class="field"><label>Tipo</label>
+        <select id="edit-dep-tipo">${['Maquinaria','Noria','Terraplén','Infraestructura','Vehículo','Otro'].map(t=>`<option ${dep.tipo_activo===t?'selected':''}>${t}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>Alcance</label>
+        <select id="edit-dep-alcance" onchange="document.getElementById('edit-dep-tablas').style.display=this.value==='tablas'?'block':'none'">
+          <option value="general" ${dep.alcance==='general'?'selected':''}>General</option>
+          <option value="tablas" ${dep.alcance==='tablas'?'selected':''}>Por tablas</option>
+        </select>
+      </div>
+      <div class="field"><label>Valor activo ($)</label><input type="number" id="edit-dep-val" value="${dep.valorActivo}"/></div>
+      <div class="field"><label>Vida útil (años)</label><input type="number" id="edit-dep-vida" value="${dep.vidaUtil}"/></div>
+      <div class="field"><label>Año inicio</label><input type="number" id="edit-dep-anio" value="${dep.anioInicio||''}"/></div>
+      <div class="field"><label>Cosecha inicio</label>
+        <select id="edit-dep-cn">${[1,2,3].map(c=>`<option value="${c}" ${dep.cosechaInicio===c?'selected':''}>C${c}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>Aplica a</label>
+        <select id="edit-dep-cultivos">
+          <option value="todos" ${dep.aplicaCultivos==='todos'?'selected':''}>Todos</option>
+          <option value="principales" ${dep.aplicaCultivos==='principales'?'selected':''}>Principales</option>
+          <option value="triticale" ${dep.aplicaCultivos==='triticale'?'selected':''}>Triticale</option>
+        </select>
+      </div>
+    </div>
+    <div id="edit-dep-tablas" style="display:${dep.alcance==='tablas'?'block':'none'};margin:10px 0;padding:12px;background:var(--cream);border:1px solid var(--border)">${tablaChecks}</div>
+    <div class="btn-row">
+      <button class="btn btn-p" onclick="guardarEditDep('${depId}',${pi})">💾 Guardar</button>
+      <button class="btn btn-s" onclick="document.getElementById('card-editar-dep').style.display='none'">Cancelar</button>
+    </div>`;
+}
+
+function guardarEditDep(depId, pi) {
+  const dep = (S.depreciaciones[pi]||[]).find(d=>d.id===depId);
+  if(!dep) return;
+  dep.nombre      = document.getElementById('edit-dep-nom').value.trim() || dep.nombre;
+  dep.tipo_activo = document.getElementById('edit-dep-tipo').value;
+  dep.alcance     = document.getElementById('edit-dep-alcance').value;
+  dep.valorActivo = parseFloat(document.getElementById('edit-dep-val').value)||dep.valorActivo;
+  dep.vidaUtil    = parseFloat(document.getElementById('edit-dep-vida').value)||dep.vidaUtil;
+  dep.anioInicio  = parseInt(document.getElementById('edit-dep-anio').value)||dep.anioInicio;
+  dep.cosechaInicio = parseInt(document.getElementById('edit-dep-cn').value)||1;
+  dep.aplicaCultivos = document.getElementById('edit-dep-cultivos').value;
+  dep.costoAnual  = dep.valorActivo / dep.vidaUtil;
+  dep.anioFin     = dep.anioInicio + Math.floor(dep.vidaUtil);
+  if(dep.alcance==='tablas') {
+    dep.tablasIdx = [];
+    document.querySelectorAll('.edit-dep-tabla:checked').forEach(cb=>dep.tablasIdx.push(parseInt(cb.value)));
+  }
+  save();
+  document.getElementById('card-editar-dep').style.display='none';
+  renderDep();
+  toast('✅ Activo actualizado');
 }
 
 function toggleTablasSel(val) {
