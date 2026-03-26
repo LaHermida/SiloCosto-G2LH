@@ -616,24 +616,20 @@ function getCurrentPrice(artId) {
 function calcDepTabla(pi, cn, ti, anio) {
   const predio = S.predios[pi];
   const td = getTablaData(pi,cn,ti);
-  // Si la tabla está marcada sin siembra, no asume ningún costo
   if(td.sinSiembra) return 0;
-  // Use haSembradas if set, otherwise fall back to tabla's total ha
   const tablaHa = parseFloat(td.haSembradas) || predio.tablas[ti]?.ha || 0;
-  // Total ha for this cosecha = sum of haSembradas (or default ha) across active tablas only
-  const totalHa = predio.tablas.reduce((s,t,idx)=>{
+  // Total ha activas en este ciclo
+  const totalHaActivas = predio.tablas.reduce((s,t,idx)=>{
     const tdx = getTablaData(pi,cn,idx);
     if(tdx.sinSiembra) return s;
     return s + (parseFloat(tdx.haSembradas) || t.ha || 0);
   },0);
   const ciclos = predio.ciclos || 3;
-  // Weight for this cosecha based on cultivo 40/20
   const cultivo = td.cultivo || 'maiz';
 
   let total = 0;
   for(const dep of S.depreciaciones[pi]) {
     const costoAnual = parseFloat(dep.costoAnual)||0;
-    let tablaPct = tablaHa / totalHa; // pro-rata by ha within predio
 
     const cosechaInicio = dep.cosechaInicio || 1;
     const metaCn = getCosechaMeta(pi, cn);
@@ -699,15 +695,39 @@ function calcDepTabla(pi, cn, ti, anio) {
       else { cosechaWeight = pesoTotal > 0 ? miPeso / pesoTotal : 0; }
     }
 
-    // Alcance
+    // Alcance — con redistribución de vacantes
     if(dep.alcance === 'general') {
+      // Tablas activas en este ciclo
+      const haActiva = tablaHa;
+      const tablaPct = totalHaActivas > 0 ? haActiva / totalHaActivas : 0;
       total += costoAnual * tablaPct * cosechaWeight * predioFraccion;
     } else {
-      if((dep.tablasIdx||[]).includes(ti)) {
-        const selTablas = (dep.tablasIdx||[]);
-        const selHaTotal = selTablas.reduce((s,idx)=>s+(predio.tablas[idx]?.ha||0),0);
-        const myHaPct = selHaTotal > 0 ? tablaHa/selHaTotal : 0;
-        total += costoAnual * myHaPct * cosechaWeight * predioFraccion;
+      // Por tablas seleccionadas
+      const tablasSelec = dep.tablasIdx||[];
+      // Tablas seleccionadas que están activas en este ciclo
+      const tablasActivas = tablasSelec.filter(t=>!getTablaData(pi,cn,t).sinSiembra);
+      // Tablas seleccionadas que están vacantes
+      const tablasVacantes = tablasSelec.filter(t=>getTablaData(pi,cn,t).sinSiembra);
+
+      if(tablasActivas.length === 0) {
+        // Todas vacantes — redistribuir a tablas activas del predio
+        if(tablasVacantes.length > 0 && totalHaActivas > 0) {
+          const tablaPct = tablaHa / totalHaActivas;
+          total += costoAnual * tablaPct * cosechaWeight * predioFraccion;
+        }
+      } else if(tablasActivas.includes(ti)) {
+        // Esta tabla está activa y seleccionada
+        // Ha total de tablas activas seleccionadas + redistribución de vacantes
+        const haActivasSelec = tablasActivas.reduce((s,t)=>{
+          return s + (parseFloat(getTablaData(pi,cn,t).haSembradas) || predio.tablas[t]?.ha || 0);
+        }, 0);
+        const miHa = tablaHa;
+        const tablaPct = haActivasSelec > 0 ? miHa / haActivasSelec : 0;
+        total += costoAnual * tablaPct * cosechaWeight * predioFraccion;
+      } else if(!tablasSelec.includes(ti) && tablasVacantes.length > 0 && tablasActivas.length === 0) {
+        // Esta tabla no está seleccionada pero recibe redistribución
+        const tablaPct = totalHaActivas > 0 ? tablaHa / totalHaActivas : 0;
+        total += costoAnual * tablaPct * cosechaWeight * predioFraccion;
       }
     }
   }
