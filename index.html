@@ -737,6 +737,7 @@ let curCosechaReg=1, curCosechaRep=1;
 let curAnioReg = new Date().getFullYear();
 let curAnioRep = new Date().getFullYear();
 let curAnioDep = new Date().getFullYear();
+let curCnDep = 1;
 let curTablaReg=0, curTablaRep=-1;
 
 function goSec(sec) {
@@ -1039,6 +1040,96 @@ function renderDepContent() {
     </div>
 
     <div class="card">
+      <div class="card-head" style="justify-content:space-between">
+        <span>📅 Asignación por predio</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <select style="padding:3px 8px;font-family:'DM Mono',monospace;font-size:12px;border:1px solid var(--border)"
+            onchange="curAnioDep=parseInt(this.value);renderDepContent()">
+            ${Array.from({length:13},(_,i)=>2020+i).map(y=>`<option value="${y}" ${y===curAnioDep?'selected':''}>${y}</option>`).join('')}
+          </select>
+          ${[1,2,3].map(c=>`<button class="ctab ${curCnDep===c?'active':''}" style="padding:3px 10px;font-size:12px" onclick="curCnDep=${c};renderDepContent()">C${c}</button>`).join('')}
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:var(--earth);color:#fff">
+          <th style="padding:7px 12px;text-align:left">Activo</th>
+          <th style="padding:7px 10px;text-align:left">Predio origen</th>
+          <th style="padding:7px 10px;text-align:right">$/año</th>
+          ${S.predios.map(p=>`<th style="padding:7px 10px;text-align:center">${p.emoji} ${p.nombre}</th>`).join('')}
+          ${S.predios.map(p=>`<th style="padding:7px 10px;text-align:right;border-left:1px solid rgba(255,255,255,0.2)">$ ${p.nombre}</th>`).join('')}
+        </tr></thead>
+        <tbody>
+        ${(()=>{
+          const todosActivos = [];
+          S.predios.forEach((pr,pIdx)=>{
+            (S.depreciaciones[pIdx]||[]).forEach(dep=>{
+              todosActivos.push({dep,pIdx,pr});
+            });
+          });
+          return todosActivos.map(({dep,pIdx,pr})=>{
+            const aFin = dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
+            const vigente = (!dep.anioInicio||curAnioDep>=dep.anioInicio)&&(!aFin||curAnioDep<=aFin);
+            const predioColor = pIdx===0?'#1a3d22':pIdx===1?'#2a7a3c':'#8b4513';
+            const costoAnual = parseFloat(dep.costoAnual)||0;
+
+            const asig = (dep.asignaciones||[]).find(a=>a.anio===curAnioDep);
+            const defaultPredios = [pIdx]; // default: solo predio origen
+
+            const checks = S.predios.map((p,pi)=>{
+              if(!vigente) return `<td style="padding:6px 10px;text-align:center;color:var(--muted)">—</td>`;
+              const isChk = asig
+                ? (asig.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(curCnDep))
+                : pi===pIdx;
+              const col = pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
+              return `<td style="padding:6px 10px;text-align:center">
+                <input type="checkbox" ${isChk?'checked':''} style="width:15px;height:15px;cursor:pointer;accent-color:${col}"
+                  onchange="toggleAsigDep('${dep.id}',${pIdx},${curAnioDep},${curCnDep},${pi},this.checked)"/>
+              </td>`;
+            }).join('');
+
+            const montos = S.predios.map((p2,pi)=>{
+              if(!vigente) return `<td style="padding:6px 10px;border-left:1px solid var(--border)">—</td>`;
+              // Calc dep for this predio using calcDepTabla
+              let monto = 0;
+              p2.tablas.forEach((_,ti2)=>{ monto += calcDepTabla(pi,curCnDep,ti2,curAnioDep); });
+              // Filter to only this dep's contribution
+              const savedAll = S.predios.map((_,px)=>[...(S.depreciaciones[px]||[])]);
+              S.predios.forEach((_,px)=>{ S.depreciaciones[px]=[]; });
+              S.depreciaciones[pIdx] = [dep];
+              let depMonto = 0;
+              p2.tablas.forEach((_,ti2)=>{ depMonto += calcDepTabla(pi,curCnDep,ti2,curAnioDep); });
+              savedAll.forEach((deps,px)=>{ S.depreciaciones[px]=deps; });
+              return `<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);border-left:1px solid var(--border)">${depMonto?fmt(depMonto):'—'}</td>`;
+            }).join('');
+
+            return `<tr style="border-bottom:1px solid var(--border)${!vigente?';opacity:0.4':''}">
+              <td style="padding:7px 12px;font-weight:600">${dep.nombre}</td>
+              <td style="padding:7px 10px;font-size:11px;color:${predioColor}">${pr.emoji} ${pr.nombre}</td>
+              <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${fmt(dep.costoAnual)}</td>
+              ${checks}
+              ${montos}
+            </tr>`;
+          }).join('');
+        })()}
+        </tbody>
+        <tfoot><tr style="background:var(--cream);font-weight:700;border-top:2px solid var(--border)">
+          <td colspan="3" style="padding:7px 12px">TOTAL C${curCnDep} ${curAnioDep}</td>
+          ${S.predios.map(()=>`<td></td>`).join('')}
+          ${S.predios.map((p2,pi)=>{
+            let tot = 0;
+            p2.tablas.forEach((_,ti2)=>{ tot += calcDepTabla(pi,curCnDep,ti2,curAnioDep); });
+            const ha = p2.tablas.reduce((s,t)=>s+t.ha,0);
+            return `<td style="padding:7px 10px;border-left:1px solid var(--border)">
+              <div style="text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${tot?fmt(tot):'—'}</div>
+              <div style="text-align:right;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${(tot&&ha)?fmt(tot/ha)+'/ha':'—'}</div>
+            </td>`;
+          }).join('')}
+        </tr></tfoot>
+      </table></div>
+    </div>
+
+    <div class="card">
       <div class="card-head">➕ Agregar activo depreciable</div>
       <div class="fg3">
         <div class="field">
@@ -1097,6 +1188,28 @@ function renderDepContent() {
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">Costo anual = Valor ÷ Vida útil</span>
       </div>
     </div>`;
+}
+
+function toggleAsigDep(depId, originPi, anio, cn, pi, checked) {
+  let dep = null;
+  (S.depreciaciones[originPi]||[]).forEach(d=>{ if(d.id===depId) dep=d; });
+  if(!dep) return;
+  if(!dep.asignaciones) dep.asignaciones=[];
+  let asig = dep.asignaciones.find(a=>a.anio===anio);
+  if(!asig) {
+    // Initialize with default: origin predio gets all cosechas
+    asig = {anio, prediosCosechas:[{pi:originPi, cosechas:[1,2,3]}]};
+    dep.asignaciones.push(asig);
+  }
+  let pc = (asig.prediosCosechas||[]).find(x=>x.pi===pi);
+  if(checked) {
+    if(!pc) { pc={pi,cosechas:[]}; asig.prediosCosechas.push(pc); }
+    if(!pc.cosechas.includes(cn)) pc.cosechas.push(cn);
+  } else {
+    if(pc) pc.cosechas = pc.cosechas.filter(c=>c!==cn);
+  }
+  asig.prediosCosechas = asig.prediosCosechas.filter(pc=>(pc.cosechas||[]).length>0);
+  save(); renderDepContent(); toast('✓ Guardado');
 }
 
 function toggleTablasSel(val) {
