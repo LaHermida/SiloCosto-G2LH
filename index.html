@@ -276,19 +276,8 @@ tr:hover td { background:var(--cream); }
           <input type="text" id="art-unidad" placeholder="kg, L, hr..."/>
         </div>
         <div class="field">
-          <label>Cultivo</label>
-          <select id="art-cultivo">
-            <option value="todos">Todos</option>
-            <option value="maiz">🌽 Maíz</option>
-            <option value="sorgo">🌿 Sorgo</option>
-            <option value="trigo">🌾 Triticale</option>
-            <option value="triticale_heno">🌾 Triticale Heno</option>
-            <option value="alfalfa">🟢 Alfalfa</option>
-            <option value="alfalfa_heno">🟡 Alfalfa Heno</option>
-            <option value="nuez">🥜 Nuez</option>
-            <option value="higo">🍃 Higo</option>
-            <option value="otro">🌱 Otro</option>
-          </select>
+          <label>Año precio</label>
+          <input type="number" id="art-anio" placeholder="2025" min="2020" max="2035" value="${new Date().getFullYear()}"/>
         </div>
         <div class="field">
           <label>Ciclo</label>
@@ -632,11 +621,11 @@ function toggleCosechaClosed(pi, cn) {
 function getCurrentPrice(artId, anio) {
   const a = S.articulos.find(x => x.id===artId);
   if(!a||!a.precios||!a.precios.length) return 0;
-  if(anio) {
-    const filtered = a.precios.filter(p=>p.fecha && parseInt(p.fecha.slice(0,4))<=anio);
-    if(filtered.length) return filtered[filtered.length-1].valor;
-  }
-  return a.precios[a.precios.length-1].valor || 0;
+  const yr = anio || curAnioReg || new Date().getFullYear();
+  // Find latest price for this year or before
+  const filtered = a.precios.filter(p=>p.fecha && parseInt(p.fecha.slice(0,4))<=yr);
+  if(filtered.length) return filtered[filtered.length-1].valor || 0;
+  return a.precios[0].valor || 0;
 }
 
 // ── DEPRECIATION CALC ──
@@ -975,16 +964,19 @@ function addArticulo() {
   const cat = document.getElementById('art-cat').value;
   const precio = parseFloat(document.getElementById('art-precio').value);
   const unidad = document.getElementById('art-unidad').value.trim();
-  const cultivo = document.getElementById('art-cultivo')?.value || 'todos';
+  const anio = parseInt(document.getElementById('art-anio')?.value) || new Date().getFullYear();
   const ciclo = document.getElementById('art-ciclo')?.value || 'todos';
   if(!nombre||!precio||!unidad) { toast('⚠️ Completa todos los campos',true); return; }
   const ex = S.articulos.find(a=>a.nombre.toLowerCase()===nombre.toLowerCase());
   if(ex) {
-    ex.precios.push({valor:precio,fecha:today()});
-    ex.categoria=cat; ex.unidad=unidad; ex.cultivo=cultivo; ex.ciclo=ciclo;
-    toast('✓ Precio actualizado — historial preservado');
+    // Update or add price for this year
+    const existeAnio = ex.precios.find(p=>p.fecha && p.fecha.startsWith(String(anio)));
+    if(existeAnio) { existeAnio.valor = precio; }
+    else { ex.precios.push({valor:precio, fecha:`${anio}-01-01`}); }
+    ex.categoria=cat; ex.unidad=unidad; ex.ciclo=ciclo;
+    toast('✓ Precio actualizado');
   } else {
-    S.articulos.push({id:uid(),nombre,categoria:cat,unidad,cultivo,ciclo,precios:[{valor:precio,fecha:today()}]});
+    S.articulos.push({id:uid(), nombre, categoria:cat, unidad, ciclo, precios:[{valor:precio, fecha:`${anio}-01-01`}]});
     toast('✓ Artículo creado');
   }
   save();
@@ -1706,13 +1698,9 @@ function renderRegContent() {
   if(artsCultivo.length) {
     // Filter by cultivo and ciclo of current tabla/cosecha, unless showAll is toggled
     const showAll = document.getElementById('reg-grid-showall')?.checked || false;
-    const tablaCultivo = td.cultivo || 'maiz';
     const artsFiltered = showAll ? artsCultivo : artsCultivo.filter(a=>{
-      const artCultivo = a.cultivo || 'todos';
       const artCiclo = a.ciclo || 'todos';
-      const cultivoOk = artCultivo==='todos' || artCultivo===tablaCultivo;
-      const cicloOk = artCiclo==='todos' || artCiclo===String(cn);
-      return cultivoOk && cicloOk;
+      return artCiclo==='todos' || artCiclo===String(cn);
     });
     const tablaHeaders = p.tablas.map((t,ti2)=>`<th style="text-align:center;min-width:90px">${t.nombre}<br><span style="font-weight:400;font-size:9px">${t.ha} ha</span></th>`).join('');
     const gridRows = artsFiltered.map(art=>{
