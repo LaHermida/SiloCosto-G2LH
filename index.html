@@ -1110,94 +1110,73 @@ function renderDepContent() {
           <th style="padding:7px 12px;text-align:left">Activo</th>
           <th style="padding:7px 10px;text-align:left">Predio origen</th>
           <th style="padding:7px 10px;text-align:right">$/año</th>
-          ${S.predios.map(p=>`<th style="padding:7px 10px;text-align:center">${p.emoji} ${p.nombre}</th>`).join('')}
-          ${S.predios.map(p=>`<th style="padding:7px 10px;text-align:right;border-left:1px solid rgba(255,255,255,0.2)">$ ${p.nombre}</th>`).join('')}
+          ${S.predios.filter(p=>(p.ciclos||3)===3).map(p=>`<th style="padding:7px 10px;text-align:center">${p.emoji} ${p.nombre}</th>`).join('')}
+          ${S.predios.filter(p=>(p.ciclos||3)===3).map(p=>`<th style="padding:7px 10px;text-align:right;border-left:1px solid rgba(255,255,255,0.2)">$ ${p.nombre}</th>`).join('')}
         </tr></thead>
         <tbody>
         ${(()=>{
           const todosActivos = [];
           S.predios.forEach((pr,pIdx)=>{
-            (S.depreciaciones[pIdx]||[]).forEach(dep=>{
-              todosActivos.push({dep,pIdx,pr});
-            });
+            if((pr.ciclos||3)!==3) return;
+            (S.depreciaciones[pIdx]||[]).forEach(dep=>{ todosActivos.push({dep,pIdx,pr}); });
           });
           todosActivos.sort((a,b)=>(a.dep.anioInicio||0)-(b.dep.anioInicio||0));
+          const predios3 = S.predios.map((p,pi)=>({p,pi})).filter(({p})=>(p.ciclos||3)===3);
           return todosActivos.map(({dep,pIdx,pr})=>{
-            const aFin = dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
-            const vigente = (!dep.anioInicio||curAnioDep>=dep.anioInicio)&&(!aFin||curAnioDep<=aFin);
-            const predioColor = pIdx===0?'#1a3d22':pIdx===1?'#2a7a3c':'#8b4513';
-            const costoAnual = parseFloat(dep.costoAnual)||0;
+            const aFin=dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
+            const vigente=(!dep.anioInicio||curAnioDep>=dep.anioInicio)&&(!aFin||curAnioDep<=aFin);
+            const predioColor=pIdx===0?'#1a3d22':pIdx===1?'#2a7a3c':'#8b4513';
+            const costoAnual=parseFloat(dep.costoAnual)||0;
+            const asig=(dep.asignaciones||[]).find(a=>a.anio===curAnioDep);
 
-            const asig = (dep.asignaciones||[]).find(a=>a.anio===curAnioDep);
-            const defaultPredios = [pIdx]; // default: solo predio origen
-
-            const checks = S.predios.map((p,pi)=>{
+            const checks=predios3.map(({p,pi})=>{
               if(!vigente) return `<td style="padding:6px 10px;text-align:center;color:var(--muted)">—</td>`;
-              const isChk = asig
-                ? (asig.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(curCnDep))
-                : pi===pIdx;
-              const col = pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
+              const isChk=asig?(asig.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(curCnDep)):pi===pIdx;
+              const col=pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
               return `<td style="padding:6px 10px;text-align:center">
                 <input type="checkbox" ${isChk?'checked':''} style="width:15px;height:15px;cursor:pointer;accent-color:${col}"
                   onchange="toggleAsigDep('${dep.id}',${pIdx},${curAnioDep},${curCnDep},${pi},this.checked)"/>
               </td>`;
             }).join('');
 
-            const montos = S.predios.map((p2,pi)=>{
+            const montos=predios3.map(({p:p2,pi})=>{
               if(!vigente) return `<td style="padding:6px 10px;border-left:1px solid var(--border)">—</td>`;
-              // Calc dep for this predio using calcDepTabla
-              let monto = 0;
-              p2.tablas.forEach((_,ti2)=>{ monto += calcDepTabla(pi,curCnDep,ti2,curAnioDep); });
-              // Calc monto directly: costoAnual × cosechaWeight × predioFraccion
-              const asigMonto = (dep.asignaciones||[]).find(a=>a.anio===curAnioDep);
-              const isAssigned = asigMonto
-                ? (asigMonto.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(curCnDep))
-                : pi===pIdx;
-              let depMonto = 0;
-              if(isAssigned) {
-                // cosechaWeight based on cultivo 20-40-40 and aplicaCultivos
-                const aplicaCultivosDep = dep.aplicaCultivos || 'todos';
-                // Check if this ciclo has applicable cultivos in the relevant tablas
-                const tablasAplicaDep = dep.alcance==='tablas' ? (dep.tablasIdx||[]) : S.predios[pIdx].tablas.map((_,idx)=>idx);
-                let pesoTotalDep = 0;
-                for(let c=1;c<=3;c++) {
-                  let pesoCosecha = 0; let cnt = 0;
-                  for(const t of tablasAplicaDep) {
-                    const tdC = getTablaData(pIdx,c,t);
-                    if(tdC.sinSiembra) continue;
-                    const cv = tdC.cultivo||'maiz';
-                    const esP = cv==='maiz'||cv==='sorgo';
-                    const esT = cv==='trigo'||cv==='triticale'||cv==='triticale_heno';
-                    if(aplicaCultivosDep==='principales'&&!esP) continue;
-                    if(aplicaCultivosDep==='triticale'&&!esT) continue;
-                    pesoCosecha += CULTIVOS[cv]?.pct||40; cnt++;
+              const asigM=(dep.asignaciones||[]).find(a=>a.anio===curAnioDep);
+              const isAssigned=asigM?(asigM.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(curCnDep)):pi===pIdx;
+              let depMonto=0;
+              if(isAssigned){
+                const predioDep=S.predios[pIdx];
+                const aplicaD=dep.aplicaCultivos||'todos';
+                const tablasD=dep.alcance==='tablas'?(dep.tablasIdx||[]):predioDep.tablas.map((_,idx)=>idx);
+                let pesoTot=0;
+                for(let c=1;c<=3;c++){
+                  for(const t of tablasD){
+                    const tdC=getTablaData(pIdx,c,t); if(tdC.sinSiembra) continue;
+                    const cv=tdC.cultivo||'maiz';
+                    if(aplicaD==='principales'&&!(cv==='maiz'||cv==='sorgo')) continue;
+                    if(aplicaD==='triticale'&&!(cv==='trigo'||cv==='triticale'||cv==='triticale_heno')) continue;
+                    const cvHa=parseFloat(tdC.haSembradas)||predioDep.tablas[t]?.ha||0;
+                    pesoTot+=(CULTIVOS[cv]?.pct||40)*cvHa;
                   }
-                  if(cnt>0) pesoTotalDep += pesoCosecha/cnt;
                 }
-                // Get peso for current ciclo
-                let pesoCnDep = 0; let cntCn = 0;
-                for(const t of tablasAplicaDep) {
-                  const tdC = getTablaData(pIdx,curCnDep,t);
-                  if(tdC.sinSiembra) continue;
-                  const cv = tdC.cultivo||'maiz';
-                  const esP = cv==='maiz'||cv==='sorgo';
-                  const esT = cv==='trigo'||cv==='triticale'||cv==='triticale_heno';
-                  if(aplicaCultivosDep==='principales'&&!esP) continue;
-                  if(aplicaCultivosDep==='triticale'&&!esT) continue;
-                  pesoCnDep += CULTIVOS[cv]?.pct||40; cntCn++;
+                let pesoCn=0;
+                for(const t of tablasD){
+                  const tdC=getTablaData(pIdx,curCnDep,t); if(tdC.sinSiembra) continue;
+                  const cv=tdC.cultivo||'maiz';
+                  if(aplicaD==='principales'&&!(cv==='maiz'||cv==='sorgo')) continue;
+                  if(aplicaD==='triticale'&&!(cv==='trigo'||cv==='triticale'||cv==='triticale_heno')) continue;
+                  const cvHa=parseFloat(tdC.haSembradas)||predioDep.tablas[t]?.ha||0;
+                  pesoCn+=(CULTIVOS[cv]?.pct||40)*cvHa;
                 }
-                const cnPct = (pesoTotalDep>0 && cntCn>0) ? (pesoCnDep/cntCn)/pesoTotalDep*100 : 0;
-                // predioFraccion by ha
-                let predioFraccion = 1;
-                if(asigMonto) {
-                  const prediosAsig = (asigMonto.prediosCosechas||[])
-                    .filter(pc=>(pc.cosechas||[]).includes(curCnDep))
-                    .map(pc=>pc.pi);
-                  const totalHaAsig = prediosAsig.reduce((s,pIdx2)=>s+S.predios[pIdx2].tablas.reduce((sh,t)=>sh+t.ha,0),0);
-                  const miHa = p2.tablas.reduce((s,t)=>s+t.ha,0);
-                  predioFraccion = prediosAsig.length>1 ? (totalHaAsig>0 ? miHa/totalHaAsig : 1/prediosAsig.length) : 1;
+                const cnPct=pesoTot>0?(pesoCn/pesoTot)*100:0;
+                let predioFraccion=1;
+                if(asigM){
+                  const prediosAsig=(asigM.prediosCosechas||[]).filter(pc=>(pc.cosechas||[]).includes(curCnDep)).map(pc=>pc.pi);
+                  const totalHaAsig=prediosAsig.reduce((s,pi2)=>s+S.predios[pi2].tablas.reduce((sh,t)=>sh+t.ha,0),0);
+                  const miHa=p2.tablas.reduce((s,t)=>s+t.ha,0);
+                  predioFraccion=prediosAsig.length>1?(totalHaAsig>0?miHa/totalHaAsig:1/prediosAsig.length):1;
                 }
-                depMonto = costoAnual * (cnPct/100) * predioFraccion;
+                depMonto=costoAnual*(cnPct/100)*predioFraccion;
               }
               return `<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);border-left:1px solid var(--border)">${depMonto?fmt(depMonto):'—'}</td>`;
             }).join('');
@@ -1206,65 +1185,58 @@ function renderDepContent() {
               <td style="padding:7px 12px;font-weight:600">${dep.nombre}</td>
               <td style="padding:7px 10px;font-size:11px;color:${predioColor}">${pr.emoji} ${pr.nombre}</td>
               <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${fmt(dep.costoAnual)}</td>
-              ${checks}
-              ${montos}
+              ${checks}${montos}
             </tr>`;
           }).join('');
         })()}
         </tbody>
         <tfoot><tr style="background:var(--cream);font-weight:700;border-top:2px solid var(--border)">
           <td colspan="3" style="padding:7px 12px">TOTAL C${curCnDep} ${curAnioDep}</td>
-          ${S.predios.map(()=>`<td></td>`).join('')}
+          ${S.predios.filter(p=>(p.ciclos||3)===3).map(()=>`<td></td>`).join('')}
           ${S.predios.map((p2,pi)=>{
-            let tot = 0;
+            if((p2.ciclos||3)!==3) return '';
+            let tot=0;
             S.predios.forEach((pr,pIdx)=>{
+              if((pr.ciclos||3)!==3) return;
               (S.depreciaciones[pIdx]||[]).forEach(dep=>{
-                const aFin = dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
-                const vigente = (!dep.anioInicio||curAnioDep>=dep.anioInicio)&&(!aFin||curAnioDep<=aFin);
-                if(!vigente) return;
-                const costoAnual = parseFloat(dep.costoAnual)||0;
-                const asig = (dep.asignaciones||[]).find(a=>a.anio===curAnioDep);
-                const isAssigned = asig
-                  ? (asig.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(curCnDep))
-                  : pi===pIdx;
-                if(!isAssigned) return;
-                // cnPct usando aplicaCultivos
-                const aplicaD = dep.aplicaCultivos||'todos';
-                const tablasD = dep.alcance==='tablas'?(dep.tablasIdx||[]):pr.tablas.map((_,idx)=>idx);
-                let pesoTot=0;
-                for(let c=1;c<=3;c++){
-                  let ps=0,cnt=0;
+                const aFin=dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
+                if((!dep.anioInicio||curAnioDep>=dep.anioInicio)&&(!aFin||curAnioDep<=aFin)){
+                  const asig=(dep.asignaciones||[]).find(a=>a.anio===curAnioDep);
+                  const isAssigned=asig?(asig.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(curCnDep)):pi===pIdx;
+                  if(!isAssigned) return;
+                  const aplicaD=dep.aplicaCultivos||'todos';
+                  const tablasD=dep.alcance==='tablas'?(dep.tablasIdx||[]):pr.tablas.map((_,idx)=>idx);
+                  let pesoTot=0;
+                  for(let c=1;c<=3;c++){
+                    for(const t of tablasD){
+                      const tdC=getTablaData(pIdx,c,t); if(tdC.sinSiembra) continue;
+                      const cv=tdC.cultivo||'maiz';
+                      if(aplicaD==='principales'&&!(cv==='maiz'||cv==='sorgo')) continue;
+                      if(aplicaD==='triticale'&&!(cv==='trigo'||cv==='triticale'||cv==='triticale_heno')) continue;
+                      pesoTot+=(CULTIVOS[cv]?.pct||40)*(parseFloat(tdC.haSembradas)||pr.tablas[t]?.ha||0);
+                    }
+                  }
+                  let pesoCn=0;
                   for(const t of tablasD){
-                    const tdC=getTablaData(pIdx,c,t); if(tdC.sinSiembra) continue;
+                    const tdC=getTablaData(pIdx,curCnDep,t); if(tdC.sinSiembra) continue;
                     const cv=tdC.cultivo||'maiz';
                     if(aplicaD==='principales'&&!(cv==='maiz'||cv==='sorgo')) continue;
                     if(aplicaD==='triticale'&&!(cv==='trigo'||cv==='triticale'||cv==='triticale_heno')) continue;
-                    ps+=CULTIVOS[cv]?.pct||40; cnt++;
+                    pesoCn+=(CULTIVOS[cv]?.pct||40)*(parseFloat(tdC.haSembradas)||pr.tablas[t]?.ha||0);
                   }
-                  if(cnt>0) pesoTot+=ps/cnt;
+                  const cnPct=pesoTot>0?(pesoCn/pesoTot)*100:0;
+                  let pf=1;
+                  if(asig){
+                    const pa=(asig.prediosCosechas||[]).filter(pc=>(pc.cosechas||[]).includes(curCnDep)).map(pc=>pc.pi);
+                    const tha=pa.reduce((s,pi2)=>s+S.predios[pi2].tablas.reduce((sh,t)=>sh+t.ha,0),0);
+                    const mh=p2.tablas.reduce((s,t)=>s+t.ha,0);
+                    pf=pa.length>1?(tha>0?mh/tha:1/pa.length):1;
+                  }
+                  tot+=parseFloat(dep.costoAnual||0)*(cnPct/100)*pf;
                 }
-                let pesoCn=0,cntCn=0;
-                for(const t of tablasD){
-                  const tdC=getTablaData(pIdx,curCnDep,t); if(tdC.sinSiembra) continue;
-                  const cv=tdC.cultivo||'maiz';
-                  if(aplicaD==='principales'&&!(cv==='maiz'||cv==='sorgo')) continue;
-                  if(aplicaD==='triticale'&&!(cv==='trigo'||cv==='triticale'||cv==='triticale_heno')) continue;
-                  pesoCn+=CULTIVOS[cv]?.pct||40; cntCn++;
-                }
-                const cnPct = (pesoTot>0&&cntCn>0) ? (pesoCn/cntCn)/pesoTot*100 : 0;
-                let predioFraccion = 1;
-                if(asig) {
-                  const prediosAsig = (asig.prediosCosechas||[])
-                    .filter(pc=>(pc.cosechas||[]).includes(curCnDep))
-                    .map(pc=>pc.pi);
-                  const totalHaAsig = prediosAsig.reduce((s,pIdx2)=>s+S.predios[pIdx2].tablas.reduce((sh,t)=>sh+t.ha,0),0);
-                  const miHa = p2.tablas.reduce((s,t)=>s+t.ha,0);
-                  predioFraccion = prediosAsig.length>1 ? (totalHaAsig>0 ? miHa/totalHaAsig : 1/prediosAsig.length) : 1;
-                }
-                tot += costoAnual * (cnPct/100) * predioFraccion;
               });
             });
-            const ha = p2.tablas.reduce((s,t)=>s+t.ha,0);
+            const ha=p2.tablas.reduce((s,t)=>s+t.ha,0);
             return `<td style="padding:7px 10px;border-left:1px solid var(--border)">
               <div style="text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${tot?fmt(tot):'—'}</div>
               <div style="text-align:right;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${(tot&&ha)?fmt(tot/ha)+'/ha':'—'}</div>
@@ -1273,6 +1245,91 @@ function renderDepContent() {
         </tr></tfoot>
       </table></div>
     </div>
+
+    ${(()=>{
+      const predios1=S.predios.map((p,pi)=>({p,pi})).filter(({p})=>p.ciclos===1);
+      if(!predios1.length) return '';
+      const todosActivos1=[];
+      S.predios.forEach((pr,pIdx)=>{
+        (S.depreciaciones[pIdx]||[]).forEach(dep=>{ todosActivos1.push({dep,pIdx,pr}); });
+      });
+      todosActivos1.sort((a,b)=>(a.dep.anioInicio||0)-(b.dep.anioInicio||0));
+      const pHdrs=predios1.map(({p})=>`<th style="padding:7px 10px;text-align:center;border-left:1px solid rgba(255,255,255,0.2)">${p.emoji} ${p.nombre}</th><th style="padding:7px 10px;text-align:right;border-left:1px solid rgba(255,255,255,0.15)">$ ${p.nombre}</th>`).join('');
+      const rows=todosActivos1.map(({dep,pIdx,pr})=>{
+        const aFin=dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
+        const vigente=(!dep.anioInicio||curAnioDep>=dep.anioInicio)&&(!aFin||curAnioDep<=aFin);
+        const predioColor=pIdx===0?'#1a3d22':pIdx===1?'#2a7a3c':'#8b4513';
+        const asig=(dep.asignaciones||[]).find(a=>a.anio===curAnioDep);
+        const celdas=predios1.map(({p:p2,pi})=>{
+          if(!vigente) return `<td style="border-left:1px solid var(--border)">—</td><td>—</td>`;
+          const col=pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
+          const isChk=asig?(asig.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(1)):pi===pIdx;
+          const costoAnual=parseFloat(dep.costoAnual)||0;
+          const asigM=(dep.asignaciones||[]).find(a=>a.anio===curAnioDep);
+          let pf=1;
+          if(asigM){
+            const pa=(asigM.prediosCosechas||[]).filter(pc=>(pc.cosechas||[]).includes(1)).map(pc=>pc.pi);
+            const tha=pa.reduce((s,pi2)=>s+S.predios[pi2].tablas.reduce((sh,t)=>sh+t.ha,0),0);
+            const mh=p2.tablas.reduce((s,t)=>s+t.ha,0);
+            pf=pa.length>1?(tha>0?mh/tha:1/pa.length):1;
+          }
+          const m=isChk?costoAnual*pf:0;
+          return `<td style="padding:5px 10px;text-align:center;border-left:1px solid var(--border)">
+            <input type="checkbox" ${isChk?'checked':''} style="width:15px;height:15px;accent-color:${col}" onchange="toggleAsigDep('${dep.id}',${pIdx},${curAnioDep},1,${pi},this.checked)"/>
+          </td>
+          <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:${m?'var(--amber)':'var(--muted)'}">
+            ${m?fmt(m):'—'}
+          </td>`;
+        }).join('');
+        return `<tr style="border-bottom:1px solid var(--border)${!vigente?';opacity:0.4':''}">
+          <td style="padding:7px 12px;font-weight:600">${dep.nombre}</td>
+          <td style="padding:7px 10px;font-size:11px;color:${predioColor}">${pr.emoji} ${pr.nombre}</td>
+          <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${fmt(dep.costoAnual)}</td>
+          ${celdas}
+        </tr>`;
+      }).join('');
+      const totRow=predios1.map(({p:p2,pi})=>{
+        let tot=0;
+        todosActivos1.forEach(({dep,pIdx})=>{
+          const aFin=dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
+          if((!dep.anioInicio||curAnioDep>=dep.anioInicio)&&(!aFin||curAnioDep<=aFin)){
+            const asigM=(dep.asignaciones||[]).find(a=>a.anio===curAnioDep);
+            const isAssigned=asigM?(asigM.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(1)):pi===pIdx;
+            if(!isAssigned) return;
+            let pf=1;
+            if(asigM){
+              const pa=(asigM.prediosCosechas||[]).filter(pc=>(pc.cosechas||[]).includes(1)).map(pc=>pc.pi);
+              const tha=pa.reduce((s,pi2)=>s+S.predios[pi2].tablas.reduce((sh,t)=>sh+t.ha,0),0);
+              const mh=p2.tablas.reduce((s,t)=>s+t.ha,0);
+              pf=pa.length>1?(tha>0?mh/tha:1/pa.length):1;
+            }
+            tot+=parseFloat(dep.costoAnual||0)*pf;
+          }
+        });
+        const ha=p2.tablas.reduce((s,t)=>s+t.ha,0);
+        return `<td style="border-left:1px solid var(--border)"></td>
+          <td style="padding:7px 10px;text-align:right;">
+            <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);font-weight:700">${tot?fmt(tot):'—'}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${(tot&&ha)?fmt(tot/ha)+'/ha':'—'}</div>
+          </td>`;
+      }).join('');
+      return `<div class="card" style="margin-top:0">
+        <div class="card-head">📅 Asignación predios 1 ciclo — ${curAnioDep}</div>
+        <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
+          <thead><tr style="background:var(--earth);color:#fff">
+            <th style="padding:7px 12px;text-align:left">Activo</th>
+            <th style="padding:7px 10px;text-align:left">Predio origen</th>
+            <th style="padding:7px 10px;text-align:right">$/año</th>
+            ${pHdrs}
+          </tr></thead>
+          <tbody>${rows}</tbody>
+          <tfoot><tr style="background:var(--cream);font-weight:700;border-top:2px solid var(--border)">
+            <td colspan="3" style="padding:7px 12px">TOTAL ${curAnioDep}</td>
+            ${totRow}
+          </tr></tfoot>
+        </table></div>
+      </div>`;
+    })()}
 
     <div class="card">
       <div class="card-head">➕ Agregar activo depreciable</div>
