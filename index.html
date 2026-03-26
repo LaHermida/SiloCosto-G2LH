@@ -663,16 +663,21 @@ function calcDepTabla(pi, cn, ti, anio) {
     if(aplicaCultivos === 'principales' && !esPrincipal) continue;
     if(aplicaCultivos === 'triticale' && !esTriticale) continue;
 
-    // Cosecha weight — 20-40-40 siempre sobre 3 cosechas completas
+    // Cosecha weight — basado solo en tablas que aplican al activo
     let cosechaWeight = 1;
     if(ciclos === 1) {
       cosechaWeight = cn === 1 ? 1 : 0;
     } else {
+      // Tablas que aplica este activo
+      const tablasAplica = dep.alcance==='tablas'
+        ? (dep.tablasIdx||[])
+        : predio.tablas.map((_,idx)=>idx);
+
       let pesoTotal = 0;
       for(let c=1;c<=3;c++) {
         let pesoCosecha = 0;
         let tablasCounted = 0;
-        for(let t=0;t<predio.tablas.length;t++) {
+        for(const t of tablasAplica) {
           const tdC = getTablaData(pi,c,t);
           if(tdC.sinSiembra) continue;
           const cv = tdC.cultivo||'maiz';
@@ -686,7 +691,12 @@ function calcDepTabla(pi, cn, ti, anio) {
         if(tablasCounted>0) pesoTotal += pesoCosecha / tablasCounted;
       }
       const miPeso = CULTIVOS[cultivo]?.pct||40;
-      cosechaWeight = pesoTotal > 0 ? miPeso / pesoTotal : 0;
+      // Si esta tabla/cultivo no aplica en ningún ciclo, cosechaWeight=0
+      const esPrincipalCn = cultivo==='maiz'||cultivo==='sorgo';
+      const esTriticalesCn = cultivo==='trigo'||cultivo==='triticale'||cultivo==='triticale_heno';
+      if(aplicaCultivos==='principales' && !esPrincipalCn) { cosechaWeight=0; }
+      else if(aplicaCultivos==='triticale' && !esTriticalesCn) { cosechaWeight=0; }
+      else { cosechaWeight = pesoTotal > 0 ? miPeso / pesoTotal : 0; }
     }
 
     // Alcance
