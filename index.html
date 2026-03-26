@@ -692,6 +692,9 @@ function calcDepTabla(pi, cn, ti, anioOverride) {
         predioFraccion = totalHaPredios > 0 ? miHa/totalHaPredios : 1/prediosAsig.length;
       }
       // Dividir entre cosechas usando pesos 20-40-40
+      const aplicaCultivos = dep.aplicaCultivos || 'todos';
+      const esPrincipal = cultivo==='maiz'||cultivo==='sorgo';
+      const esTriticale = cultivo==='trigo'||cultivo==='triticale'||cultivo==='triticale_heno';
       const miPeso = CULTIVOS[cultivo]?.pct || 40;
       let pesoTotalCosecha = 0;
       for(let t=0; t<predio.tablas.length; t++) {
@@ -718,9 +721,6 @@ function calcDepTabla(pi, cn, ti, anioOverride) {
       const fraccionCosecha = predioFraccion * (pesoTotalCosecha > 0 ? miPeso/pesoTotalCosecha : 0);
 
       const tablaPct = totalHa > 0 ? tablaHa/totalHa : 0;
-      const aplicaCultivos = dep.aplicaCultivos || 'todos';
-      const esPrincipal = cultivo==='maiz'||cultivo==='sorgo';
-      const esTriticale = cultivo==='trigo'||cultivo==='triticale'||cultivo==='triticale_heno';
       if(aplicaCultivos==='principales' && !esPrincipal) continue;
       if(aplicaCultivos==='triticale' && !esTriticale) continue;
 
@@ -2750,7 +2750,7 @@ function renderGastos() {
             <th style="padding:7px 12px;text-align:right">Total $ C${selectedCn}</th>
             <th></th>
           </tr></thead>
-          <tbody>${dieselRows}${addDieselRow}</tbody>
+          <tbody>${dieselRows}</tbody>
           <tfoot><tr style="background:var(--cream);font-weight:700">
             <td colspan="3" style="padding:7px 12px">TOTAL</td>
             <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace">${totLitrosGlobal?fmtN(totLitrosGlobal,0)+' L':'—'}</td>
@@ -2771,7 +2771,7 @@ function renderGastos() {
             <th style="padding:7px 12px;text-align:right">Acumulado C${selectedCn}</th>
             <th></th>
           </tr></thead>
-          <tbody>${servRepRows}${addServRepRow}</tbody>
+          <tbody>${servRepRows}</tbody>
           <tfoot><tr style="background:var(--cream);font-weight:700">
             <td colspan="4" style="padding:7px 12px">TOTAL</td>
             <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${totServRepGlobal?fmt(totServRepGlobal):'—'}</td>
