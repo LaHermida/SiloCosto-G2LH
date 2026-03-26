@@ -1536,15 +1536,9 @@ function renderReg() {
   if(!cosechas.includes(curCosechaReg)) curCosechaReg=1;
   if(curTablaReg>=p.tablas.length) curTablaReg=0;
 
-  const meta = getCosechaMeta(pi, curCosechaReg);
   document.getElementById('reg-ctabs').innerHTML = cosechas.map(c=>
     `<button class="ctab ${c===curCosechaReg?'active':''}" onclick="curCosechaReg=${c};renderReg()">Cosecha ${c}</button>`
-  ).join('') + `<div style="display:inline-flex;align-items:center;gap:6px;margin-left:14px;vertical-align:middle">
-    <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</span>
-    <input type="number" value="${curAnioReg}" min="2000" max="2100"
-      style="width:76px;padding:4px 8px;font-size:13px;border:1px solid var(--border);background:#fff;color:var(--text)"
-      onchange="getCosechaMeta(${pi},${curCosechaReg}).year=parseInt(this.value);save()"/>
-  </div>`;
+  ).join('');
 
   renderRegContent();
 }
@@ -1553,7 +1547,7 @@ function renderRegContent() {
   const pi = curPredioReg, cn = curCosechaReg, ti = curTablaReg;
   const p = S.predios[pi];
   const td = getTablaData(pi,cn,ti);
-  const dep = calcDepTabla(pi,cn,ti,curAnioRep);
+  const dep = calcDepTabla(pi,cn,ti);
   const vars = calcConsumosTabla(pi,cn,ti);
   const total = dep+vars;
   const kilos = parseFloat(td.kilos)||0;
@@ -1649,13 +1643,17 @@ function renderRegContent() {
 
   document.getElementById('reg-content').innerHTML = `
     ${isClosed ? `<div style="background:#7a1f1f;color:white;padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
-      <span>🔒 <strong>Cosecha cerrada</strong> — Archivada el ${meta.closedDate} · Año ${curAnioRep}</span>
+      <span>🔒 <strong>Cosecha cerrada</strong> — Archivada el ${meta.closedDate} · Año ${meta.year}</span>
       <button class="btn" style="background:white;color:#7a1f1f;font-size:12px" onclick="toggleCosechaClosed(${pi},${cn})">🔓 Reabrir</button>
     </div>` : ''}
     <div class="card">
       <div class="card-head" style="justify-content:space-between">
-        <span>🗺️ ${p.nombre} · Cosecha ${cn} · ${curAnioRep}</span>
+        <span>🗺️ ${p.nombre} · Cosecha ${cn}</span>
         <div style="display:flex;align-items:center;gap:10px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <label style="font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0">Año:</label>
+            <input type="number" value="${meta.year}" min="2000" max="2100" style="width:80px;padding:4px 8px;font-size:13px" ${isClosed?'disabled':''} onchange="getCosechaMeta(${pi},${cn}).year=parseInt(this.value);save()"/>
+          </div>
           ${!isClosed ? `<button class="btn" style="background:#1a3d22;color:#eef8f2;font-size:11px;padding:6px 14px" onclick="toggleCosechaClosed(${pi},${cn})">🔒 Cerrar cosecha</button>` : ''}
         </div>
       </div>
