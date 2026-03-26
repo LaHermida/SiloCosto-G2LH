@@ -654,15 +654,13 @@ function calcDepTabla(pi, cn, ti, anio) {
     if(aplicaCultivos === 'principales' && !esPrincipal) continue;
     if(aplicaCultivos === 'triticale' && !esTriticale) continue;
 
-    // Cosecha weight — 20-40-40 basado en cultivos, independiente del año del selector
+    // Cosecha weight — 20-40-40 siempre sobre 3 cosechas completas
     let cosechaWeight = 1;
     if(ciclos === 1) {
       cosechaWeight = cn === 1 ? 1 : 0;
     } else {
       let pesoTotal = 0;
       for(let c=1;c<=3;c++) {
-        // Solo skip cosechas antes de cosechaInicio en el año de inicio del activo
-        if(dep.anioInicio && dep.anioInicio === metaYear && c < cosechaInicio) continue;
         let pesoCosecha = 0;
         let tablasCounted = 0;
         for(let t=0;t<predio.tablas.length;t++) {
