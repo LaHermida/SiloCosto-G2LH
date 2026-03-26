@@ -633,24 +633,33 @@ function calcDepTabla(pi, cn, ti, anio) {
   let total = 0;
   for(const dep of S.depreciaciones[pi]) {
     const costoAnual = parseFloat(dep.costoAnual)||0;
-    // Determine this tabla's share of the annual cost
-    let tablaPct = tablaHa / totalHa; // pro-rata by ha
+    let tablaPct = tablaHa / totalHa; // pro-rata by ha within predio
 
-    // Cosecha de inicio — si esta cosecha es anterior a la de inicio, no aplica
     const cosechaInicio = dep.cosechaInicio || 1;
-    // Check if this cosecha/year combo is before the start
-    // Simple check: if anioInicio is set and current cosecha year < anioInicio, skip
-    // We use meta year for each cosecha
     const metaCn = getCosechaMeta(pi, cn);
     const metaYear = anio || curAnioRep || curAnioReg || new Date().getFullYear();
     if(dep.anioInicio && metaYear < dep.anioInicio) continue;
     if(dep.anioInicio && metaYear === dep.anioInicio && cn < cosechaInicio) continue;
     if(dep.anioFin && metaYear > dep.anioFin) continue;
 
-    // Cultivos filter — check if this tabla's cultivo matches what dep applies to
+    // Check asignacion for multi-predio
+    const asigDep = (dep.asignaciones||[]).find(a=>a.anio===metaYear);
+    let predioFraccion = 1;
+    if(asigDep) {
+      // Check if this predio+cn is assigned
+      const isAssigned = (asigDep.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(cn));
+      if(!isAssigned) continue;
+      const prediosAsig = (asigDep.prediosCosechas||[]).filter(pc=>(pc.cosechas||[]).includes(cn)).map(pc=>pc.pi);
+      if(prediosAsig.length > 1) {
+        const totalHaPredios = prediosAsig.reduce((s,pIdx2)=>s+S.predios[pIdx2].tablas.reduce((sh,t)=>sh+t.ha,0),0);
+        const miHa = predio.tablas.reduce((s,t)=>s+t.ha,0);
+        predioFraccion = totalHaPredios>0 ? miHa/totalHaPredios : 1/prediosAsig.length;
+      }
+    }
+
     const aplicaCultivos = dep.aplicaCultivos || 'todos';
     const esPrincipal = cultivo === 'maiz' || cultivo === 'sorgo';
-    const esTriticale = cultivo === 'trigo';
+    const esTriticale = cultivo === 'trigo' || cultivo === 'triticale' || cultivo === 'triticale_heno';
     if(aplicaCultivos === 'principales' && !esPrincipal) continue;
     if(aplicaCultivos === 'triticale' && !esTriticale) continue;
 
@@ -682,17 +691,13 @@ function calcDepTabla(pi, cn, ti, anio) {
 
     // Alcance
     if(dep.alcance === 'general') {
-      total += costoAnual * tablaPct * cosechaWeight;
+      total += costoAnual * tablaPct * cosechaWeight * predioFraccion;
     } else {
-      // Only if this tabla is selected
       if((dep.tablasIdx||[]).includes(ti)) {
-        // Split equally among selected tablas by ha
         const selTablas = (dep.tablasIdx||[]);
-        const selHaTotal = selTablas.reduce((s,idx)=>{
-          return s + (predio.tablas[idx]?.ha||0);
-        },0);
+        const selHaTotal = selTablas.reduce((s,idx)=>s+(predio.tablas[idx]?.ha||0),0);
         const myHaPct = selHaTotal > 0 ? tablaHa/selHaTotal : 0;
-        total += costoAnual * myHaPct * cosechaWeight;
+        total += costoAnual * myHaPct * cosechaWeight * predioFraccion;
       }
     }
   }
@@ -1112,7 +1117,9 @@ function renderDepContent() {
                 // predioFraccion by ha
                 let predioFraccion = 1;
                 if(asigMonto) {
-                  const prediosAsig = (asigMonto.prediosCosechas||[]).map(pc=>pc.pi);
+                  const prediosAsig = (asigMonto.prediosCosechas||[])
+                    .filter(pc=>(pc.cosechas||[]).includes(curCnDep))
+                    .map(pc=>pc.pi);
                   const totalHaAsig = prediosAsig.reduce((s,pIdx2)=>s+S.predios[pIdx2].tablas.reduce((sh,t)=>sh+t.ha,0),0);
                   const miHa = p2.tablas.reduce((s,t)=>s+t.ha,0);
                   predioFraccion = prediosAsig.length>1 ? (totalHaAsig>0 ? miHa/totalHaAsig : 1/prediosAsig.length) : 1;
@@ -1151,7 +1158,9 @@ function renderDepContent() {
                 if(!isAssigned) return;
                 let predioFraccion = 1;
                 if(asig) {
-                  const prediosAsig = (asig.prediosCosechas||[]).map(pc=>pc.pi);
+                  const prediosAsig = (asig.prediosCosechas||[])
+                    .filter(pc=>(pc.cosechas||[]).includes(curCnDep))
+                    .map(pc=>pc.pi);
                   const totalHaAsig = prediosAsig.reduce((s,pIdx2)=>s+S.predios[pIdx2].tablas.reduce((sh,t)=>sh+t.ha,0),0);
                   const miHa = p2.tablas.reduce((s,t)=>s+t.ha,0);
                   predioFraccion = prediosAsig.length>1 ? (totalHaAsig>0 ? miHa/totalHaAsig : 1/prediosAsig.length) : 1;
