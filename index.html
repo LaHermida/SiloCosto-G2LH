@@ -1093,13 +1093,25 @@ function renderDepContent() {
               // Calc dep for this predio using calcDepTabla
               let monto = 0;
               p2.tablas.forEach((_,ti2)=>{ monto += calcDepTabla(pi,curCnDep,ti2,curAnioDep); });
-              // Filter to only this dep's contribution
-              const savedAll = S.predios.map((_,px)=>[...(S.depreciaciones[px]||[])]);
-              S.predios.forEach((_,px)=>{ S.depreciaciones[px]=[]; });
-              S.depreciaciones[pIdx] = [dep];
+              // Calc monto directly: costoAnual × cosechaWeight × predioFraccion
+              const asigMonto = (dep.asignaciones||[]).find(a=>a.anio===curAnioDep);
+              const isAssigned = asigMonto
+                ? (asigMonto.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(curCnDep))
+                : pi===pIdx;
               let depMonto = 0;
-              p2.tablas.forEach((_,ti2)=>{ depMonto += calcDepTabla(pi,curCnDep,ti2,curAnioDep); });
-              savedAll.forEach((deps,px)=>{ S.depreciaciones[px]=deps; });
+              if(isAssigned) {
+                // cosechaWeight based on cultivo 20-40-40
+                const cnPct = curCnDep===1?20:40; // C1=20%, C2/C3=40%
+                // predioFraccion by ha
+                let predioFraccion = 1;
+                if(asigMonto) {
+                  const prediosAsig = (asigMonto.prediosCosechas||[]).map(pc=>pc.pi);
+                  const totalHaAsig = prediosAsig.reduce((s,pIdx2)=>s+S.predios[pIdx2].tablas.reduce((sh,t)=>sh+t.ha,0),0);
+                  const miHa = p2.tablas.reduce((s,t)=>s+t.ha,0);
+                  predioFraccion = totalHaAsig>0 ? miHa/totalHaAsig : 1/prediosAsig.length;
+                }
+                depMonto = costoAnual * (cnPct/100) * predioFraccion;
+              }
               return `<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);border-left:1px solid var(--border)">${depMonto?fmt(depMonto):'—'}</td>`;
             }).join('');
 
