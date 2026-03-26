@@ -275,6 +275,22 @@ tr:hover td { background:var(--cream); }
           <label>Unidad</label>
           <input type="text" id="art-unidad" placeholder="kg, L, hr..."/>
         </div>
+        <div class="field">
+          <label>Cultivo</label>
+          <select id="art-cultivo">
+            <option value="todos">Todos</option>
+            ${Object.entries(CULTIVOS).map(([k,v])=>`<option value="${k}">${v.icon} ${v.label}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Ciclo</label>
+          <select id="art-ciclo">
+            <option value="todos">Todos</option>
+            <option value="1">C1 (Dic-Feb)</option>
+            <option value="2">C2 (Mar-Jul)</option>
+            <option value="3">C3 (Ago-Nov)</option>
+          </select>
+        </div>
       </div>
       <div class="btn-row">
         <button class="btn btn-p" onclick="addArticulo()">Guardar artículo</button>
@@ -605,10 +621,14 @@ function toggleCosechaClosed(pi, cn) {
   toast(meta.closed ? '🔒 Cosecha cerrada y archivada' : '🔓 Cosecha reabierta');
 }
 
-function getCurrentPrice(artId) {
+function getCurrentPrice(artId, anio) {
   const a = S.articulos.find(x => x.id===artId);
-  if(!a||!a.precios.length) return null;
-  return a.precios[a.precios.length-1].valor;
+  if(!a||!a.precios||!a.precios.length) return 0;
+  if(anio) {
+    const filtered = a.precios.filter(p=>p.fecha && parseInt(p.fecha.slice(0,4))<=anio);
+    if(filtered.length) return filtered[filtered.length-1].valor;
+  }
+  return a.precios[a.precios.length-1].valor || 0;
 }
 
 // ── DEPRECIATION CALC ──
@@ -947,14 +967,16 @@ function addArticulo() {
   const cat = document.getElementById('art-cat').value;
   const precio = parseFloat(document.getElementById('art-precio').value);
   const unidad = document.getElementById('art-unidad').value.trim();
+  const cultivo = document.getElementById('art-cultivo')?.value || 'todos';
+  const ciclo = document.getElementById('art-ciclo')?.value || 'todos';
   if(!nombre||!precio||!unidad) { toast('⚠️ Completa todos los campos',true); return; }
   const ex = S.articulos.find(a=>a.nombre.toLowerCase()===nombre.toLowerCase());
   if(ex) {
     ex.precios.push({valor:precio,fecha:today()});
-    ex.categoria=cat; ex.unidad=unidad;
+    ex.categoria=cat; ex.unidad=unidad; ex.cultivo=cultivo; ex.ciclo=ciclo;
     toast('✓ Precio actualizado — historial preservado');
   } else {
-    S.articulos.push({id:uid(),nombre,categoria:cat,unidad,precios:[{valor:precio,fecha:today()}]});
+    S.articulos.push({id:uid(),nombre,categoria:cat,unidad,cultivo,ciclo,precios:[{valor:precio,fecha:today()}]});
     toast('✓ Artículo creado');
   }
   save();
@@ -1559,7 +1581,7 @@ function renderRegContent() {
   const pi = curPredioReg, cn = curCosechaReg, ti = curTablaReg;
   const p = S.predios[pi];
   const td = getTablaData(pi,cn,ti);
-  const dep = calcDepTabla(pi,cn,ti);
+  const dep = calcDepTabla(pi,cn,ti,curAnioReg);
   const vars = calcConsumosTabla(pi,cn,ti);
   const total = dep+vars;
   const kilos = parseFloat(td.kilos)||0;
@@ -1674,8 +1696,18 @@ function renderRegContent() {
   // ── GRID MATERIAL CULTIVO (always shown, independent of tabla selection) ──
   const artsCultivo = S.articulos.filter(a=>a.categoria==='Material de cultivo');
   if(artsCultivo.length) {
+    // Filter by cultivo and ciclo of current tabla/cosecha, unless showAll is toggled
+    const showAll = document.getElementById('reg-grid-showall')?.checked || false;
+    const tablaCultivo = td.cultivo || 'maiz';
+    const artsFiltered = showAll ? artsCultivo : artsCultivo.filter(a=>{
+      const artCultivo = a.cultivo || 'todos';
+      const artCiclo = a.ciclo || 'todos';
+      const cultivoOk = artCultivo==='todos' || artCultivo===tablaCultivo;
+      const cicloOk = artCiclo==='todos' || artCiclo===String(cn);
+      return cultivoOk && cicloOk;
+    });
     const tablaHeaders = p.tablas.map((t,ti2)=>`<th style="text-align:center;min-width:90px">${t.nombre}<br><span style="font-weight:400;font-size:9px">${t.ha} ha</span></th>`).join('');
-    const gridRows = artsCultivo.map(art=>{
+    const gridRows = artsFiltered.map(art=>{
       const precio = getCurrentPrice(art.id);
       const cells = p.tablas.map((t,ti2)=>{
         return `<td style="padding:4px"><input type="number" min="0" step="0.01" placeholder="—"
@@ -1693,7 +1725,13 @@ function renderRegContent() {
     const gridEl = document.createElement('div');
     gridEl.className = 'card';
     gridEl.innerHTML = `
-      <div class="card-head">🌱 Grid — Material de Cultivo · ${p.nombre} · Cosecha ${cn}</div>
+      <div class="card-head" style="justify-content:space-between">
+        <span>🌱 Grid — Material de Cultivo · ${p.nombre} · C${cn} ${curAnioReg}</span>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;font-weight:400">
+          <input type="checkbox" id="reg-grid-showall" ${showAll?'checked':''} onchange="renderRegContent()"/>
+          Ver todos
+        </label>
+      </div>
       <div style="padding:8px 12px;background:#f0fdf4;border:1px solid var(--border);margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">📅 Fecha del registro:</span>
         <input type="date" id="reg-grid-fecha" value="${new Date().toISOString().slice(0,10)}"
