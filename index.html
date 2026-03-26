@@ -1122,8 +1122,38 @@ function renderDepContent() {
                 : pi===pIdx;
               let depMonto = 0;
               if(isAssigned) {
-                // cosechaWeight based on cultivo 20-40-40
-                const cnPct = curCnDep===1?20:40; // C1=20%, C2/C3=40%
+                // cosechaWeight based on cultivo 20-40-40 and aplicaCultivos
+                const aplicaCultivosDep = dep.aplicaCultivos || 'todos';
+                // Check if this ciclo has applicable cultivos in the relevant tablas
+                const tablasAplicaDep = dep.alcance==='tablas' ? (dep.tablasIdx||[]) : S.predios[pIdx].tablas.map((_,idx)=>idx);
+                let pesoTotalDep = 0;
+                for(let c=1;c<=3;c++) {
+                  let pesoCosecha = 0; let cnt = 0;
+                  for(const t of tablasAplicaDep) {
+                    const tdC = getTablaData(pIdx,c,t);
+                    if(tdC.sinSiembra) continue;
+                    const cv = tdC.cultivo||'maiz';
+                    const esP = cv==='maiz'||cv==='sorgo';
+                    const esT = cv==='trigo'||cv==='triticale'||cv==='triticale_heno';
+                    if(aplicaCultivosDep==='principales'&&!esP) continue;
+                    if(aplicaCultivosDep==='triticale'&&!esT) continue;
+                    pesoCosecha += CULTIVOS[cv]?.pct||40; cnt++;
+                  }
+                  if(cnt>0) pesoTotalDep += pesoCosecha/cnt;
+                }
+                // Get peso for current ciclo
+                let pesoCnDep = 0; let cntCn = 0;
+                for(const t of tablasAplicaDep) {
+                  const tdC = getTablaData(pIdx,curCnDep,t);
+                  if(tdC.sinSiembra) continue;
+                  const cv = tdC.cultivo||'maiz';
+                  const esP = cv==='maiz'||cv==='sorgo';
+                  const esT = cv==='trigo'||cv==='triticale'||cv==='triticale_heno';
+                  if(aplicaCultivosDep==='principales'&&!esP) continue;
+                  if(aplicaCultivosDep==='triticale'&&!esT) continue;
+                  pesoCnDep += CULTIVOS[cv]?.pct||40; cntCn++;
+                }
+                const cnPct = (pesoTotalDep>0 && cntCn>0) ? (pesoCnDep/cntCn)/pesoTotalDep*100 : 0;
                 // predioFraccion by ha
                 let predioFraccion = 1;
                 if(asigMonto) {
@@ -1153,7 +1183,6 @@ function renderDepContent() {
           <td colspan="3" style="padding:7px 12px">TOTAL C${curCnDep} ${curAnioDep}</td>
           ${S.predios.map(()=>`<td></td>`).join('')}
           ${S.predios.map((p2,pi)=>{
-            const cnPct = curCnDep===1?20:40;
             let tot = 0;
             S.predios.forEach((pr,pIdx)=>{
               (S.depreciaciones[pIdx]||[]).forEach(dep=>{
@@ -1166,6 +1195,30 @@ function renderDepContent() {
                   ? (asig.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(curCnDep))
                   : pi===pIdx;
                 if(!isAssigned) return;
+                // cnPct usando aplicaCultivos
+                const aplicaD = dep.aplicaCultivos||'todos';
+                const tablasD = dep.alcance==='tablas'?(dep.tablasIdx||[]):pr.tablas.map((_,idx)=>idx);
+                let pesoTot=0;
+                for(let c=1;c<=3;c++){
+                  let ps=0,cnt=0;
+                  for(const t of tablasD){
+                    const tdC=getTablaData(pIdx,c,t); if(tdC.sinSiembra) continue;
+                    const cv=tdC.cultivo||'maiz';
+                    if(aplicaD==='principales'&&!(cv==='maiz'||cv==='sorgo')) continue;
+                    if(aplicaD==='triticale'&&!(cv==='trigo'||cv==='triticale'||cv==='triticale_heno')) continue;
+                    ps+=CULTIVOS[cv]?.pct||40; cnt++;
+                  }
+                  if(cnt>0) pesoTot+=ps/cnt;
+                }
+                let pesoCn=0,cntCn=0;
+                for(const t of tablasD){
+                  const tdC=getTablaData(pIdx,curCnDep,t); if(tdC.sinSiembra) continue;
+                  const cv=tdC.cultivo||'maiz';
+                  if(aplicaD==='principales'&&!(cv==='maiz'||cv==='sorgo')) continue;
+                  if(aplicaD==='triticale'&&!(cv==='trigo'||cv==='triticale'||cv==='triticale_heno')) continue;
+                  pesoCn+=CULTIVOS[cv]?.pct||40; cntCn++;
+                }
+                const cnPct = (pesoTot>0&&cntCn>0) ? (pesoCn/cntCn)/pesoTot*100 : 0;
                 let predioFraccion = 1;
                 if(asig) {
                   const prediosAsig = (asig.prediosCosechas||[])
