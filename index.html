@@ -2431,6 +2431,12 @@ function getCosechaFromMes(mes) {
   return map[parseInt(mes)] || 1;
 }
 
+function getGastoMes(gasto) {
+  if(gasto.mes) return parseInt(gasto.mes);
+  if(gasto.fecha) return parseInt(gasto.fecha.slice(5,7));
+  return null;
+}
+
 // Get total ha sembradas for a predio in a cosecha
 function getHaSembradasPredio(pi, cn) {
   const p = S.predios[pi];
@@ -2760,7 +2766,7 @@ function renderGastos() {
         const pct2 = gastosGridDraft[`d_pct2_${eq.id}_${mesActual}`]||'';
         const cn2sel = gastosGridDraft[`d_cn2_${eq.id}_${mesActual}`]||'';
         const montoCalc = lts && precioDieselGlobal ? fmt(parseFloat(lts)*precioDieselGlobal*(pct1/100)) : '—';
-        const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&(g.mes===mesActual||g.mes===String(mesActual))&&getGastoCosecha(g)===selectedCn);
+        const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&getGastoMes(g)===mesActual&&getGastoCosecha(g)===selectedCn);
         const acumLts=histMes.reduce((s,g)=>s+(parseFloat(g.litros||0)),0);
         const acumMonto=histMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
         return `<tr style="border-bottom:1px solid var(--border)">
@@ -2809,7 +2815,7 @@ function renderGastos() {
         const pct1 = gastosGridDraft[`r_pct1_${eq.id}_${mesActual}`]??100;
         const pct2 = gastosGridDraft[`r_pct2_${eq.id}_${mesActual}`]||'';
         const cn2sel = gastosGridDraft[`r_cn2_${eq.id}_${mesActual}`]||'';
-        const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&(g.mes===mesActual||g.mes===String(mesActual))&&getGastoCosecha(g)===selectedCn);
+        const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&getGastoMes(g)===mesActual&&getGastoCosecha(g)===selectedCn);
         const acum=histMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
         return `<tr style="border-bottom:1px solid var(--border)">
           <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
@@ -2848,7 +2854,7 @@ function renderGastos() {
 
       const dieselHistRows = tractoresSolo.map(eq=>{
         const celdas = mesesHist.map(m=>{
-          const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&(g.mes===m||g.mes===String(m))&&getGastoCosecha(g)===selectedCn);
+          const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&getGastoMes(g)===m&&getGastoCosecha(g)===selectedCn);
           const lts=hist.reduce((s,g)=>s+(parseFloat(g.litros||0)),0);
           const monto=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
           const delBtn = isAdmin && lts ? `<button onclick="delGastosPorEquipoMes('${eq.nombre}','Diesel',${m},${selectedCn})"
@@ -2869,7 +2875,7 @@ function renderGastos() {
 
       const repHistRows = todos.map(eq=>{
         const celdas = mesesHist.map(m=>{
-          const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&(g.mes===m||g.mes===String(m))&&getGastoCosecha(g)===selectedCn);
+          const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&getGastoMes(g)===m&&getGastoCosecha(g)===selectedCn);
           const monto=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
           const descs=hist.map(g=>g.descripcion).filter(Boolean).join(', ');
           const delBtn = isAdmin && monto ? `<button onclick="delGastosPorEquipoMes('${eq.nombre}','Maquinaria',${m},${selectedCn})"
@@ -3931,7 +3937,7 @@ function delTractorGlobal(id) {
 function delGastosPorEquipoMes(nombre, categoria, mes, cn) {
   if(!confirm(`¿Borrar registros de ${nombre} — ${categoria} — ${mes}/${cn}?`)) return;
   S.gastosGenerales = (S.gastosGenerales||[]).filter(g=>
-    !(g.equipo===nombre && g.categoria===categoria && (g.mes===mes||g.mes===String(mes)) && getGastoCosecha(g)===cn)
+    !(g.equipo===nombre && g.categoria===categoria && getGastoMes(g)===mes && getGastoCosecha(g)===cn)
   );
   save(); renderGastos(); toast('✓ Eliminado');
 }
