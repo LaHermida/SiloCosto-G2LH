@@ -2706,55 +2706,33 @@ function renderGastos() {
   if(gastosTab === 'tractores') {
     if(!S.tractores) S.tractores = [];
 
-    // ── Meses activos para este ciclo (flexibles) ──
-    const mesesKey = `meses_activos_${selectedCn}`;
-    if(!gastosGridDraft[mesesKey]) {
-      const def = getMesesCn(selectedCn);
-      gastosGridDraft[mesesKey] = def.join(',');
-    }
-    const mesesActivos = gastosGridDraft[mesesKey].split(',').map(Number).filter(Boolean);
-    const todosLosMeses = [1,2,3,4,5,6,7,8,9,10,11,12];
-    const mesesDisponibles = todosLosMeses.filter(m=>!mesesActivos.includes(m));
+    // ── Mes seleccionado ──
+    const mesActual = parseInt(gastosGridDraft['trac_mes'] || getMesesCn(selectedCn)[0]);
+    const mesOpts = [1,2,3,4,5,6,7,8,9,10,11,12].map(m=>
+      `<option value="${m}" ${m===mesActual?'selected':''}>${MESES[m-1]}</option>`).join('');
 
-    // ── Selector año + ciclo ──
-    const anioOptsG = Array.from({length:13},(_,i)=>2020+i).map(y=>
-      `<option value="${y}" ${y===gastosGridAnio?'selected':''}>${y}</option>`).join('');
-
-    // ── Config: agregar tractor ──
+    // ── Config: agregar tractor (solo nombre y tipo) ──
     const configEq = isAdmin ? `
       <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar equipo:</span>
-        <input type="text" id="eq-nombre" placeholder="Ej: Tractor 3..." style="padding:5px;width:160px;font-size:13px"/>
+        <input type="text" id="eq-nombre" placeholder="Ej: Tractor 3..." style="padding:5px;width:180px;font-size:13px"/>
         <select id="eq-tipo" style="padding:5px"><option value="tractor">Tractor</option><option value="implemento">Implementos</option><option value="camioneta">Camioneta</option></select>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          ${S.predios.map((p,i)=>`<label class="check-row"><input type="checkbox" class="eq-predio-check" value="${i}" checked/> ${p.emoji} ${p.nombre}</label>`).join('')}
-        </div>
         <button class="btn btn-s" onclick="addTractorGlobal()">+ Agregar</button>
       </div>` : '';
 
     // ── Precio diesel ──
     const precioDieselVal = S.precioDiesel?.[selectedCn] || '';
     const precioDieselBar = `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:8px 12px;background:#f0fdf4;border:1px solid #7ec89a;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:8px 14px;background:#f0fdf4;border:1px solid #7ec89a;flex-wrap:wrap">
         <span style="font-size:12px;color:var(--muted)">💧 Precio diesel C${selectedCn}:</span>
         ${isAdmin ? `<input type="number" min="0" step="0.01" placeholder="$/litro" value="${precioDieselVal}"
           style="width:100px;padding:4px 8px;border:1px solid #7ec89a;font-size:13px;text-align:right"
           onchange="if(!S.precioDiesel)S.precioDiesel={};S.precioDiesel[${selectedCn}]=parseFloat(this.value)||0;save()"/>` :
           `<strong>${precioDieselVal?'$'+precioDieselVal+'/L':'pendiente'}</strong>`}
-        <span style="font-size:11px;color:var(--muted)">Litros × Precio</span>
-        <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
-          <span style="font-size:11px;color:var(--muted)">+ Mes:</span>
-          <select id="mes-extra-sel" style="padding:3px 6px;font-size:12px;border:1px solid var(--border)">
-            ${mesesDisponibles.map(m=>`<option value="${m}">${MESES[m-1]}</option>`).join('')}
-          </select>
-          <button class="btn btn-s" style="font-size:11px;padding:3px 10px" onclick="(()=>{
-            const m=parseInt(document.getElementById('mes-extra-sel').value);
-            if(!m) return;
-            const key='meses_activos_${selectedCn}';
-            const arr=gastosGridDraft[key].split(',').map(Number).filter(Boolean);
-            if(!arr.includes(m)){arr.push(m);arr.sort((a,b)=>a-b);gastosGridDraft[key]=arr.join(',');}
-            renderGastos();
-          })()">+ Agregar</button>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted)">📅 Mes:</span>
+          <select style="padding:4px 8px;font-size:13px;border:1px solid var(--border)"
+            onchange="gastosGridDraft['trac_mes']=this.value;renderGastos()">${mesOpts}</select>
         </div>
       </div>`;
 
@@ -2763,70 +2741,60 @@ function renderGastos() {
     } else {
       const tractoresSolo = S.tractores.filter(t=>t.tipo!=='implemento');
       const todos = S.tractores;
-
-      // Headers meses
-      const mesesHdr = mesesActivos.map(m=>`
-        <th style="padding:5px 6px;text-align:center;min-width:120px;white-space:nowrap">
-          ${MESES[m-1]}
-          <button onclick="(()=>{const key='meses_activos_${selectedCn}';const arr=gastosGridDraft[key].split(',').map(Number).filter(n=>n!==${m});gastosGridDraft[key]=arr.join(',');renderGastos();})()"
-            style="border:none;background:none;cursor:pointer;color:#aaa;font-size:9px;margin-left:2px" title="Quitar mes">✕</button>
-        </th>`).join('');
-
-      // Ciclo opts para split
       const cicloOpts = [1,2,3].map(c=>`<option value="${c}">C${c}</option>`).join('');
 
       // ── DIESEL ──
       const dieselRows = tractoresSolo.map(eq=>{
         const predioChecks = S.predios.map((p,pi)=>{
           const col=pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
-          const chk = gastosGridDraft[`d_pi_${eq.id}_${pi}`]!==undefined
-            ? gastosGridDraft[`d_pi_${eq.id}_${pi}`]==='1'
-            : (eq.predios||[]).includes(pi);
-          return `<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer">
+          const chk = gastosGridDraft[`d_pi_${eq.id}_${pi}_${mesActual}`]!==undefined
+            ? gastosGridDraft[`d_pi_${eq.id}_${pi}_${mesActual}`]==='1'
+            : true;
+          return `<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;margin-right:6px">
             <input type="checkbox" ${chk?'checked':''} style="accent-color:${col}"
-              onchange="gastosGridDraft['d_pi_${eq.id}_${pi}']=this.checked?'1':'0'"/> <span style="color:${col}">${p.emoji}</span>
+              onchange="gastosGridDraft['d_pi_${eq.id}_${pi}_${mesActual}']=this.checked?'1':'0'"/>
+            <span style="color:${col}">${p.emoji} ${p.nombre}</span>
           </label>`;
         }).join('');
-
-        const celdas = mesesActivos.map(mes=>{
-          const val = gastosGridDraft[`d_${eq.id}_${mes}`]||'';
-          const pct1 = gastosGridDraft[`d_pct1_${eq.id}_${mes}`]??100;
-          const pct2 = gastosGridDraft[`d_pct2_${eq.id}_${mes}`]??'';
-          const cn2  = gastosGridDraft[`d_cn2_${eq.id}_${mes}`]??'';
-          const hist = (S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&(g.mes===mes||g.mes===String(mes))&&getGastoCosecha(g)===selectedCn);
-          const acum = hist.reduce((s,g)=>s+(parseFloat(g.litros||0)),0);
-          return `<td style="padding:3px 4px;vertical-align:top">
+        const val = gastosGridDraft[`d_${eq.id}_${mesActual}`]||'';
+        const pct1 = gastosGridDraft[`d_pct1_${eq.id}_${mesActual}`]??100;
+        const pct2 = gastosGridDraft[`d_pct2_${eq.id}_${mesActual}`]??'';
+        const cn2sel = gastosGridDraft[`d_cn2_${eq.id}_${mesActual}`]??'';
+        const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&(g.mes===mesActual||g.mes===String(mesActual))&&getGastoCosecha(g)===selectedCn);
+        const acumLts=hist.reduce((s,g)=>s+(parseFloat(g.litros||0)),0);
+        const acumMonto=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        const histTot=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&getGastoCosecha(g)===selectedCn);
+        const totLts=histTot.reduce((s,g)=>s+(parseFloat(g.litros||0)),0);
+        const totMonto=histTot.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
+          <td style="padding:6px 10px">${predioChecks}</td>
+          <td style="padding:6px 8px;text-align:center">
             <input type="number" min="0" step="0.1" placeholder="Lts" value="${val}"
-              style="width:70px;padding:4px;text-align:center;border:1px solid var(--border);font-size:12px;font-family:'DM Mono',monospace;display:block;margin-bottom:3px"
-              onchange="gastosGridDraft['d_${eq.id}_${mes}']=this.value"/>
-            <div style="display:flex;gap:2px;align-items:center;flex-wrap:wrap">
-              <input type="number" min="0" max="100" step="1" value="${pct1}" title="% este ciclo"
-                style="width:36px;padding:2px;font-size:10px;text-align:center;border:1px solid var(--border)"
-                onchange="gastosGridDraft['d_pct1_${eq.id}_${mes}']=this.value"/>
-              <span style="font-size:9px;color:var(--muted)">%C${selectedCn}</span>
-            </div>
-            <div style="display:flex;gap:2px;align-items:center;margin-top:2px;flex-wrap:wrap">
-              <input type="number" min="0" max="100" step="1" value="${pct2}" placeholder="0" title="% ciclo extra"
-                style="width:36px;padding:2px;font-size:10px;text-align:center;border:1px solid var(--border)"
-                onchange="gastosGridDraft['d_pct2_${eq.id}_${mes}']=this.value"/>
-              <select style="font-size:9px;padding:1px;border:1px solid var(--border)" onchange="gastosGridDraft['d_cn2_${eq.id}_${mes}']=this.value">
+              style="width:80px;padding:5px;text-align:center;border:1px solid var(--border);font-size:13px;font-family:'DM Mono',monospace"
+              onchange="gastosGridDraft['d_${eq.id}_${mesActual}']=this.value"/>
+          </td>
+          <td style="padding:6px 8px">
+            <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+              <input type="number" min="0" max="100" step="1" value="${pct1}" title="% C${selectedCn}"
+                style="width:42px;padding:3px;font-size:11px;text-align:center;border:1px solid var(--border)"
+                onchange="gastosGridDraft['d_pct1_${eq.id}_${mesActual}']=this.value"/>
+              <span style="font-size:10px;color:var(--muted)">%C${selectedCn}</span>
+              <input type="number" min="0" max="100" step="1" value="${pct2}" placeholder="0"
+                style="width:42px;padding:3px;font-size:11px;text-align:center;border:1px solid var(--border)"
+                onchange="gastosGridDraft['d_pct2_${eq.id}_${mesActual}']=this.value"/>
+              <select style="font-size:11px;padding:2px;border:1px solid var(--border)"
+                onchange="gastosGridDraft['d_cn2_${eq.id}_${mesActual}']=this.value">
                 <option value="">C?</option>${cicloOpts}
               </select>
             </div>
-            ${acum?`<div style="font-size:9px;color:var(--amber);font-family:'DM Mono',monospace;margin-top:2px">${acum}L acum</div>`:''}
-          </td>`;
-        }).join('');
-
-        const histAll=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&getGastoCosecha(g)===selectedCn);
-        const totLts=histAll.reduce((s,g)=>s+(parseFloat(g.litros||0)),0);
-        const totMonto=histAll.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-
-        return `<tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:6px 10px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
-          <td style="padding:4px 6px">${predioChecks}</td>
-          ${celdas}
-          <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);white-space:nowrap">${totLts?totLts+'L':'—'}</td>
-          <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);white-space:nowrap">${totMonto?fmt(totMonto):'—'}</td>
+          </td>
+          <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">
+            ${acumLts?`${acumLts}L · ${fmt(acumMonto)} este mes`:'—'}
+          </td>
+          <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--amber)">
+            ${totLts?`${totLts}L · ${fmt(totMonto)} C${selectedCn}`:'—'}
+          </td>
           ${isAdmin?`<td style="padding:4px"><button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delTractorGlobal('${eq.id}')">✕</button></td>`:'<td></td>'}
         </tr>`;
       }).join('');
@@ -2835,56 +2803,56 @@ function renderGastos() {
       const repRows = todos.map(eq=>{
         const predioChecks = S.predios.map((p,pi)=>{
           const col=pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
-          const chk = gastosGridDraft[`r_pi_${eq.id}_${pi}`]!==undefined
-            ? gastosGridDraft[`r_pi_${eq.id}_${pi}`]==='1'
-            : (eq.predios||[]).includes(pi);
-          return `<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer">
+          const chk = gastosGridDraft[`r_pi_${eq.id}_${pi}_${mesActual}`]!==undefined
+            ? gastosGridDraft[`r_pi_${eq.id}_${pi}_${mesActual}`]==='1'
+            : true;
+          return `<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;margin-right:6px">
             <input type="checkbox" ${chk?'checked':''} style="accent-color:${col}"
-              onchange="gastosGridDraft['r_pi_${eq.id}_${pi}']=this.checked?'1':'0'"/> <span style="color:${col}">${p.emoji}</span>
+              onchange="gastosGridDraft['r_pi_${eq.id}_${pi}_${mesActual}']=this.checked?'1':'0'"/>
+            <span style="color:${col}">${p.emoji} ${p.nombre}</span>
           </label>`;
         }).join('');
-
-        const celdas = mesesActivos.map(mes=>{
-          const val = gastosGridDraft[`r_${eq.id}_${mes}`]||'';
-          const desc = gastosGridDraft[`r_desc_${eq.id}_${mes}`]||'';
-          const pct1 = gastosGridDraft[`r_pct1_${eq.id}_${mes}`]??100;
-          const pct2 = gastosGridDraft[`r_pct2_${eq.id}_${mes}`]??'';
-          const cn2  = gastosGridDraft[`r_cn2_${eq.id}_${mes}`]??'';
-          const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&(g.mes===mes||g.mes===String(mes))&&getGastoCosecha(g)===selectedCn);
-          const acum=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-          return `<td style="padding:3px 4px;vertical-align:top">
+        const val = gastosGridDraft[`r_${eq.id}_${mesActual}`]||'';
+        const desc = gastosGridDraft[`r_desc_${eq.id}_${mesActual}`]||'';
+        const pct1 = gastosGridDraft[`r_pct1_${eq.id}_${mesActual}`]??100;
+        const pct2 = gastosGridDraft[`r_pct2_${eq.id}_${mesActual}`]??'';
+        const cn2sel = gastosGridDraft[`r_cn2_${eq.id}_${mesActual}`]??'';
+        const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&(g.mes===mesActual||g.mes===String(mesActual))&&getGastoCosecha(g)===selectedCn);
+        const acum=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        const histTot=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&getGastoCosecha(g)===selectedCn);
+        const tot=histTot.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
+          <td style="padding:6px 10px">${predioChecks}</td>
+          <td style="padding:6px 8px">
             <input type="number" min="0" step="1" placeholder="$" value="${val}"
-              style="width:70px;padding:4px;text-align:center;border:1px solid var(--border);font-size:12px;font-family:'DM Mono',monospace;display:block;margin-bottom:3px"
-              onchange="gastosGridDraft['r_${eq.id}_${mes}']=this.value"/>
-            <input type="text" placeholder="nota..." value="${desc}"
-              style="width:70px;padding:2px 4px;border:1px solid var(--border);font-size:10px;color:var(--muted);display:block;margin-bottom:3px"
-              onchange="gastosGridDraft['r_desc_${eq.id}_${mes}']=this.value"/>
-            <div style="display:flex;gap:2px;align-items:center;flex-wrap:wrap">
-              <input type="number" min="0" max="100" step="1" value="${pct1}" title="% este ciclo"
-                style="width:36px;padding:2px;font-size:10px;text-align:center;border:1px solid var(--border)"
-                onchange="gastosGridDraft['r_pct1_${eq.id}_${mes}']=this.value"/>
-              <span style="font-size:9px;color:var(--muted)">%C${selectedCn}</span>
-            </div>
-            <div style="display:flex;gap:2px;align-items:center;margin-top:2px;flex-wrap:wrap">
+              style="width:100px;padding:5px;text-align:right;border:1px solid var(--border);font-size:13px;font-family:'DM Mono',monospace;display:block;margin-bottom:4px"
+              onchange="gastosGridDraft['r_${eq.id}_${mesActual}']=this.value"/>
+            <input type="text" placeholder="Descripción..." value="${desc}"
+              style="width:160px;padding:3px 6px;border:1px solid var(--border);font-size:11px;color:var(--muted)"
+              onchange="gastosGridDraft['r_desc_${eq.id}_${mesActual}']=this.value"/>
+          </td>
+          <td style="padding:6px 8px">
+            <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+              <input type="number" min="0" max="100" step="1" value="${pct1}" title="% C${selectedCn}"
+                style="width:42px;padding:3px;font-size:11px;text-align:center;border:1px solid var(--border)"
+                onchange="gastosGridDraft['r_pct1_${eq.id}_${mesActual}']=this.value"/>
+              <span style="font-size:10px;color:var(--muted)">%C${selectedCn}</span>
               <input type="number" min="0" max="100" step="1" value="${pct2}" placeholder="0"
-                style="width:36px;padding:2px;font-size:10px;text-align:center;border:1px solid var(--border)"
-                onchange="gastosGridDraft['r_pct2_${eq.id}_${mes}']=this.value"/>
-              <select style="font-size:9px;padding:1px;border:1px solid var(--border)" onchange="gastosGridDraft['r_cn2_${eq.id}_${mes}']=this.value">
+                style="width:42px;padding:3px;font-size:11px;text-align:center;border:1px solid var(--border)"
+                onchange="gastosGridDraft['r_pct2_${eq.id}_${mesActual}']=this.value"/>
+              <select style="font-size:11px;padding:2px;border:1px solid var(--border)"
+                onchange="gastosGridDraft['r_cn2_${eq.id}_${mesActual}']=this.value">
                 <option value="">C?</option>${cicloOpts}
               </select>
             </div>
-            ${acum?`<div style="font-size:9px;color:var(--amber);font-family:'DM Mono',monospace;margin-top:2px">${fmt(acum)} acum</div>`:''}
-          </td>`;
-        }).join('');
-
-        const histAll=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&getGastoCosecha(g)===selectedCn);
-        const totMonto=histAll.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-
-        return `<tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:6px 10px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
-          <td style="padding:4px 6px">${predioChecks}</td>
-          ${celdas}
-          <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);white-space:nowrap">${totMonto?fmt(totMonto):'—'}</td>
+          </td>
+          <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">
+            ${acum?fmt(acum)+' este mes':'—'}
+          </td>
+          <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--amber)">
+            ${tot?fmt(tot)+' C'+selectedCn:'—'}
+          </td>
           ${isAdmin?`<td style="padding:4px"><button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delTractorGlobal('${eq.id}')">✕</button></td>`:'<td></td>'}
         </tr>`;
       }).join('');
@@ -2892,28 +2860,31 @@ function renderGastos() {
       tabContent = `
         ${configEq}
         ${precioDieselBar}
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🛢 Diesel — C${selectedCn} ${gastosGridAnio}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🛢 Diesel — ${MESES[mesActual-1]} · C${selectedCn} ${gastosGridAnio}</div>
         <div style="overflow-x:auto;margin-bottom:20px">
-        <table style="border-collapse:collapse;font-size:13px">
+        <table style="border-collapse:collapse;font-size:13px;width:100%">
           <thead><tr style="background:var(--earth);color:#fff">
-            <th style="padding:7px 10px;text-align:left">Equipo</th>
-            <th style="padding:7px 8px;text-align:left">Predios</th>
-            ${mesesHdr}
-            <th style="padding:7px 8px;text-align:right">Total Lts</th>
-            <th style="padding:7px 8px;text-align:right">Total $</th>
+            <th style="padding:7px 12px;text-align:left">Equipo</th>
+            <th style="padding:7px 10px;text-align:left">Predios</th>
+            <th style="padding:7px 10px;text-align:center">Litros</th>
+            <th style="padding:7px 10px;text-align:left">Split ciclo</th>
+            <th style="padding:7px 10px;text-align:right">Este mes</th>
+            <th style="padding:7px 10px;text-align:right">Total C${selectedCn}</th>
             <th></th>
           </tr></thead>
           <tbody>${dieselRows}</tbody>
         </table></div>
 
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🔧 Reparaciones y Servicios — C${selectedCn} ${gastosGridAnio}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🔧 Reparaciones — ${MESES[mesActual-1]} · C${selectedCn} ${gastosGridAnio}</div>
         <div style="overflow-x:auto">
-        <table style="border-collapse:collapse;font-size:13px">
+        <table style="border-collapse:collapse;font-size:13px;width:100%">
           <thead><tr style="background:var(--earth);color:#fff">
-            <th style="padding:7px 10px;text-align:left">Equipo</th>
-            <th style="padding:7px 8px;text-align:left">Predios</th>
-            ${mesesHdr}
-            <th style="padding:7px 8px;text-align:right">Total $</th>
+            <th style="padding:7px 12px;text-align:left">Equipo</th>
+            <th style="padding:7px 10px;text-align:left">Predios</th>
+            <th style="padding:7px 10px;text-align:left">Monto y descripción</th>
+            <th style="padding:7px 10px;text-align:left">Split ciclo</th>
+            <th style="padding:7px 10px;text-align:right">Este mes</th>
+            <th style="padding:7px 10px;text-align:right">Total C${selectedCn}</th>
             <th></th>
           </tr></thead>
           <tbody>${repRows}</tbody>
@@ -4140,40 +4111,32 @@ function capturarGastos() {
 
   if(gastosTab === 'tractores') {
     const precioDieselCn = (S.precioDiesel && S.precioDiesel[cn]) || 0;
-    const mesesKey = `meses_activos_${cn}`;
-    const mesesActCap = (gastosGridDraft[mesesKey]||getMesesCn(cn).join(',')).split(',').map(Number).filter(Boolean);
+    const mesActCap = parseInt(gastosGridDraft['trac_mes'] || getMesesCn(cn)[0]);
     (S.tractores||[]).forEach(eq=>{
-      // Diesel (solo tractores)
+      // Predios seleccionados para este mes
+      const prediosD = S.predios.map((_,pi)=>({pi, chk: gastosGridDraft[`d_pi_${eq.id}_${pi}_${mesActCap}`]!==undefined ? gastosGridDraft[`d_pi_${eq.id}_${pi}_${mesActCap}`]==='1' : true})).filter(x=>x.chk).map(x=>x.pi);
+      const prediosR = S.predios.map((_,pi)=>({pi, chk: gastosGridDraft[`r_pi_${eq.id}_${pi}_${mesActCap}`]!==undefined ? gastosGridDraft[`r_pi_${eq.id}_${pi}_${mesActCap}`]==='1' : true})).filter(x=>x.chk).map(x=>x.pi);
+      // Diesel
       if(eq.tipo!=='implemento') {
-        const prediosD = S.predios.map((_,pi)=>({pi, chk: gastosGridDraft[`d_pi_${eq.id}_${pi}`]!==undefined ? gastosGridDraft[`d_pi_${eq.id}_${pi}`]==='1' : (eq.predios||[]).includes(pi)})).filter(x=>x.chk).map(x=>x.pi);
-        mesesActCap.forEach(mes=>{
-          const litros = parseFloat(gastosGridDraft[`d_${eq.id}_${mes}`]);
-          if(!litros||litros<=0) return;
-          const pct1 = parseFloat(gastosGridDraft[`d_pct1_${eq.id}_${mes}`]??100)/100;
-          const pct2 = parseFloat(gastosGridDraft[`d_pct2_${eq.id}_${mes}`]||0)/100;
-          const cn2  = parseInt(gastosGridDraft[`d_cn2_${eq.id}_${mes}`]||0);
-          if(pct1>0) {
-            const lts1=litros*pct1; const m1=precioDieselCn?lts1*precioDieselCn:0;
-            S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel',equipo:eq.nombre,litros:lts1,precioPorLitro:precioDieselCn,monto:m1,prediosIdx:prediosD,mes,fecha:today()}); total++;
-          }
-          if(pct2>0&&cn2) {
-            const lts2=litros*pct2; const m2=precioDieselCn?lts2*precioDieselCn:0;
-            S.gastosGenerales.push({id:uid(),cosecha:cn2,anio,categoria:'Diesel',equipo:eq.nombre,litros:lts2,precioPorLitro:precioDieselCn,monto:m2,prediosIdx:prediosD,mes,fecha:today()}); total++;
-          }
-        });
+        const litros = parseFloat(gastosGridDraft[`d_${eq.id}_${mesActCap}`]);
+        if(litros>0) {
+          const pct1 = parseFloat(gastosGridDraft[`d_pct1_${eq.id}_${mesActCap}`]??100)/100;
+          const pct2 = parseFloat(gastosGridDraft[`d_pct2_${eq.id}_${mesActCap}`]||0)/100;
+          const cn2  = parseInt(gastosGridDraft[`d_cn2_${eq.id}_${mesActCap}`]||0);
+          if(pct1>0) { const l1=litros*pct1; S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel',equipo:eq.nombre,litros:l1,precioPorLitro:precioDieselCn,monto:precioDieselCn?l1*precioDieselCn:0,prediosIdx:prediosD,mes:mesActCap,fecha:today()}); total++; }
+          if(pct2>0&&cn2) { const l2=litros*pct2; S.gastosGenerales.push({id:uid(),cosecha:cn2,anio,categoria:'Diesel',equipo:eq.nombre,litros:l2,precioPorLitro:precioDieselCn,monto:precioDieselCn?l2*precioDieselCn:0,prediosIdx:prediosD,mes:mesActCap,fecha:today()}); total++; }
+        }
       }
-      // Reparaciones (todos)
-      const prediosR = S.predios.map((_,pi)=>({pi, chk: gastosGridDraft[`r_pi_${eq.id}_${pi}`]!==undefined ? gastosGridDraft[`r_pi_${eq.id}_${pi}`]==='1' : (eq.predios||[]).includes(pi)})).filter(x=>x.chk).map(x=>x.pi);
-      mesesActCap.forEach(mes=>{
-        const rep = parseFloat(gastosGridDraft[`r_${eq.id}_${mes}`]);
-        if(!rep||rep<=0) return;
-        const desc = gastosGridDraft[`r_desc_${eq.id}_${mes}`]||'';
-        const pct1 = parseFloat(gastosGridDraft[`r_pct1_${eq.id}_${mes}`]??100)/100;
-        const pct2 = parseFloat(gastosGridDraft[`r_pct2_${eq.id}_${mes}`]||0)/100;
-        const cn2  = parseInt(gastosGridDraft[`r_cn2_${eq.id}_${mes}`]||0);
-        if(pct1>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria',equipo:eq.nombre,actividad:'Reparación',descripcion:desc,monto:rep*pct1,prediosIdx:prediosR,mes,fecha:today()}); total++; }
-        if(pct2>0&&cn2) { S.gastosGenerales.push({id:uid(),cosecha:cn2,anio,categoria:'Maquinaria',equipo:eq.nombre,actividad:'Reparación',descripcion:desc,monto:rep*pct2,prediosIdx:prediosR,mes,fecha:today()}); total++; }
-      });
+      // Reparaciones
+      const rep = parseFloat(gastosGridDraft[`r_${eq.id}_${mesActCap}`]);
+      if(rep>0) {
+        const desc = gastosGridDraft[`r_desc_${eq.id}_${mesActCap}`]||'';
+        const pct1 = parseFloat(gastosGridDraft[`r_pct1_${eq.id}_${mesActCap}`]??100)/100;
+        const pct2 = parseFloat(gastosGridDraft[`r_pct2_${eq.id}_${mesActCap}`]||0)/100;
+        const cn2  = parseInt(gastosGridDraft[`r_cn2_${eq.id}_${mesActCap}`]||0);
+        if(pct1>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria',equipo:eq.nombre,actividad:'Reparación',descripcion:desc,monto:rep*pct1,prediosIdx:prediosR,mes:mesActCap,fecha:today()}); total++; }
+        if(pct2>0&&cn2) { S.gastosGenerales.push({id:uid(),cosecha:cn2,anio,categoria:'Maquinaria',equipo:eq.nombre,actividad:'Reparación',descripcion:desc,monto:rep*pct2,prediosIdx:prediosR,mes:mesActCap,fecha:today()}); total++; }
+      }
     });
 
   } else if(gastosTab === 'luz') {
