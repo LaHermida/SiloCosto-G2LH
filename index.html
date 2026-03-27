@@ -2706,12 +2706,13 @@ function renderGastos() {
   if(gastosTab === 'tractores') {
     if(!S.tractores) S.tractores = [];
 
-    // ── Mes seleccionado ──
     const mesActual = parseInt(gastosGridDraft['trac_mes'] || getMesesCn(selectedCn)[0]);
     const mesOpts = [1,2,3,4,5,6,7,8,9,10,11,12].map(m=>
       `<option value="${m}" ${m===mesActual?'selected':''}>${MESES[m-1]}</option>`).join('');
+    const precioDieselVal = parseFloat(S.precioDiesel?.[mesActual] || S.precioDiesel?.[selectedCn] || 0);
+    const cicloOpts = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
 
-    // ── Config: agregar tractor (solo nombre y tipo) ──
+    // ── Config agregar equipo ──
     const configEq = isAdmin ? `
       <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar equipo:</span>
@@ -2720,96 +2721,94 @@ function renderGastos() {
         <button class="btn btn-s" onclick="addTractorGlobal()">+ Agregar</button>
       </div>` : '';
 
-    // ── Precio diesel ──
-    const precioDieselVal = S.precioDiesel?.[selectedCn] || '';
-    const precioDieselBar = `
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:8px 14px;background:#f0fdf4;border:1px solid #7ec89a;flex-wrap:wrap">
-        <span style="font-size:12px;color:var(--muted)">💧 Precio diesel C${selectedCn}:</span>
-        ${isAdmin ? `<input type="number" min="0" step="0.01" placeholder="$/litro" value="${precioDieselVal}"
-          style="width:100px;padding:4px 8px;border:1px solid #7ec89a;font-size:13px;text-align:right"
-          onchange="if(!S.precioDiesel)S.precioDiesel={};S.precioDiesel[${selectedCn}]=parseFloat(this.value)||0;save()"/>` :
-          `<strong>${precioDieselVal?'$'+precioDieselVal+'/L':'pendiente'}</strong>`}
-        <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
-          <span style="font-size:12px;color:var(--muted)">📅 Mes:</span>
-          <select style="padding:4px 8px;font-size:13px;border:1px solid var(--border)"
-            onchange="gastosGridDraft['trac_mes']=this.value;renderGastos()">${mesOpts}</select>
-        </div>
-      </div>`;
-
     if(!S.tractores.length) {
-      tabContent = `${configEq}${precioDieselBar}<div class="empty"><div class="empty-icon">🚜</div><div>Sin equipos. Agrégalos arriba.</div></div>`;
+      tabContent = `${configEq}<div class="empty"><div class="empty-icon">🚜</div><div>Sin equipos. Agrégalos arriba.</div></div>`;
     } else {
       const tractoresSolo = S.tractores.filter(t=>t.tipo!=='implemento');
       const todos = S.tractores;
-      const cicloOpts = [1,2,3].map(c=>`<option value="${c}">C${c}</option>`).join('');
 
-      // ── DIESEL ──
+      // ── Header compartido Mes + Precio Diesel ──
+      const sharedHeader = `
+        <div style="display:flex;align-items:center;gap:16px;padding:10px 14px;background:#f0fdf4;border:1px solid #7ec89a;margin-bottom:16px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--muted)">📅 Mes:</span>
+            <select style="padding:5px 10px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #7ec89a"
+              onchange="gastosGridDraft['trac_mes']=this.value;renderGastos()">${mesOpts}</select>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--muted)">💧 Precio diesel:</span>
+            ${isAdmin ? `<input type="number" min="0" step="0.01" placeholder="$/Lt" value="${precioDieselVal||''}"
+              style="width:90px;padding:4px 8px;border:1px solid #7ec89a;font-size:13px;font-family:'DM Mono',monospace;text-align:right"
+              onchange="if(!S.precioDiesel)S.precioDiesel={};S.precioDiesel[${mesActual}]=parseFloat(this.value)||0;save()"/>
+              <span style="font-size:11px;color:var(--muted)">/Lt — ${MESES[mesActual-1]}</span>` :
+              `<strong style="font-family:'DM Mono',monospace">${precioDieselVal?'$'+precioDieselVal+'/Lt':'pendiente'}</strong>`}
+          </div>
+        </div>`;
+
+      // ── DIESEL rows ──
       const dieselRows = tractoresSolo.map(eq=>{
         const predioChecks = S.predios.map((p,pi)=>{
           const col=pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
           const chk = gastosGridDraft[`d_pi_${eq.id}_${pi}_${mesActual}`]!==undefined
-            ? gastosGridDraft[`d_pi_${eq.id}_${pi}_${mesActual}`]==='1'
-            : true;
-          return `<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;margin-right:6px">
+            ? gastosGridDraft[`d_pi_${eq.id}_${pi}_${mesActual}`]==='1' : true;
+          return `<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;margin-right:4px">
             <input type="checkbox" ${chk?'checked':''} style="accent-color:${col}"
               onchange="gastosGridDraft['d_pi_${eq.id}_${pi}_${mesActual}']=this.checked?'1':'0'"/>
-            <span style="color:${col}">${p.emoji} ${p.nombre}</span>
+            <span style="color:${col}">${p.emoji}</span>
           </label>`;
         }).join('');
-        const val = gastosGridDraft[`d_${eq.id}_${mesActual}`]||'';
+        const lts = gastosGridDraft[`d_${eq.id}_${mesActual}`]||'';
         const pct1 = gastosGridDraft[`d_pct1_${eq.id}_${mesActual}`]??100;
         const pct2 = gastosGridDraft[`d_pct2_${eq.id}_${mesActual}`]??'';
         const cn2sel = gastosGridDraft[`d_cn2_${eq.id}_${mesActual}`]??'';
-        const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&(g.mes===mesActual||g.mes===String(mesActual))&&getGastoCosecha(g)===selectedCn);
-        const acumLts=hist.reduce((s,g)=>s+(parseFloat(g.litros||0)),0);
-        const acumMonto=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        const montoPreview = lts && precioDieselVal ? fmt(parseFloat(lts)*precioDieselVal*(parseFloat(pct1)||100)/100) : '';
+        const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&(g.mes===mesActual||g.mes===String(mesActual))&&getGastoCosecha(g)===selectedCn);
+        const acumMes=histMes.reduce((s,g)=>s+(parseFloat(g.litros||0)),0);
         const histTot=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&getGastoCosecha(g)===selectedCn);
         const totLts=histTot.reduce((s,g)=>s+(parseFloat(g.litros||0)),0);
         const totMonto=histTot.reduce((s,g)=>s+parseFloat(g.monto||0),0);
         return `<tr style="border-bottom:1px solid var(--border)">
           <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
-          <td style="padding:6px 10px">${predioChecks}</td>
+          <td style="padding:6px 8px"><div style="display:flex;flex-wrap:wrap">${predioChecks}</div></td>
           <td style="padding:6px 8px;text-align:center">
-            <input type="number" min="0" step="0.1" placeholder="Lts" value="${val}"
-              style="width:80px;padding:5px;text-align:center;border:1px solid var(--border);font-size:13px;font-family:'DM Mono',monospace"
-              onchange="gastosGridDraft['d_${eq.id}_${mesActual}']=this.value"/>
+            <input type="number" min="0" step="0.1" placeholder="Lts" value="${lts}"
+              style="width:75px;padding:5px;text-align:center;border:1px solid var(--border);font-size:13px;font-family:'DM Mono',monospace"
+              onchange="gastosGridDraft['d_${eq.id}_${mesActual}']=this.value;renderGastos()"/>
+            ${montoPreview?`<div style="font-size:10px;color:var(--amber);margin-top:2px">${montoPreview}</div>`:''}
           </td>
           <td style="padding:6px 8px">
-            <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
-              <input type="number" min="0" max="100" step="1" value="${pct1}" title="% C${selectedCn}"
-                style="width:42px;padding:3px;font-size:11px;text-align:center;border:1px solid var(--border)"
+            <div style="display:flex;gap:4px;align-items:center">
+              <input type="number" min="0" max="100" step="1" value="${pct1}"
+                style="width:40px;padding:3px;font-size:11px;text-align:center;border:1px solid var(--border)"
                 onchange="gastosGridDraft['d_pct1_${eq.id}_${mesActual}']=this.value"/>
               <span style="font-size:10px;color:var(--muted)">%C${selectedCn}</span>
+            </div>
+            <div style="display:flex;gap:4px;align-items:center;margin-top:3px">
               <input type="number" min="0" max="100" step="1" value="${pct2}" placeholder="0"
-                style="width:42px;padding:3px;font-size:11px;text-align:center;border:1px solid var(--border)"
+                style="width:40px;padding:3px;font-size:11px;text-align:center;border:1px solid var(--border)"
                 onchange="gastosGridDraft['d_pct2_${eq.id}_${mesActual}']=this.value"/>
-              <select style="font-size:11px;padding:2px;border:1px solid var(--border)"
+              <select style="font-size:10px;padding:2px;border:1px solid var(--border)"
                 onchange="gastosGridDraft['d_cn2_${eq.id}_${mesActual}']=this.value">
                 <option value="">C?</option>${cicloOpts}
               </select>
             </div>
           </td>
-          <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">
-            ${acumLts?`${acumLts}L · ${fmt(acumMonto)} este mes`:'—'}
-          </td>
-          <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--amber)">
-            ${totLts?`${totLts}L · ${fmt(totMonto)} C${selectedCn}`:'—'}
-          </td>
-          ${isAdmin?`<td style="padding:4px"><button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delTractorGlobal('${eq.id}')">✕</button></td>`:'<td></td>'}
+          <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:right">${acumMes?acumMes+'L este mes':'—'}</td>
+          <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);text-align:right">${totLts?totLts+'L · '+fmt(totMonto):'—'}</td>
+          ${isAdmin?`<td><button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delTractorGlobal('${eq.id}')">✕</button></td>`:'<td></td>'}
         </tr>`;
       }).join('');
 
-      // ── REPARACIONES ──
+      // ── REPARACIONES rows ──
       const repRows = todos.map(eq=>{
         const predioChecks = S.predios.map((p,pi)=>{
           const col=pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
           const chk = gastosGridDraft[`r_pi_${eq.id}_${pi}_${mesActual}`]!==undefined
-            ? gastosGridDraft[`r_pi_${eq.id}_${pi}_${mesActual}`]==='1'
-            : true;
-          return `<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;margin-right:6px">
+            ? gastosGridDraft[`r_pi_${eq.id}_${pi}_${mesActual}`]==='1' : true;
+          return `<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;margin-right:4px">
             <input type="checkbox" ${chk?'checked':''} style="accent-color:${col}"
               onchange="gastosGridDraft['r_pi_${eq.id}_${pi}_${mesActual}']=this.checked?'1':'0'"/>
-            <span style="color:${col}">${p.emoji} ${p.nombre}</span>
+            <span style="color:${col}">${p.emoji}</span>
           </label>`;
         }).join('');
         const val = gastosGridDraft[`r_${eq.id}_${mesActual}`]||'';
@@ -2817,50 +2816,48 @@ function renderGastos() {
         const pct1 = gastosGridDraft[`r_pct1_${eq.id}_${mesActual}`]??100;
         const pct2 = gastosGridDraft[`r_pct2_${eq.id}_${mesActual}`]??'';
         const cn2sel = gastosGridDraft[`r_cn2_${eq.id}_${mesActual}`]??'';
-        const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&(g.mes===mesActual||g.mes===String(mesActual))&&getGastoCosecha(g)===selectedCn);
-        const acum=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&(g.mes===mesActual||g.mes===String(mesActual))&&getGastoCosecha(g)===selectedCn);
+        const acumMes=histMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
         const histTot=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&getGastoCosecha(g)===selectedCn);
         const tot=histTot.reduce((s,g)=>s+parseFloat(g.monto||0),0);
         return `<tr style="border-bottom:1px solid var(--border)">
           <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
-          <td style="padding:6px 10px">${predioChecks}</td>
+          <td style="padding:6px 8px"><div style="display:flex;flex-wrap:wrap">${predioChecks}</div></td>
           <td style="padding:6px 8px">
             <input type="number" min="0" step="1" placeholder="$" value="${val}"
-              style="width:100px;padding:5px;text-align:right;border:1px solid var(--border);font-size:13px;font-family:'DM Mono',monospace;display:block;margin-bottom:4px"
+              style="width:100px;padding:5px;text-align:right;border:1px solid var(--border);font-size:13px;font-family:'DM Mono',monospace;display:block;margin-bottom:3px"
               onchange="gastosGridDraft['r_${eq.id}_${mesActual}']=this.value"/>
             <input type="text" placeholder="Descripción..." value="${desc}"
               style="width:160px;padding:3px 6px;border:1px solid var(--border);font-size:11px;color:var(--muted)"
               onchange="gastosGridDraft['r_desc_${eq.id}_${mesActual}']=this.value"/>
           </td>
           <td style="padding:6px 8px">
-            <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
-              <input type="number" min="0" max="100" step="1" value="${pct1}" title="% C${selectedCn}"
-                style="width:42px;padding:3px;font-size:11px;text-align:center;border:1px solid var(--border)"
+            <div style="display:flex;gap:4px;align-items:center">
+              <input type="number" min="0" max="100" step="1" value="${pct1}"
+                style="width:40px;padding:3px;font-size:11px;text-align:center;border:1px solid var(--border)"
                 onchange="gastosGridDraft['r_pct1_${eq.id}_${mesActual}']=this.value"/>
               <span style="font-size:10px;color:var(--muted)">%C${selectedCn}</span>
+            </div>
+            <div style="display:flex;gap:4px;align-items:center;margin-top:3px">
               <input type="number" min="0" max="100" step="1" value="${pct2}" placeholder="0"
-                style="width:42px;padding:3px;font-size:11px;text-align:center;border:1px solid var(--border)"
+                style="width:40px;padding:3px;font-size:11px;text-align:center;border:1px solid var(--border)"
                 onchange="gastosGridDraft['r_pct2_${eq.id}_${mesActual}']=this.value"/>
-              <select style="font-size:11px;padding:2px;border:1px solid var(--border)"
+              <select style="font-size:10px;padding:2px;border:1px solid var(--border)"
                 onchange="gastosGridDraft['r_cn2_${eq.id}_${mesActual}']=this.value">
                 <option value="">C?</option>${cicloOpts}
               </select>
             </div>
           </td>
-          <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">
-            ${acum?fmt(acum)+' este mes':'—'}
-          </td>
-          <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--amber)">
-            ${tot?fmt(tot)+' C'+selectedCn:'—'}
-          </td>
-          ${isAdmin?`<td style="padding:4px"><button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delTractorGlobal('${eq.id}')">✕</button></td>`:'<td></td>'}
+          <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:right">${acumMes?fmt(acumMes)+' este mes':'—'}</td>
+          <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);text-align:right">${tot?fmt(tot)+' C'+selectedCn:'—'}</td>
+          ${isAdmin?`<td><button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delTractorGlobal('${eq.id}')">✕</button></td>`:'<td></td>'}
         </tr>`;
       }).join('');
 
       tabContent = `
         ${configEq}
-        ${precioDieselBar}
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🛢 Diesel — ${MESES[mesActual-1]} · C${selectedCn} ${gastosGridAnio}</div>
+        ${sharedHeader}
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🛢 Diesel</div>
         <div style="overflow-x:auto;margin-bottom:20px">
         <table style="border-collapse:collapse;font-size:13px;width:100%">
           <thead><tr style="background:var(--earth);color:#fff">
@@ -2868,22 +2865,21 @@ function renderGastos() {
             <th style="padding:7px 10px;text-align:left">Predios</th>
             <th style="padding:7px 10px;text-align:center">Litros</th>
             <th style="padding:7px 10px;text-align:left">Split ciclo</th>
-            <th style="padding:7px 10px;text-align:right">Este mes</th>
+            <th style="padding:7px 10px;text-align:right">${MESES[mesActual-1]}</th>
             <th style="padding:7px 10px;text-align:right">Total C${selectedCn}</th>
             <th></th>
           </tr></thead>
           <tbody>${dieselRows}</tbody>
         </table></div>
-
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🔧 Reparaciones — ${MESES[mesActual-1]} · C${selectedCn} ${gastosGridAnio}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🔧 Reparaciones</div>
         <div style="overflow-x:auto">
         <table style="border-collapse:collapse;font-size:13px;width:100%">
           <thead><tr style="background:var(--earth);color:#fff">
             <th style="padding:7px 12px;text-align:left">Equipo</th>
             <th style="padding:7px 10px;text-align:left">Predios</th>
-            <th style="padding:7px 10px;text-align:left">Monto y descripción</th>
+            <th style="padding:7px 10px;text-align:left">Monto / Descripción</th>
             <th style="padding:7px 10px;text-align:left">Split ciclo</th>
-            <th style="padding:7px 10px;text-align:right">Este mes</th>
+            <th style="padding:7px 10px;text-align:right">${MESES[mesActual-1]}</th>
             <th style="padding:7px 10px;text-align:right">Total C${selectedCn}</th>
             <th></th>
           </tr></thead>
