@@ -2857,24 +2857,10 @@ function renderGastos() {
       }).join('');
 
       // ── HISTORIAL: filas=tractores, columnas=meses del ciclo ──
-      // Meses del ciclo + 2 antes y 2 después para ciclos que se corran
-      const mesesBase = getMesesCn(selectedCn);
-      const allMonths = [1,2,3,4,5,6,7,8,9,10,11,12];
-      const firstIdx = allMonths.indexOf(mesesBase[0]);
-      const lastIdx = allMonths.indexOf(mesesBase[mesesBase.length-1]);
-      const extMeses = new Set();
-      for(let i=Math.max(0,firstIdx-2);i<=Math.min(11,lastIdx+2);i++) extMeses.add(allMonths[i]);
-      // C1 wraps around: Dec is month 12
-      if(selectedCn===1) { extMeses.add(10); extMeses.add(11); extMeses.add(12); extMeses.add(1); extMeses.add(2); extMeses.add(3); extMeses.add(4); }
-      // Only keep months that have actual data OR are in base cycle
-      const mesesHist = allMonths.filter(m=>{
-        if(mesesBase.includes(m)) return true;
-        if(!extMeses.has(m)) return false;
-        return (S.gastosGenerales||[]).some(g=>
-          (g.categoria==='Diesel'||g.categoria==='Maquinaria') &&
-          getGastoMes(g)===m && getGastoCosecha(g)===selectedCn
-        );
-      });
+      // Meses del historial con extensión fija por ciclo
+      const mesesHist = selectedCn===1 ? [10,11,12,1,2,3]
+                      : selectedCn===2 ? [2,3,4,5,6,7]
+                      : [6,7,8,9,10,11,12];
       const mesesHistHdr = mesesHist.map(m=>`<th style="padding:6px 10px;text-align:right;min-width:90px">${MESES[m-1].slice(0,3)}</th>`).join('');
 
       const dieselHistRows = tractoresSolo.map(eq=>{
