@@ -2602,6 +2602,14 @@ function buildGridTableFiltered(prediosList, prefix, headerColor, cultivoFilter,
     </table></div>`;
 }
 
+function getMesesCn(cn) {
+  if(cn===1) return [12,1,2];
+  if(cn===2) return [3,4,5,6,7];
+  return [8,9,10,11];
+}
+
+const MESES_G = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
 function renderGastos() {
   if(!S.gastosGenerales) S.gastosGenerales = [];
   if(!S.equipos) S.equipos = {}; // {pi: [{id, nombre, tipo}]} tipo: tractor|noria|luz
@@ -2849,7 +2857,24 @@ function renderGastos() {
       }).join('');
 
       // ── HISTORIAL: filas=tractores, columnas=meses del ciclo ──
-      const mesesHist = getMesesCn(selectedCn);
+      // Meses del ciclo + 2 antes y 2 después para ciclos que se corran
+      const mesesBase = getMesesCn(selectedCn);
+      const allMonths = [1,2,3,4,5,6,7,8,9,10,11,12];
+      const firstIdx = allMonths.indexOf(mesesBase[0]);
+      const lastIdx = allMonths.indexOf(mesesBase[mesesBase.length-1]);
+      const extMeses = new Set();
+      for(let i=Math.max(0,firstIdx-2);i<=Math.min(11,lastIdx+2);i++) extMeses.add(allMonths[i]);
+      // C1 wraps around: Dec is month 12
+      if(selectedCn===1) { extMeses.add(10); extMeses.add(11); extMeses.add(12); extMeses.add(1); extMeses.add(2); extMeses.add(3); extMeses.add(4); }
+      // Only keep months that have actual data OR are in base cycle
+      const mesesHist = allMonths.filter(m=>{
+        if(mesesBase.includes(m)) return true;
+        if(!extMeses.has(m)) return false;
+        return (S.gastosGenerales||[]).some(g=>
+          (g.categoria==='Diesel'||g.categoria==='Maquinaria') &&
+          getGastoMes(g)===m && getGastoCosecha(g)===selectedCn
+        );
+      });
       const mesesHistHdr = mesesHist.map(m=>`<th style="padding:6px 10px;text-align:right;min-width:90px">${MESES[m-1].slice(0,3)}</th>`).join('');
 
       const dieselHistRows = tractoresSolo.map(eq=>{
@@ -2857,8 +2882,8 @@ function renderGastos() {
           const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&getGastoMes(g)===m&&getGastoCosecha(g)===selectedCn);
           const lts=hist.reduce((s,g)=>s+(parseFloat(g.litros||0)),0);
           const monto=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-          const delBtn = isAdmin && lts ? `<button onclick="delGastosPorEquipoMes('${eq.nombre}','Diesel',${m},${selectedCn})"
-            style="border:none;background:none;cursor:pointer;color:#aaa;font-size:9px;padding:0" title="Borrar mes">✕</button>` : '';
+          const delBtn = isAdmin && lts ? `<button class="del-gasto-mes" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Diesel" data-mes="${m}" data-cn="${selectedCn}"
+            style="border:none;background:none;cursor:pointer;color:#aaa;font-size:9px;padding:0;margin-left:4px" title="Borrar mes">✕</button>` : '';
           return `<td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:11px">
             ${lts?`<div style="color:var(--muted)">${lts}L</div><div style="color:var(--amber)">${fmt(monto)}</div>${delBtn}`:'<span style="color:var(--muted)">—</span>'}
           </td>`;
@@ -2878,8 +2903,8 @@ function renderGastos() {
           const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&getGastoMes(g)===m&&getGastoCosecha(g)===selectedCn);
           const monto=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
           const descs=hist.map(g=>g.descripcion).filter(Boolean).join(', ');
-          const delBtn = isAdmin && monto ? `<button onclick="delGastosPorEquipoMes('${eq.nombre}','Maquinaria',${m},${selectedCn})"
-            style="border:none;background:none;cursor:pointer;color:#aaa;font-size:9px;padding:0" title="Borrar mes">✕</button>` : '';
+          const delBtn = isAdmin && monto ? `<button class="del-gasto-mes" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Maquinaria" data-mes="${m}" data-cn="${selectedCn}"
+            style="border:none;background:none;cursor:pointer;color:#aaa;font-size:9px;padding:0;margin-left:4px" title="Borrar mes">✕</button>` : '';
           return `<td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:11px">
             ${monto?`<div style="color:var(--amber)">${fmt(monto)}</div>${descs?`<div style="font-size:9px;color:var(--muted)">${descs}</div>`:''} ${delBtn}`:'<span style="color:var(--muted)">—</span>'}
           </td>`;
@@ -3890,6 +3915,21 @@ function renderGastos() {
     </div>
 
 `;  // end gastos-content
+
+  // Event delegation for del-gasto-mes buttons
+  document.getElementById('gastos-content').addEventListener('click', e=>{
+    const btn = e.target.closest('.del-gasto-mes');
+    if(!btn) return;
+    const nombre = btn.dataset.nombre;
+    const cat = btn.dataset.cat;
+    const mes = parseInt(btn.dataset.mes);
+    const cn = parseInt(btn.dataset.cn);
+    if(!confirm(`¿Borrar registros de ${nombre} — ${MESES_G[mes-1]} — C${cn}?`)) return;
+    S.gastosGenerales = (S.gastosGenerales||[]).filter(g=>
+      !(g.equipo===nombre && g.categoria===cat && getGastoMes(g)===mes && getGastoCosecha(g)===cn)
+    );
+    save(); renderGastos(); toast('✓ Eliminado');
+  }, {once: true});
 }
 
 function renderEquiposList() {
