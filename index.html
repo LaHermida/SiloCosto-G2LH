@@ -3901,21 +3901,6 @@ function renderGastos() {
     </div>
 
 `;  // end gastos-content
-
-  // Event delegation for del-gasto-mes buttons
-  document.getElementById('gastos-content').addEventListener('click', e=>{
-    const btn = e.target.closest('.del-gasto-mes');
-    if(!btn) return;
-    const nombre = btn.dataset.nombre;
-    const cat = btn.dataset.cat;
-    const mes = parseInt(btn.dataset.mes);
-    const cn = parseInt(btn.dataset.cn);
-    if(!confirm(`¿Borrar registros de ${nombre} — ${MESES_G[mes-1]} — C${cn}?`)) return;
-    S.gastosGenerales = (S.gastosGenerales||[]).filter(g=>
-      !(g.equipo===nombre && g.categoria===cat && getGastoMes(g)===mes && getGastoCosecha(g)===cn)
-    );
-    save(); renderGastos(); toast('✓ Eliminado');
-  }, {once: true});
 }
 
 function renderEquiposList() {
@@ -4806,6 +4791,21 @@ function toast(msg,warn=false) {
 curTablaRep=-1;
 checkRemembered();
 loadState();
+
+// Global event delegation for del-gasto-mes buttons
+document.addEventListener('click', e=>{
+  const btn = e.target.closest('.del-gasto-mes');
+  if(!btn) return;
+  const nombre = btn.dataset.nombre;
+  const cat = btn.dataset.cat;
+  const mes = parseInt(btn.dataset.mes);
+  const cn = parseInt(btn.dataset.cn);
+  if(!confirm(`¿Borrar registros de ${nombre} — ${MESES_G[mes-1]} — C${cn}?`)) return;
+  S.gastosGenerales = (S.gastosGenerales||[]).filter(g=>
+    !(g.equipo===nombre && g.categoria===cat && getGastoMes(g)===mes && getGastoCosecha(g)===cn)
+  );
+  save(); renderGastos(); toast('✓ Eliminado');
+});
 </script>
 </body>
 </html>
