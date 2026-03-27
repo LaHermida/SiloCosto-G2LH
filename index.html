@@ -178,6 +178,7 @@ tr:hover td { background:var(--cream); }
 .check-row { display:flex; align-items:center; gap:8px; padding:6px 0; cursor:pointer; font-size:13px; }
 .check-row input[type=checkbox] { width:16px; height:16px; cursor:pointer; accent-color:var(--gold); }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="shell">
@@ -291,6 +292,17 @@ tr:hover td { background:var(--cream); }
       </div>
       <div class="btn-row">
         <button class="btn btn-p" onclick="addArticulo()">Guardar artículo</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head" style="justify-content:space-between">
+        <span>📥 Importar desde Excel</span>
+      </div>
+      <div style="padding:4px 0 12px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Sube el template con los artículos — se agregan o actualizan automáticamente.</div>
+        <input type="file" id="art-excel-input" accept=".xlsx,.xls" style="display:none" onchange="importarArticulosExcel(this)"/>
+        <button class="btn btn-s" onclick="document.getElementById('art-excel-input').click()">📂 Seleccionar archivo Excel</button>
+        <span id="art-import-status" style="margin-left:12px;font-size:12px;color:var(--muted)"></span>
       </div>
     </div>
     <div class="card">
@@ -959,6 +971,52 @@ function deleteTabla(ti) {
 // ══════════════════════════════════════════════
 // ARTÍCULOS
 // ══════════════════════════════════════════════
+function importarArticulosExcel(input) {
+  const file = input.files[0];
+  if(!file) return;
+  const status = document.getElementById('art-import-status');
+  status.textContent = 'Leyendo archivo...';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+      let agregados=0, actualizados=0, errores=0;
+      rows.forEach(row => {
+        const nombre = String(row['Nombre']||'').trim();
+        const cat = String(row['Categoría']||'Material de cultivo').trim();
+        const unidad = String(row['Unidad']||'kg').trim();
+        const ciclo = String(row['Ciclo']||'todos').trim();
+        const anio = parseInt(row['Año']) || new Date().getFullYear();
+        const precio = parseFloat(row['Precio']);
+        if(!nombre || isNaN(precio)) { errores++; return; }
+        const ex = S.articulos.find(a=>a.nombre.toLowerCase()===nombre.toLowerCase());
+        if(ex) {
+          const existeAnio = ex.precios.find(p=>p.fecha&&p.fecha.startsWith(String(anio)));
+          if(existeAnio) { existeAnio.valor = precio; }
+          else { ex.precios.push({valor:precio, fecha:`${anio}-01-01`}); }
+          ex.categoria=cat; ex.unidad=unidad; ex.ciclo=ciclo;
+          actualizados++;
+        } else {
+          S.articulos.push({id:uid(), nombre, categoria:cat, unidad, ciclo, precios:[{valor:precio, fecha:`${anio}-01-01`}]});
+          agregados++;
+        }
+      });
+      save();
+      renderArticulos();
+      status.textContent = `✅ ${agregados} nuevos · ${actualizados} actualizados${errores?` · ${errores} errores`:''}`;
+      status.style.color = 'var(--green)';
+      input.value = '';
+    } catch(err) {
+      status.textContent = '❌ Error al leer el archivo';
+      status.style.color = 'var(--red)';
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 function addArticulo() {
   const nombre = document.getElementById('art-nombre').value.trim();
   const cat = document.getElementById('art-cat').value;
