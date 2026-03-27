@@ -278,7 +278,7 @@ tr:hover td { background:var(--cream); }
         </div>
         <div class="field">
           <label>Año precio</label>
-          <input type="number" id="art-anio" placeholder="2025" min="2020" max="2035" value="${new Date().getFullYear()}"/>
+          <input type="number" id="art-anio" placeholder="2025" min="2020" max="2035" value="2025"/>
         </div>
         <div class="field">
           <label>Ciclo</label>
@@ -4174,6 +4174,7 @@ function capturarGastos() {
         if(pct1>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria',equipo:eq.nombre,actividad:'Reparación',descripcion:desc,monto:rep*pct1,prediosIdx:prediosR,mes,fecha:today()}); total++; }
         if(pct2>0&&cn2) { S.gastosGenerales.push({id:uid(),cosecha:cn2,anio,categoria:'Maquinaria',equipo:eq.nombre,actividad:'Reparación',descripcion:desc,monto:rep*pct2,prediosIdx:prediosR,mes,fecha:today()}); total++; }
       });
+    });
 
   } else if(gastosTab === 'luz') {
     const mes = parseInt(gastosGridDraft['mes'] || new Date().getMonth()+1);
