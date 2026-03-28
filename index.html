@@ -1320,41 +1320,7 @@ function renderDepContent() {
               if(!vigente) return `<td style="padding:6px 10px;border-left:1px solid var(--border)">—</td>`;
               const asigM=(dep.asignaciones||[]).find(a=>a.anio===curAnioDep);
               const isAssigned=asigM?(asigM.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(curCnDep)):pi===pIdx;
-              let depMonto=0;
-              if(isAssigned){
-                const predioDep=S.predios[pIdx];
-                const aplicaD=dep.aplicaCultivos||'todos';
-                const tablasD=dep.alcance==='tablas'?(dep.tablasIdx||[]):predioDep.tablas.map((_,idx)=>idx);
-                let pesoTot=0;
-                for(let c=1;c<=3;c++){
-                  for(const t of tablasD){
-                    const tdC=getTablaData(pIdx,c,t); if(tdC.sinSiembra) continue;
-                    const cv=tdC.cultivo||'maiz';
-                    if(aplicaD==='principales'&&!(cv==='maiz'||cv==='sorgo')) continue;
-                    if(aplicaD==='triticale'&&!(cv==='trigo'||cv==='triticale'||cv==='triticale_heno')) continue;
-                    const cvHa=parseFloat(tdC.haSembradas)||predioDep.tablas[t]?.ha||0;
-                    pesoTot+=(CULTIVOS[cv]?.pct||40)*cvHa;
-                  }
-                }
-                let pesoCn=0;
-                for(const t of tablasD){
-                  const tdC=getTablaData(pIdx,curCnDep,t); if(tdC.sinSiembra) continue;
-                  const cv=tdC.cultivo||'maiz';
-                  if(aplicaD==='principales'&&!(cv==='maiz'||cv==='sorgo')) continue;
-                  if(aplicaD==='triticale'&&!(cv==='trigo'||cv==='triticale'||cv==='triticale_heno')) continue;
-                  const cvHa=parseFloat(tdC.haSembradas)||predioDep.tablas[t]?.ha||0;
-                  pesoCn+=(CULTIVOS[cv]?.pct||40)*cvHa;
-                }
-                const cnPct=pesoTot>0?(pesoCn/pesoTot)*100:0;
-                let predioFraccion=1;
-                if(asigM){
-                  const prediosAsig=(asigM.prediosCosechas||[]).filter(pc=>(pc.cosechas||[]).includes(curCnDep)).map(pc=>pc.pi);
-                  const totalHaAsig=prediosAsig.reduce((s,pi2)=>s+S.predios[pi2].tablas.reduce((sh,t)=>sh+t.ha,0),0);
-                  const miHa=p2.tablas.reduce((s,t)=>s+t.ha,0);
-                  predioFraccion=prediosAsig.length>1?(totalHaAsig>0?miHa/totalHaAsig:1/prediosAsig.length):1;
-                }
-                depMonto=costoAnual*(cnPct/100)*predioFraccion;
-              }
+              const depMonto = isAssigned ? calcDepPredio(pi, curCnDep, curAnioDep) : 0;
               return `<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);border-left:1px solid var(--border)">${depMonto?fmt(depMonto):'—'}</td>`;
             }).join('');
 
@@ -1372,47 +1338,7 @@ function renderDepContent() {
           ${S.predios.filter(p=>(p.ciclos||3)===3).map(()=>`<td></td>`).join('')}
           ${S.predios.map((p2,pi)=>{
             if((p2.ciclos||3)!==3) return '';
-            let tot=0;
-            S.predios.forEach((pr,pIdx)=>{
-              if((pr.ciclos||3)!==3) return;
-              (S.depreciaciones[pIdx]||[]).forEach(dep=>{
-                const aFin=dep.anioFin||(dep.anioInicio?dep.anioInicio+Math.floor(dep.vidaUtil):null);
-                if((!dep.anioInicio||curAnioDep>=dep.anioInicio)&&(!aFin||curAnioDep<=aFin)){
-                  const asig=(dep.asignaciones||[]).find(a=>a.anio===curAnioDep);
-                  const isAssigned=asig?(asig.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(curCnDep)):pi===pIdx;
-                  if(!isAssigned) return;
-                  const aplicaD=dep.aplicaCultivos||'todos';
-                  const tablasD=dep.alcance==='tablas'?(dep.tablasIdx||[]):pr.tablas.map((_,idx)=>idx);
-                  let pesoTot=0;
-                  for(let c=1;c<=3;c++){
-                    for(const t of tablasD){
-                      const tdC=getTablaData(pIdx,c,t); if(tdC.sinSiembra) continue;
-                      const cv=tdC.cultivo||'maiz';
-                      if(aplicaD==='principales'&&!(cv==='maiz'||cv==='sorgo')) continue;
-                      if(aplicaD==='triticale'&&!(cv==='trigo'||cv==='triticale'||cv==='triticale_heno')) continue;
-                      pesoTot+=(CULTIVOS[cv]?.pct||40)*(parseFloat(tdC.haSembradas)||pr.tablas[t]?.ha||0);
-                    }
-                  }
-                  let pesoCn=0;
-                  for(const t of tablasD){
-                    const tdC=getTablaData(pIdx,curCnDep,t); if(tdC.sinSiembra) continue;
-                    const cv=tdC.cultivo||'maiz';
-                    if(aplicaD==='principales'&&!(cv==='maiz'||cv==='sorgo')) continue;
-                    if(aplicaD==='triticale'&&!(cv==='trigo'||cv==='triticale'||cv==='triticale_heno')) continue;
-                    pesoCn+=(CULTIVOS[cv]?.pct||40)*(parseFloat(tdC.haSembradas)||pr.tablas[t]?.ha||0);
-                  }
-                  const cnPct=pesoTot>0?(pesoCn/pesoTot)*100:0;
-                  let pf=1;
-                  if(asig){
-                    const pa=(asig.prediosCosechas||[]).filter(pc=>(pc.cosechas||[]).includes(curCnDep)).map(pc=>pc.pi);
-                    const tha=pa.reduce((s,pi2)=>s+S.predios[pi2].tablas.reduce((sh,t)=>sh+t.ha,0),0);
-                    const mh=p2.tablas.reduce((s,t)=>s+t.ha,0);
-                    pf=pa.length>1?(tha>0?mh/tha:1/pa.length):1;
-                  }
-                  tot+=parseFloat(dep.costoAnual||0)*(cnPct/100)*pf;
-                }
-              });
-            });
+            const tot = calcDepPredio(pi, curCnDep, curAnioDep);
             const ha=p2.tablas.reduce((s,t)=>s+t.ha,0);
             return `<td style="padding:7px 10px;border-left:1px solid var(--border)">
               <div style="text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${tot?fmt(tot):'—'}</div>
