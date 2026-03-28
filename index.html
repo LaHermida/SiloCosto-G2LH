@@ -664,32 +664,27 @@ function calcDepTabla(pi, cn, ti, anio) {
   const predio = S.predios[pi];
   const td = getTablaData(pi,cn,ti);
   if(td.sinSiembra) return 0;
-  const tablaHa = predio.tablas[ti]?.ha || 0;  // ha fija del activo, no haSembradas
-  // Total ha activas en este ciclo (ha fija)
-  const totalHaActivas = predio.tablas.reduce((s,t,idx)=>{
-    const tdx = getTablaData(pi,cn,idx);
-    if(tdx.sinSiembra) return s;
-    return s + (t.ha || 0);
-  },0);
+
+  const tablaHa = predio.tablas[ti]?.ha || 0;
   const ciclos = predio.ciclos || 3;
   const cultivo = td.cultivo || 'maiz';
+  const metaYear = anio || curAnioRep || curAnioReg || new Date().getFullYear();
 
   let total = 0;
-  for(const dep of S.depreciaciones[pi]) {
+  for(const dep of (S.depreciaciones[pi]||[])) {
     const costoAnual = parseFloat(dep.costoAnual)||0;
+    if(!costoAnual) continue;
 
+    // Vigencia
     const cosechaInicio = dep.cosechaInicio || 1;
-    const metaCn = getCosechaMeta(pi, cn);
-    const metaYear = anio || curAnioRep || curAnioReg || new Date().getFullYear();
     if(dep.anioInicio && metaYear < dep.anioInicio) continue;
     if(dep.anioInicio && metaYear === dep.anioInicio && cn < cosechaInicio) continue;
     if(dep.anioFin && metaYear > dep.anioFin) continue;
 
-    // Check asignacion for multi-predio
+    // Asignación multi-predio
     const asigDep = (dep.asignaciones||[]).find(a=>a.anio===metaYear);
     let predioFraccion = 1;
     if(asigDep) {
-      // Check if this predio+cn is assigned
       const isAssigned = (asigDep.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(cn));
       if(!isAssigned) continue;
       const prediosAsig = (asigDep.prediosCosechas||[]).filter(pc=>(pc.cosechas||[]).includes(cn)).map(pc=>pc.pi);
@@ -700,79 +695,63 @@ function calcDepTabla(pi, cn, ti, anio) {
       }
     }
 
+    // Filtro cultivo
     const aplicaCultivos = dep.aplicaCultivos || 'todos';
-    const esPrincipal = cultivo === 'maiz' || cultivo === 'sorgo';
-    const esTriticale = cultivo === 'trigo' || cultivo === 'triticale' || cultivo === 'triticale_heno';
-    if(aplicaCultivos === 'principales' && !esPrincipal) continue;
-    if(aplicaCultivos === 'triticale' && !esTriticale) continue;
+    const esPrincipal = cultivo==='maiz'||cultivo==='sorgo';
+    const esTriticale = cultivo==='trigo'||cultivo==='triticale'||cultivo==='triticale_heno';
+    if(aplicaCultivos==='principales'&&!esPrincipal) continue;
+    if(aplicaCultivos==='triticale'&&!esTriticale) continue;
 
-    // cosechaWeight — fracción del año que corresponde a este ciclo según cultivos del predio
-    // Es FIJO para el predio/ciclo, no varía por tabla ni por ha sembradas
+    // cosechaWeight — fracción del año para este ciclo (basado en ha FIJAS del predio)
     let cosechaWeight = 1;
     if(ciclos === 1) {
-      cosechaWeight = cn === 1 ? 1 : 0;
+      cosechaWeight = cn===1 ? 1 : 0;
     } else {
       const tablasAplica = dep.alcance==='tablas'
         ? (dep.tablasIdx||[])
         : predio.tablas.map((_,idx)=>idx);
-
-      // Peso total del predio en todos los ciclos (usando ha fijas)
-      let pesoTotal = 0;
-      let pesoCn = 0;
+      let pesoTotal=0, pesoCn=0;
       for(let c=1;c<=3;c++) {
         for(const t of tablasAplica) {
           const tdC = getTablaData(pi,c,t);
           if(tdC.sinSiembra) continue;
           const cv = tdC.cultivo||'maiz';
-          const esP = cv==='maiz'||cv==='sorgo';
-          const esT = cv==='trigo'||cv==='triticale'||cv==='triticale_heno';
+          const esP=cv==='maiz'||cv==='sorgo';
+          const esT=cv==='trigo'||cv==='triticale'||cv==='triticale_heno';
           if(aplicaCultivos==='principales'&&!esP) continue;
           if(aplicaCultivos==='triticale'&&!esT) continue;
-          const cvHa = predio.tablas[t]?.ha || 0;
-          const peso = (CULTIVOS[cv]?.pct||40) * cvHa;
+          const peso = (CULTIVOS[cv]?.pct||40) * (predio.tablas[t]?.ha||0);
           pesoTotal += peso;
           if(c===cn) pesoCn += peso;
         }
       }
-      cosechaWeight = pesoTotal > 0 ? pesoCn / pesoTotal : (cn===1?1:0);
+      cosechaWeight = pesoTotal>0 ? pesoCn/pesoTotal : (cn===1?1:0);
+    }
+    if(!cosechaWeight) continue;
 
-      // Verificar que este cultivo aplica al filtro
-      const miCv = cultivo;
-      const esPCn = miCv==='maiz'||miCv==='sorgo';
-      const esTCn = miCv==='trigo'||miCv==='triticale'||miCv==='triticale_heno';
-      if(aplicaCultivos==='principales'&&!esPCn) { cosechaWeight=0; }
-      else if(aplicaCultivos==='triticale'&&!esTCn) { cosechaWeight=0; }
+    // Monto fijo del predio en este ciclo
+    const montoPredio = costoAnual * cosechaWeight * predioFraccion;
+
+    // Distribuir entre tablas activas proporcional a ha FIJAS
+    const tablasAplica2 = dep.alcance==='tablas' ? (dep.tablasIdx||[]) : predio.tablas.map((_,idx)=>idx);
+    const tablasActivas = tablasAplica2.filter(t=>!getTablaData(pi,cn,t).sinSiembra);
+    const tablasVacantes = tablasAplica2.filter(t=>getTablaData(pi,cn,t).sinSiembra);
+
+    if(tablasActivas.length === 0) {
+      // Todas vacantes — no asignar a ninguna tabla
+      continue;
     }
 
-    // Alcance — distribuir el costo entre tablas activas del ciclo por ha fija
-    const tablasSelec = dep.alcance==='tablas' ? (dep.tablasIdx||[]) : predio.tablas.map((_,idx)=>idx);
-    const tablasActivas = tablasSelec.filter(t=>!getTablaData(pi,cn,t).sinSiembra);
-    const tablasVacantes = tablasSelec.filter(t=>getTablaData(pi,cn,t).sinSiembra);
-    const haActivasSelec = tablasActivas.reduce((s,t)=>s+(predio.tablas[t]?.ha||0),0);
+    const haActivasTotal = tablasActivas.reduce((s,t)=>s+(predio.tablas[t]?.ha||0),0);
 
-    let fracTabla = 0;
-    if(dep.alcance === 'general') {
-      // Distribuir entre todas las tablas activas del predio proporcionalmente por ha fija
-      fracTabla = haActivasSelec > 0 ? tablaHa / haActivasSelec : (tablasActivas.includes(ti) ? 1/tablasActivas.length : 0);
-      if(!tablasActivas.includes(ti) && tablasVacantes.includes(ti)) {
-        // Esta tabla está vacante — no recibe depreciación
-        fracTabla = 0;
-      }
-    } else {
-      if(tablasActivas.length === 0 && tablasVacantes.includes(ti)) {
-        // Todas las tablas seleccionadas vacantes — redistribuir al predio activo por ha
-        fracTabla = totalHaActivas > 0 ? tablaHa / totalHaActivas : 0;
-      } else if(tablasActivas.includes(ti)) {
-        fracTabla = haActivasSelec > 0 ? tablaHa / haActivasSelec : 1/tablasActivas.length;
-      }
+    if(tablasActivas.includes(ti)) {
+      const fracTabla = haActivasTotal>0 ? tablaHa/haActivasTotal : 1/tablasActivas.length;
+      total += montoPredio * fracTabla;
     }
-    if(fracTabla > 0) {
-      total += costoAnual * cosechaWeight * predioFraccion * fracTabla;
-    }
+    // Si esta tabla está vacante y hay activas, no recibe nada
   }
   return total;
 }
-
 function calcConsumosTabla(pi, cn, ti) {
   const td = getTablaData(pi,cn,ti);
   return (td.consumos||[]).reduce((s,c)=>s+(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0),0);
