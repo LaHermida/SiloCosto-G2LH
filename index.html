@@ -660,6 +660,39 @@ function getCurrentPrice(artId, anio) {
 
 // ── DEPRECIATION CALC ──
 // For a given predio + cosecha + tabla, sum up applicable depreciations
+function calcDepActivo(dep, pi, cn, anio) {
+  // Monto FIJO de UN activo para UN predio en UN ciclo
+  // costoAnual x peso_ciclo x predioFraccion — nunca cambia
+  const predio = S.predios[pi];
+  const ciclos = predio.ciclos || 3;
+  const metaYear = anio || curAnioRep || curAnioReg || new Date().getFullYear();
+  const costoAnual = parseFloat(dep.costoAnual)||0;
+  if(!costoAnual) return 0;
+  if(dep.anioInicio && metaYear < dep.anioInicio) return 0;
+  if(dep.anioFin && metaYear > dep.anioFin) return 0;
+  const cosechaInicio = dep.cosechaInicio || 1;
+  if(dep.anioInicio && metaYear === dep.anioInicio && cn < cosechaInicio) return 0;
+  const asigDep = (dep.asignaciones||[]).find(a=>a.anio===metaYear);
+  let predioFraccion = 1;
+  if(asigDep) {
+    const isAssigned = (asigDep.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(cn));
+    if(!isAssigned) return 0;
+    const prediosAsig = (asigDep.prediosCosechas||[]).filter(pc=>(pc.cosechas||[]).includes(cn)).map(pc=>pc.pi);
+    if(prediosAsig.length > 1) {
+      const totalHaPredios = prediosAsig.reduce((s,pIdx2)=>s+S.predios[pIdx2].tablas.reduce((sh,t)=>sh+t.ha,0),0);
+      const miHa = predio.tablas.reduce((s,t)=>s+t.ha,0);
+      predioFraccion = totalHaPredios>0 ? miHa/totalHaPredios : 1/prediosAsig.length;
+    }
+  }
+  const aplicaCultivos = dep.aplicaCultivos || 'todos';
+  let peso;
+  if(ciclos===1) peso = cn===1?1:0;
+  else if(aplicaCultivos==='principales') peso = cn===1?0:0.5;
+  else if(aplicaCultivos==='triticale') peso = cn===1?1:0;
+  else peso = cn===1?0.20:0.40;
+  return costoAnual * peso * predioFraccion;
+}
+
 function calcDepPredio(pi, cn, anio) {
   // Calcula el total FIJO de depreciacion para un predio/ciclo
   // Este numero NUNCA cambia sin importar tablas vacantes o ha sembradas
@@ -1320,7 +1353,7 @@ function renderDepContent() {
               if(!vigente) return `<td style="padding:6px 10px;border-left:1px solid var(--border)">—</td>`;
               const asigM=(dep.asignaciones||[]).find(a=>a.anio===curAnioDep);
               const isAssigned=asigM?(asigM.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(curCnDep)):pi===pIdx;
-              const depMonto = isAssigned ? calcDepPredio(pi, curCnDep, curAnioDep) : 0;
+              const depMonto = isAssigned ? calcDepActivo(dep, pIdx, curCnDep, curAnioDep) : 0;
               return `<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);border-left:1px solid var(--border)">${depMonto?fmt(depMonto):'—'}</td>`;
             }).join('');
 
@@ -1338,7 +1371,13 @@ function renderDepContent() {
           ${S.predios.filter(p=>(p.ciclos||3)===3).map(()=>`<td></td>`).join('')}
           ${S.predios.map((p2,pi)=>{
             if((p2.ciclos||3)!==3) return '';
-            const tot = calcDepPredio(pi, curCnDep, curAnioDep);
+            let tot=0;
+            S.predios.forEach((pr,pIdx2)=>{
+              if((pr.ciclos||3)!==3) return;
+              (S.depreciaciones[pIdx2]||[]).forEach(dep2=>{
+                tot += calcDepActivo(dep2, pi, curCnDep, curAnioDep);
+              });
+            });
             const ha=p2.tablas.reduce((s,t)=>s+t.ha,0);
             return `<td style="padding:7px 10px;border-left:1px solid var(--border)">
               <div style="text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${tot?fmt(tot):'—'}</div>
