@@ -225,11 +225,19 @@ tr:hover td { background:var(--cream); }
 
   <!-- DASHBOARD -->
   <section id="sec-dashboard" class="page active">
-    <div class="pg-title">Dashboard General</div>
-    <div class="pg-sub">// Resumen en tiempo real · Los 3 predios</div>
+    <div class="pg-title">Dashboard</div>
+    <div class="pg-sub">// Resumen de costos · Selecciona año y ciclo</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+      <select id="dash-anio" style="padding:5px 10px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid var(--border)"
+        onchange="renderDash()">
+        ${Array.from({length:13},(_,i)=>2020+i).map(y=>`<option value="${y}">${y}</option>`).join('')}
+      </select>
+      ${[1,2,3].map(c=>`<button class="ctab" id="dash-cn-${c}" onclick="setDashCn(${c})">${c===1?'C1 · Dic-Feb':c===2?'C2 · Mar-Jul':'C3 · Ago-Nov'}</button>`).join('')}
+    </div>
     <div class="stats-row" id="dash-stats" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))"></div>
+    <div id="dash-charts" style="margin:16px 0"></div>
     <div class="card">
-      <div class="card-head">🗺️ Resumen por predio y tabla</div>
+      <div class="card-head">🗺️ Resumen por predio y cultivo</div>
       <div id="dash-detail"></div>
     </div>
   </section>
@@ -257,6 +265,11 @@ tr:hover td { background:var(--cream); }
           <label>Categoría</label>
           <select id="art-cat">
             <option>Material de cultivo</option>
+            <option>Semillas</option>
+            <option>Fertilizantes</option>
+            <option>Herbicidas</option>
+            <option>Fungicidas</option>
+            <option>Insecticidas</option>
             <option>Maquinaria</option>
             <option>Reparaciones Riego</option>
             <option>Luz</option>
@@ -810,117 +823,218 @@ function render(sec) {
 // ══════════════════════════════════════════════
 // DASHBOARD
 // ══════════════════════════════════════════════
+let curDashCn = 1;
+let curDashAnio = new Date().getFullYear();
+
+function setDashCn(cn) {
+  curDashCn = cn;
+  renderDash();
+}
+
 function renderDash() {
-  const stats = document.getElementById('dash-stats');
-  // Un cuadrito por predio x cosecha
-  let cards = '';
+  const anioSel = document.getElementById('dash-anio');
+  if(anioSel) { curDashAnio = parseInt(anioSel.value)||curDashAnio; anioSel.value = curDashAnio; }
+  [1,2,3].forEach(c=>{
+    const btn = document.getElementById(`dash-cn-${c}`);
+    if(btn) btn.className = `ctab${c===curDashCn?' active':''}`;
+  });
+
+  const cn = curDashCn;
+  const anio = curDashAnio;
+  const cnLabel = cn===1?'C1 · Dic–Feb':cn===2?'C2 · Mar–Jul':'C3 · Ago–Nov';
+
+  // ── Collect all data ──
+  let totalCosto=0, totalHa=0, totalKilos=0, totalKgMS=0;
+  const catTotals = {};
   S.predios.forEach((p,pi)=>{
-    const ciclos = p.ciclos||3;
-    const cosechas = ciclos===1?[1]:[1,2,3];
-    cosechas.forEach(cn=>{
-      const meta = getCosechaMeta(pi,cn);
-      // Agrupar por cultivo
-      const cultivoMap = {};
-      for(let ti=0;ti<p.tablas.length;ti++) {
-        const td = getTablaData(pi,cn,ti);
-        if(td.sinSiembra) continue;
-        const cv = td.cultivo||'maiz';
-        if(!cultivoMap[cv]) cultivoMap[cv] = {cost:0,kilos:0,kgMS:0};
-        cultivoMap[cv].cost += calcTotalTabla(pi,cn,ti,curAnioRep);
-        const kilos = parseFloat(td.kilos)||0;
-        cultivoMap[cv].kilos += kilos;
-        cultivoMap[cv].kgMS += kilos*((parseFloat(td.pctMS)||0)/100);
-      }
-      const cultivosPresentes = Object.keys(cultivoMap);
-      const colors = ['c1','c2','c3'];
+    if((p.ciclos||3)===1&&cn>1) return;
+    for(let ti=0;ti<p.tablas.length;ti++){
+      const td = getTablaData(pi,cn,ti);
+      if(td.sinSiembra) continue;
+      totalCosto += calcTotalTabla(pi,cn,ti,anio);
+      totalHa += parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
+      totalKilos += parseFloat(td.kilos)||0;
+      totalKgMS += (parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100);
+    }
+    (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===cn&&(g.prediosIdx||[]).includes(pi)).forEach(g=>{
+      const cat = g.categoria||'Otros';
+      catTotals[cat]=(catTotals[cat]||0)+parseFloat(g.monto||0);
+    });
+    const dep = p.tablas.reduce((_,__,ti)=>_+calcDepTabla(pi,cn,ti,anio),0);
+    if(dep>0) catTotals['Depreciaciones']=(catTotals['Depreciaciones']||0)+dep;
+    const cons = p.tablas.reduce((_,__,ti)=>_+calcConsumosTabla(pi,cn,ti),0);
+    if(cons>0) catTotals['Material de cultivo']=(catTotals['Material de cultivo']||0)+cons;
+  });
 
-      // Si hay un solo cultivo: tarjeta simple; si hay varios: desglose
-      const cultivoRows = cultivosPresentes.map(cv => {
-        const d = cultivoMap[cv];
-        const cvCpk = d.kilos ? d.cost/d.kilos : null;
-        const cvCpkms = d.kgMS ? d.cost/d.kgMS : null;
-        const cvInfo = CULTIVOS[cv]||CULTIVOS.otro;
-        return `<div style="display:flex;align-items:center;gap:10px;margin-top:6px;padding-top:${cultivosPresentes.length>1?'6px;border-top:1px solid rgba(255,255,255,0.1)':'0px'}">
-          <span style="font-size:13px">${cvInfo.icon}</span>
-          <div>
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:#2a7a2a;text-transform:uppercase;letter-spacing:1px">${cvInfo.label} · kg húmedo</div>
-            <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:#2a7a2a;line-height:1">${cvCpk!==null?'$'+cvCpk.toFixed(2):'—'} <span style="font-size:13px;color:#7a4a1a">/ $${cvCpkms!==null?cvCpkms.toFixed(2):'—'} MS</span></div>
-          </div>
-        </div>`;
-      }).join('');
+  const cpk = totalKilos?totalCosto/totalKilos:null;
+  const cpkms = totalKgMS?totalCosto/totalKgMS:null;
+  const gasHa = totalHa?totalCosto/totalHa:null;
 
-      cards += `<div class="stat ${colors[pi%3]}" style="min-width:0">
-        <div class="stat-lbl">${p.emoji} ${p.nombre} · Cosecha ${cn} ${meta.closed?'🔒':''} · ${curAnioReg}</div>
-        ${cultivoRows || '<div style="color:var(--muted);font-size:12px;margin-top:8px">Sin datos</div>'}
-      </div>`;
+  // ── KPI Cards ──
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="stat c${cn}" style="min-width:0">
+      <div class="stat-lbl">💰 Costo Total</div>
+      <div class="stat-val">${fmt(totalCosto)}</div>
+      <div class="stat-unit">${cnLabel} ${anio}</div>
+    </div>
+    <div class="stat c${cn}" style="min-width:0">
+      <div class="stat-lbl">🌾 $/Ha</div>
+      <div class="stat-val">${gasHa?'$'+gasHa.toFixed(0):'—'}</div>
+      <div class="stat-unit">${fmtN(totalHa,1)} ha sembradas</div>
+    </div>
+    <div class="stat c${cn}" style="min-width:0">
+      <div class="stat-lbl">📦 $/kg húmedo</div>
+      <div class="stat-val">${cpk?'$'+cpk.toFixed(2):'—'}</div>
+      <div class="stat-unit">${fmtN(totalKilos,0)} kg cosechados</div>
+    </div>
+    <div class="stat c${cn}" style="min-width:0">
+      <div class="stat-lbl">🧪 $/kg MS</div>
+      <div class="stat-val">${cpkms?'$'+cpkms.toFixed(2):'—'}</div>
+      <div class="stat-unit">${fmtN(totalKgMS,0)} kg MS</div>
+    </div>`;
+
+  // ── Desglose por categoría (barras) ──
+  const catsSorted = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
+  const catBars = catsSorted.map(([cat,monto])=>{
+    const pct = totalCosto>0?Math.round(monto/totalCosto*100):0;
+    return `<div style="display:grid;grid-template-columns:160px 1fr 90px;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cat}</span>
+      <div style="background:var(--cream);border-radius:3px;height:8px">
+        <div style="width:${pct}%;height:8px;background:var(--green);border-radius:3px;transition:width 0.3s"></div>
+      </div>
+      <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);text-align:right">${fmt(monto)} <span style="color:var(--muted)">(${pct}%)</span></span>
+    </div>`;
+  }).join('');
+
+  // ── Cards por predio ──
+  let predioCards = '';
+  S.predios.forEach((p,pi)=>{
+    if((p.ciclos||3)===1&&cn>1) return;
+    let predioHa=0,predioKilos=0,predioKgMS=0,predioCosto=0;
+    const cultivoMap={};
+    const tablaRows = p.tablas.map((t,ti)=>{
+      const td = getTablaData(pi,cn,ti);
+      if(td.sinSiembra) return `<tr style="opacity:0.4"><td style="padding:4px 8px;font-size:11px">${t.nombre}</td><td colspan="5" style="font-size:11px;color:var(--muted);padding:4px 8px">⏸ Vacante</td></tr>`;
+      const cv = td.cultivo||'maiz';
+      const ha = parseFloat(td.haSembradas)||t.ha||0;
+      const kilos = parseFloat(td.kilos)||0;
+      const kgMS = kilos*((parseFloat(td.pctMS)||0)/100);
+      const costo = calcTotalTabla(pi,cn,ti,anio);
+      predioHa+=ha; predioKilos+=kilos; predioKgMS+=kgMS; predioCosto+=costo;
+      if(!cultivoMap[cv]) cultivoMap[cv]={ha:0,kilos:0,costo:0};
+      cultivoMap[cv].ha+=ha; cultivoMap[cv].kilos+=kilos; cultivoMap[cv].costo+=costo;
+      const cpkT = kilos?costo/kilos:null;
+      const cvInfo = CULTIVOS[cv]||CULTIVOS.otro;
+      return `<tr style="border-bottom:1px solid var(--border);font-size:12px">
+        <td style="padding:4px 8px;font-weight:600">${t.nombre}</td>
+        <td style="padding:4px 8px">${cvInfo.icon} ${cvInfo.label}</td>
+        <td style="padding:4px 8px;text-align:right;font-family:'DM Mono',monospace">${fmtN(ha,1)}</td>
+        <td style="padding:4px 8px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${fmt(costo)}</td>
+        <td style="padding:4px 8px;text-align:right;font-family:'DM Mono',monospace;color:var(--muted)">${ha?'$'+(costo/ha).toFixed(0):'-'}</td>
+        <td style="padding:4px 8px;text-align:right;font-family:'DM Mono',monospace;color:#2a7a2a">${cpkT?'$'+cpkT.toFixed(2):'-'}</td>
+      </tr>`;
+    }).join('');
+
+    const predioColor=pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
+    const cpkP = predioKilos?predioCosto/predioKilos:null;
+    const cpkmsP = predioKgMS?predioCosto/predioKgMS:null;
+    const gasHaP = predioHa?predioCosto/predioHa:null;
+
+    predioCards += `<div class="card">
+      <div class="card-head" style="color:${predioColor};justify-content:space-between">
+        <span>${p.emoji} ${p.nombre}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--amber)">${fmt(predioCosto)}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+        <div style="background:var(--cream);padding:8px;border-radius:6px;text-align:center">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase">$/ha</div>
+          <div style="font-family:'DM Mono',monospace;font-size:15px;color:var(--amber);font-weight:700">${gasHaP?'$'+gasHaP.toFixed(0):'—'}</div>
+        </div>
+        <div style="background:var(--cream);padding:8px;border-radius:6px;text-align:center">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase">$/kg</div>
+          <div style="font-family:'DM Mono',monospace;font-size:15px;color:var(--amber);font-weight:700">${cpkP?'$'+cpkP.toFixed(2):'—'}</div>
+        </div>
+        <div style="background:var(--cream);padding:8px;border-radius:6px;text-align:center">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase">$/kg MS</div>
+          <div style="font-family:'DM Mono',monospace;font-size:15px;color:var(--amber);font-weight:700">${cpkmsP?'$'+cpkmsP.toFixed(2):'—'}</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--earth);color:#fff;font-size:10px">
+          <th style="padding:5px 8px;text-align:left">Tabla</th>
+          <th style="padding:5px 8px;text-align:left">Cultivo</th>
+          <th style="padding:5px 8px;text-align:right">Ha</th>
+          <th style="padding:5px 8px;text-align:right">Costo</th>
+          <th style="padding:5px 8px;text-align:right">$/ha</th>
+          <th style="padding:5px 8px;text-align:right">$/kg</th>
+        </tr></thead>
+        <tbody>${tablaRows}</tbody>
+      </table></div>
+    </div>`;
+  });
+
+  document.getElementById('dash-charts').innerHTML = `
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:16px;margin-bottom:16px">
+      <div class="card">
+        <div class="card-head">📊 Desglose por categoría</div>
+        ${catBars||'<div class="empty" style="padding:12px">Sin gastos</div>'}
+        ${totalCosto?`<div style="display:flex;justify-content:space-between;padding:8px 0;margin-top:4px;border-top:2px solid var(--border)">
+          <span style="font-size:12px;font-weight:600">TOTAL</span>
+          <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--amber);font-weight:700">${fmt(totalCosto)}</span>
+        </div>`:''}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;align-content:start">
+        ${predioCards}
+      </div>
+    </div>`;
+
+  // ── Tabla detalle ──
+  let html='';
+  S.predios.forEach((p,pi)=>{
+    if((p.ciclos||3)===1&&cn>1) return;
+    const cvGroups={};
+    for(let ti=0;ti<p.tablas.length;ti++){
+      const td=getTablaData(pi,cn,ti);
+      if(td.sinSiembra) continue;
+      const cv=td.cultivo||'maiz';
+      if(!cvGroups[cv]) cvGroups[cv]={tablas:[],ha:0,kilos:0,kgMS:0,cost:0};
+      const haTabla=parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
+      const kilos=parseFloat(td.kilos)||0;
+      const kgMS=kilos*((parseFloat(td.pctMS)||0)/100);
+      const total=calcTotalTabla(pi,cn,ti,anio);
+      cvGroups[cv].tablas.push(p.tablas[ti].nombre);
+      cvGroups[cv].ha+=haTabla; cvGroups[cv].kilos+=kilos; cvGroups[cv].kgMS+=kgMS; cvGroups[cv].cost+=total;
+    }
+    Object.entries(cvGroups).forEach(([cv,d])=>{
+      if(!d.tablas.length) return;
+      const cvInfo=CULTIVOS[cv]||CULTIVOS.otro;
+      const gasHa2=d.ha?d.cost/d.ha:null;
+      const kgHa=d.ha?d.kilos/d.ha:null;
+      const cpk2=d.kilos?d.cost/d.kilos:null;
+      const cpkms2=d.kgMS?d.cost/d.kgMS:null;
+      html+=`<tr>
+        <td>${p.emoji} <strong>${p.nombre}</strong></td>
+        <td>${cultivoBadge(cv)}</td>
+        <td style="font-size:11px;color:var(--muted)">${d.tablas.join(', ')}</td>
+        <td class="mono tr">${d.ha.toFixed(2)} ha</td>
+        <td class="mono tr">${fmt(d.cost)}</td>
+        <td class="mono tr amber">${gasHa2?'$'+gasHa2.toFixed(0):'—'}</td>
+        <td class="mono tr" style="color:#2a7a2a">${kgHa?fmtN(kgHa,0)+' kg':'—'}</td>
+        <td class="mono tr amber">${cpk2?'$'+cpk2.toFixed(2):'—'}</td>
+        <td class="mono tr green">${cpkms2?'$'+cpkms2.toFixed(2):'—'}</td>
+      </tr>`;
     });
   });
-  stats.innerHTML = cards;
-
-  const det = document.getElementById('dash-detail');
-  // Group by cosecha > predio > cultivo
-  let html = '';
-  for(const cn of [1,2,3]) {
-    let sectionRows = '';
-    S.predios.forEach((p,pi)=>{
-      const ciclos = p.ciclos||3;
-      if(ciclos===1 && cn>1) return;
-      // Build cultivo groups for this predio+cosecha
-      const cvGroups = {};
-      for(let ti=0;ti<p.tablas.length;ti++) {
-        const td = getTablaData(pi,cn,ti);
-        if(td.sinSiembra) continue;
-        const cv = td.cultivo||'maiz';
-        if(!cvGroups[cv]) cvGroups[cv] = {tablas:[],ha:0,kilos:0,kgMS:0,cost:0};
-        const haTabla = parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
-        const kilos = parseFloat(td.kilos)||0;
-        const kgMS = kilos*((parseFloat(td.pctMS)||0)/100);
-        const total = calcTotalTabla(pi,cn,ti,curAnioRep);
-        if(haTabla>0||total>0) {
-          cvGroups[cv].tablas.push(p.tablas[ti].nombre);
-          cvGroups[cv].ha += haTabla;
-          cvGroups[cv].kilos += kilos;
-          cvGroups[cv].kgMS += kgMS;
-          cvGroups[cv].cost += total;
-        }
-      }
-      Object.entries(cvGroups).forEach(([cv, d])=>{
-        if(!d.tablas.length) return;
-        const cvInfo = CULTIVOS[cv]||CULTIVOS.otro;
-        const gasHa  = d.ha    ? d.cost/d.ha    : null;
-        const kgHa   = d.ha    ? d.kilos/d.ha   : null;
-        const cpk    = d.kilos ? d.cost/d.kilos  : null;
-        const cpkms  = d.kgMS  ? d.cost/d.kgMS   : null;
-        sectionRows += `<tr>
-          <td>${p.emoji} <strong>${p.nombre}</strong></td>
-          <td class="mono">C${cn}</td>
-          <td>${cultivoBadge(cv)}</td>
-          <td style="font-size:11px;color:var(--muted)">${d.tablas.join(', ')}</td>
-          <td class="mono tr">${d.ha.toFixed(2)} ha</td>
-          <td class="mono tr">${fmt(d.cost)}</td>
-          <td class="mono tr amber">${gasHa!==null?'$'+gasHa.toFixed(2):'—'}</td>
-          <td class="mono tr" style="color:#2a7a2a">${kgHa!==null?fmtN(kgHa,0)+' kg':'—'}</td>
-          <td class="mono tr amber">${cpk!==null?'$'+cpk.toFixed(2):'—'}</td>
-          <td class="mono tr green">${cpkms!==null?'$'+cpkms.toFixed(2):'—'}</td>
-        </tr>`;
-      });
-    });
-    if(sectionRows) html += `<tr style="background:var(--earth);color:#ffffff"><td colspan="10" style="padding:6px 14px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase">Cosecha ${cn}</td></tr>${sectionRows}`;
-  }
-
-  det.innerHTML = html ? `<div class="tbl-wrap"><table>
+  document.getElementById('dash-detail').innerHTML = html?`<div class="tbl-wrap"><table>
     <thead><tr>
-      <th>Predio</th><th>Cos.</th><th>Cultivo</th><th>Tablas</th>
+      <th>Predio</th><th>Cultivo</th><th>Tablas</th>
       <th class="tr">Ha</th><th class="tr">Gasto Total</th><th class="tr">$/ha</th>
       <th class="tr">kg/ha</th><th class="tr">$/kg húmedo</th><th class="tr">$/kg MS</th>
     </tr></thead>
     <tbody>${html}</tbody>
-  </table></div>` : `<div class="empty"><div class="empty-icon">🌱</div><div>Sin datos registrados aún</div></div>`;
+  </table></div>`:`<div class="empty"><div class="empty-icon">🌱</div><div>Sin datos para C${cn} ${anio}</div></div>`;
 }
-
-// ══════════════════════════════════════════════
-// TABLAS CONFIG
-// ══════════════════════════════════════════════
 function renderTablas() {
   document.getElementById('tab-ptabs').innerHTML = S.predios.map((p,i)=>
     `<button class="ptab ${i===curPredioTab?'active':''}" onclick="curPredioTab=${i};renderTablas()">${p.emoji} ${p.nombre}</button>`
@@ -1752,13 +1866,16 @@ function renderRegContent() {
     </div>`;
 
   // ── GRID MATERIAL CULTIVO (always shown, independent of tabla selection) ──
-  const artsCultivo = S.articulos.filter(a=>a.categoria==='Material de cultivo');
+  const CATS_MATERIAL = ['Material de cultivo','Semillas','Fertilizantes','Herbicidas','Fungicidas','Insecticidas'];
+  const artsCultivo = S.articulos.filter(a=>CATS_MATERIAL.includes(a.categoria));
   if(artsCultivo.length) {
     // Filter by cultivo and ciclo of current tabla/cosecha, unless showAll is toggled
     const showAll = document.getElementById('reg-grid-showall')?.checked || false;
-    const artsFiltered = showAll ? artsCultivo : artsCultivo.filter(a=>{
-      const artCiclo = a.ciclo || 'todos';
-      return artCiclo==='todos' || artCiclo===String(cn);
+    const filterCat = document.getElementById('reg-grid-cat')?.value || 'todos';
+    const artsFiltered = artsCultivo.filter(a=>{
+      const cicloOk = showAll || (a.ciclo||'todos')==='todos' || (a.ciclo||'todos')===String(cn);
+      const catOk = filterCat==='todos' || a.categoria===filterCat;
+      return cicloOk && catOk;
     });
     const tablaHeaders = p.tablas.map((t,ti2)=>`<th style="text-align:center;min-width:90px">${t.nombre}<br><span style="font-weight:400;font-size:9px">${t.ha} ha</span></th>`).join('');
     const gridRows = artsFiltered.map(art=>{
@@ -1781,10 +1898,21 @@ function renderRegContent() {
     gridEl.innerHTML = `
       <div class="card-head" style="justify-content:space-between">
         <span>🌱 Grid — Material de Cultivo · ${p.nombre} · C${cn} ${curAnioReg}</span>
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;font-weight:400">
-          <input type="checkbox" id="reg-grid-showall" ${showAll?'checked':''} onchange="renderRegContent()"/>
-          Ver todos
-        </label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <select id="reg-grid-cat" style="padding:3px 8px;font-size:12px;border:1px solid var(--border)" onchange="renderRegContent()">
+            <option value="todos">Todos</option>
+            <option value="Semillas">🌱 Semillas</option>
+            <option value="Fertilizantes">🧪 Fertilizantes</option>
+            <option value="Herbicidas">🌿 Herbicidas</option>
+            <option value="Fungicidas">🍄 Fungicidas</option>
+            <option value="Insecticidas">🐛 Insecticidas</option>
+            <option value="Material de cultivo">Otros</option>
+          </select>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;font-weight:400">
+            <input type="checkbox" id="reg-grid-showall" ${showAll?'checked':''} onchange="renderRegContent()"/>
+            Ver todos ciclos
+          </label>
+        </div>
       </div>
       <div style="padding:8px 12px;background:#f0fdf4;border:1px solid var(--border);margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">📅 Fecha del registro:</span>
@@ -2414,15 +2542,16 @@ const CATS_GENERALES = [
 
 // Tabs del grid de gastos
 const GASTOS_TABS = [
-  { id:'tractores',   label:'🚜 Tractores',    rol:'colaborador' },
-  { id:'luz',         label:'💡 Luz',           rol:'colaborador' },
-  { id:'ensilada',    label:'🌽 Ensilada',      rol:'admin' },
-  { id:'empaque',     label:'📦 Empaque',       rol:'admin' },
-  { id:'corte',       label:'✂️ Corte',          rol:'admin' },
-  { id:'nomina',      label:'👷 Nómina',        rol:'admin' },
-  { id:'reparaciones',label:'🔧 Noria y Riego',  rol:'admin' },
-  { id:'derechos',     label:'💧 Derechos Agua',  rol:'admin' },
-  { id:'otros',       label:'🗂 Otros',         rol:'admin' },
+  { id:'tractores',    label:'🚜 Tractores',    rol:'colaborador' },
+  { id:'luz',          label:'💡 Luz',           rol:'colaborador' },
+  { id:'aplicaciones', label:'🌿 Aplicaciones',  rol:'colaborador' },
+  { id:'ensilada',     label:'🌽 Ensilada',      rol:'admin' },
+  { id:'empaque',      label:'📦 Empaque',       rol:'admin' },
+  { id:'corte',        label:'✂️ Corte',          rol:'admin' },
+  { id:'nomina',       label:'👷 Nómina',        rol:'admin' },
+  { id:'reparaciones', label:'🔧 Noria y Riego', rol:'admin' },
+  { id:'derechos',     label:'💧 Derechos Agua', rol:'admin' },
+  { id:'otros',        label:'🗂 Otros',         rol:'admin' },
 ];
 
 // Keep for backward compat with old data that had mes field
@@ -2973,6 +3102,111 @@ function renderGastos() {
           <thead><tr style="background:#2d5a1b;color:#fff"><th style="padding:6px 12px;text-align:left">Noria / Sistema</th>${mesesHdr}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
           <tbody>${histRows}</tbody></table></div>`;
     }
+  } else if(gastosTab === 'aplicaciones') {
+    if(!S.equiposAplic) S.equiposAplic = [];
+    const mesActual = parseInt(gastosGridDraft['aplic_mes'] || getMesesCn(selectedCn)[0]);
+    const mesOpts = [1,2,3,4,5,6,7,8,9,10,11,12].map(m=>
+      `<option value="${m}" ${m===mesActual?'selected':''}>${MESES_G[m-1]}</option>`).join('');
+    const pct1G = parseFloat(gastosGridDraft['aplic_pct1'] ?? 100);
+    const pct2G = parseFloat(gastosGridDraft['aplic_pct2'] || 0);
+    const cn2G  = parseInt(gastosGridDraft['aplic_cn2'] || 0);
+    const cicloOpts = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
+    const configEq = isAdmin ? `
+      <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar equipo:</span>
+        <input type="text" id="aplic-eq-nombre" placeholder="Ej: Dron, Aspersora..." style="padding:5px;width:180px;font-size:13px"/>
+        <select id="aplic-eq-tipo" style="padding:5px"><option value="dron">Dron</option><option value="aspersora">Aspersora</option><option value="tractor">Tractor</option><option value="otro">Otro</option></select>
+        <button class="btn btn-s" onclick="addEquipoAplic()">+ Agregar</button>
+      </div>` : '';
+    const sharedBar = `
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0fdf4;border:1px solid #7ec89a;margin-bottom:14px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted)">📅 Mes:</span>
+          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['aplic_mes']=this.value;renderGastos()">${mesOpts}</select>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #7ec89a;padding-left:14px">
+          <span style="font-size:12px;color:var(--muted)">Split:</span>
+          <input type="number" min="0" max="100" step="1" value="${pct1G}"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['aplic_pct1']=this.value;renderGastos()"/>
+          <span style="font-size:11px;color:var(--muted)">%C${selectedCn}</span>
+          <input type="number" min="0" max="100" step="1" value="${pct2G||''}" placeholder="0"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['aplic_pct2']=this.value"/>
+          <select style="font-size:12px;padding:3px;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['aplic_cn2']=this.value">
+            <option value="">C?</option>${cicloOpts}
+          </select>
+        </div>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto">C${selectedCn} · ${gastosGridAnio}</span>
+      </div>`;
+    const aplicHist = (S.gastosGenerales||[]).filter(g=>g.categoria==='Aplicaciones'&&getGastoCosecha(g)===selectedCn);
+    const histRows = aplicHist.map(g=>{
+      const tabNom = g.tablaIdx!==undefined && g.prediosIdx?.[0]!==undefined ?
+        S.predios[g.prediosIdx[0]]?.tablas[g.tablaIdx]?.nombre||'' : '';
+      const gi = S.gastosGenerales.indexOf(g);
+      return `<tr style="border-bottom:1px solid var(--border);font-size:12px">
+        <td style="padding:5px 10px">${MESES_G[(g.mes||1)-1]||''}</td>
+        <td style="padding:5px 10px;font-weight:600">${g.equipo||'—'}</td>
+        <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.emoji+' '+S.predios[pi]?.nombre).join(', ')}</td>
+        <td style="padding:5px 10px;color:var(--muted)">${tabNom}</td>
+        <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--muted)">${g.haAplicadas?fmtN(g.haAplicadas,2)+' ha':'—'}</td>
+        <td style="padding:5px 10px;color:var(--muted);font-size:11px">${g.actividad||''}</td>
+        <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${fmt(g.monto)}</td>
+        <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delGasto(${gi})">✕</button>`:''}</td>
+      </tr>`;
+    }).join('');
+    const totAplic = aplicHist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+    const equipOpts = (S.equiposAplic||[]).map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
+    const predioOpts = S.predios.map((p,pi)=>`<option value="${pi}" ${gastosGridDraft['aplic_pi']==String(pi)?'selected':''}>${p.emoji} ${p.nombre}</option>`).join('');
+    const piSel = parseInt(gastosGridDraft['aplic_pi']??0);
+    const tablaOpts = S.predios[piSel]?.tablas.map((t,ti)=>
+      `<option value="${ti}" ${gastosGridDraft['aplic_ti']==String(ti)?'selected':''}>${t.nombre} (${t.ha} ha)</option>`).join('')||'';
+    const tipoSel = gastosGridDraft['aplic_tipo']||'Nómina';
+    tabContent = `${configEq}${sharedBar}
+      <div class="card" style="background:var(--cream);border:1px solid #7ec89a;margin-bottom:16px">
+        <div class="card-head">➕ Registrar aplicación</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:4px 0">
+          <div class="field" style="margin:0"><label>Equipo</label>
+            <select style="padding:5px;font-size:13px" onchange="gastosGridDraft['aplic_eq']=this.value">
+              <option value="">— selecciona —</option>${equipOpts}</select></div>
+          <div class="field" style="margin:0"><label>Predio</label>
+            <select style="padding:5px;font-size:13px" onchange="gastosGridDraft['aplic_pi']=this.value;renderGastos()">${predioOpts}</select></div>
+          <div class="field" style="margin:0"><label>Tabla</label>
+            <select style="padding:5px;font-size:13px" onchange="gastosGridDraft['aplic_ti']=this.value">${tablaOpts}</select></div>
+          <div class="field" style="margin:0"><label>Ha aplicadas</label>
+            <input type="number" min="0" step="0.01" placeholder="ha" value="${gastosGridDraft['aplic_ha']||''}"
+              style="width:80px;padding:5px;border:1px solid #7ec89a;font-size:13px;text-align:right"
+              onchange="gastosGridDraft['aplic_ha']=this.value"/></div>
+          <div class="field" style="margin:0"><label>Tipo</label>
+            <select style="padding:5px;font-size:13px" onchange="gastosGridDraft['aplic_tipo']=this.value">
+              <option value="Nómina" ${tipoSel==='Nómina'?'selected':''}>👷 Nómina</option>
+              <option value="Diesel" ${tipoSel==='Diesel'?'selected':''}>🛢 Diesel</option>
+              <option value="Reparación" ${tipoSel==='Reparación'?'selected':''}>🔧 Reparación/Servicio</option>
+              <option value="Maquila" ${tipoSel==='Maquila'?'selected':''}>💵 Maquila ($/ha)</option>
+            </select></div>
+          <div class="field" style="margin:0"><label>Monto $</label>
+            <input type="number" min="0" step="1" placeholder="$" value="${gastosGridDraft['aplic_monto']||''}"
+              style="width:120px;padding:5px;border:1px solid #7ec89a;font-size:13px;text-align:right"
+              onchange="gastosGridDraft['aplic_monto']=this.value"/></div>
+        </div>
+      </div>
+      ${aplicHist.length?`
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Aplicaciones C${selectedCn} ${gastosGridAnio}</div>
+      <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
+        <thead><tr style="background:var(--earth);color:#fff">
+          <th style="padding:6px 10px">Mes</th><th style="padding:6px 10px">Equipo</th>
+          <th style="padding:6px 10px">Predio</th><th style="padding:6px 10px">Tabla</th>
+          <th style="padding:6px 10px;text-align:right">Ha</th><th style="padding:6px 10px">Tipo</th>
+          <th style="padding:6px 10px;text-align:right">Monto</th><th></th>
+        </tr></thead>
+        <tbody>${histRows}</tbody>
+        <tfoot><tr style="background:var(--cream);font-weight:700">
+          <td colspan="6" style="padding:7px 12px">TOTAL C${selectedCn}</td>
+          <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${fmt(totAplic)}</td><td></td>
+        </tr></tfoot>
+      </table></div>`:'<div class="empty"><div class="empty-icon">🌿</div><div>Sin aplicaciones registradas</div></div>'}`;
   } else if(gastosTab === 'ensilada') {
     const artsEnsilada = S.articulos.filter(a=>a.categoria==='Materiales de ensilada');
     const nomEnsiladaVal = gastosGridDraft['nom_ensilada'] || '';
@@ -3833,6 +4067,17 @@ function renderEquiposList() {
   </table>`;
 }
 
+function addEquipoAplic() {
+  const nombre = document.getElementById('aplic-eq-nombre')?.value.trim();
+  const tipo = document.getElementById('aplic-eq-tipo')?.value;
+  if(!nombre) { toast('⚠️ Ingresa el nombre',true); return; }
+  if(!S.equiposAplic) S.equiposAplic = [];
+  if(S.equiposAplic.find(t=>t.nombre===nombre)) { toast('⚠️ Ya existe',true); return; }
+  S.equiposAplic.push({id:uid(), nombre, tipo});
+  if(document.getElementById('aplic-eq-nombre')) document.getElementById('aplic-eq-nombre').value='';
+  save(); renderGastos(); toast('✓ Equipo agregado');
+}
+
 function addSistemaLuz() {
   const nombre = document.getElementById('luz-nombre')?.value.trim();
   if(!nombre) { toast('⚠️ Ingresa el nombre',true); return; }
@@ -4165,6 +4410,158 @@ function capturarGastos() {
         if(pct2L>0&&cn2L) { S.gastosGenerales.push({id:uid(),cosecha:cn2L,anio,categoria:'Luz',equipo:eq.nombre,monto:val*pct*pct2L,prediosIdx:[pi],mes:mesLuz,fecha:today()}); total++; }
       });
     });
+  } else if(gastosTab === 'aplicaciones') {
+    if(!S.equiposAplic) S.equiposAplic = [];
+    const mesActual = parseInt(gastosGridDraft['aplic_mes'] || getMesesCn(selectedCn)[0]);
+    const mesOpts = [1,2,3,4,5,6,7,8,9,10,11,12].map(m=>
+      `<option value="${m}" ${m===mesActual?'selected':''}>${MESES_G[m-1]}</option>`).join('');
+    const pct1G = parseFloat(gastosGridDraft['aplic_pct1'] ?? 100);
+    const pct2G = parseFloat(gastosGridDraft['aplic_pct2'] || 0);
+    const cn2G  = parseInt(gastosGridDraft['aplic_cn2'] || 0);
+    const cicloOpts = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
+
+    const configEq = isAdmin ? `
+      <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar equipo:</span>
+        <input type="text" id="aplic-eq-nombre" placeholder="Ej: Dron, Aspersora..." style="padding:5px;width:180px;font-size:13px"/>
+        <select id="aplic-eq-tipo" style="padding:5px"><option value="dron">Dron</option><option value="aspersora">Aspersora</option><option value="tractor">Tractor</option><option value="otro">Otro</option></select>
+        <button class="btn btn-s" onclick="addEquipoAplic()">+ Agregar</button>
+      </div>` : '';
+
+    const sharedBar = `
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0fdf4;border:1px solid #7ec89a;margin-bottom:14px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted)">📅 Mes:</span>
+          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['aplic_mes']=this.value;renderGastos()">${mesOpts}</select>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #7ec89a;padding-left:14px">
+          <span style="font-size:12px;color:var(--muted)">Split:</span>
+          <input type="number" min="0" max="100" step="1" value="${pct1G}"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['aplic_pct1']=this.value;renderGastos()"/>
+          <span style="font-size:11px;color:var(--muted)">%C${selectedCn}</span>
+          <input type="number" min="0" max="100" step="1" value="${pct2G||''}" placeholder="0"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['aplic_pct2']=this.value"/>
+          <select style="font-size:12px;padding:3px;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['aplic_cn2']=this.value">
+            <option value="">C?</option>${cicloOpts}
+          </select>
+        </div>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto">C${selectedCn} · ${gastosGridAnio}</span>
+      </div>`;
+
+    // ── Aplicaciones registradas (historial) ──
+    const aplicHist = (S.gastosGenerales||[]).filter(g=>g.categoria==='Aplicaciones'&&getGastoCosecha(g)===selectedCn);
+    const histRows = aplicHist.map((g,gi)=>{
+      const tabNom = g.tablaIdx!==undefined && g.prediosIdx?.[0]!==undefined ?
+        S.predios[g.prediosIdx[0]]?.tablas[g.tablaIdx]?.nombre||'' : '';
+      return `<tr style="border-bottom:1px solid var(--border);font-size:12px">
+        <td style="padding:5px 10px">${MESES_G[(g.mes||1)-1]||''}</td>
+        <td style="padding:5px 10px;font-weight:600">${g.equipo||'—'}</td>
+        <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.emoji+' '+S.predios[pi]?.nombre).join(', ')}</td>
+        <td style="padding:5px 10px;color:var(--muted)">${tabNom}</td>
+        <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--muted)">${g.haAplicadas?fmtN(g.haAplicadas,2)+' ha':'—'}</td>
+        <td style="padding:5px 10px;color:var(--muted);font-size:11px">${g.actividad||''}</td>
+        <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${fmt(g.monto)}</td>
+        <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delGasto(${S.gastosGenerales.indexOf(g)})">✕</button>`:''}</td>
+      </tr>`;
+    }).join('');
+    const totAplic = aplicHist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+
+    // ── Form de captura ──
+    const equipOpts = (S.equiposAplic||[]).map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
+    const predioOpts = S.predios.map((p,pi)=>`<option value="${pi}">${p.emoji} ${p.nombre}</option>`).join('');
+    const piSel = parseInt(gastosGridDraft['aplic_pi']??0);
+    const tablaOpts = S.predios[piSel]?.tablas.map((t,ti)=>
+      `<option value="${ti}" ${gastosGridDraft['aplic_ti']==String(ti)?'selected':''}>${t.nombre} (${t.ha} ha)</option>`).join('')||'';
+
+    tabContent = `${configEq}${sharedBar}
+      <div class="card" style="background:var(--cream);border:1px solid #7ec89a;margin-bottom:16px">
+        <div class="card-head">➕ Registrar aplicación</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:4px 0">
+          <div class="field" style="margin:0">
+            <label>Equipo</label>
+            <select style="padding:5px;font-size:13px" onchange="gastosGridDraft['aplic_eq']=this.value">
+              <option value="">— selecciona —</option>${equipOpts}
+            </select>
+          </div>
+          <div class="field" style="margin:0">
+            <label>Predio</label>
+            <select style="padding:5px;font-size:13px" onchange="gastosGridDraft['aplic_pi']=this.value;renderGastos()">
+              ${predioOpts}
+            </select>
+          </div>
+          <div class="field" style="margin:0">
+            <label>Tabla</label>
+            <select style="padding:5px;font-size:13px" onchange="gastosGridDraft['aplic_ti']=this.value">
+              ${tablaOpts}
+            </select>
+          </div>
+          <div class="field" style="margin:0">
+            <label>Ha aplicadas</label>
+            <input type="number" min="0" step="0.1" placeholder="ha" value="${gastosGridDraft['aplic_ha']||''}"
+              style="width:80px;padding:5px;border:1px solid #7ec89a;font-size:13px;text-align:right"
+              onchange="gastosGridDraft['aplic_ha']=this.value"/>
+          </div>
+          <div class="field" style="margin:0">
+            <label>Tipo</label>
+            <select style="padding:5px;font-size:13px" onchange="gastosGridDraft['aplic_tipo']=this.value">
+              <option value="Nómina">👷 Nómina</option>
+              <option value="Diesel">🛢 Diesel</option>
+              <option value="Reparación">🔧 Reparación/Servicio</option>
+              <option value="Maquila">💵 Maquila ($/ha)</option>
+            </select>
+          </div>
+          <div class="field" style="margin:0">
+            <label>Monto $</label>
+            <input type="number" min="0" step="1" placeholder="$" value="${gastosGridDraft['aplic_monto']||''}"
+              style="width:120px;padding:5px;border:1px solid #7ec89a;font-size:13px;text-align:right"
+              onchange="gastosGridDraft['aplic_monto']=this.value"/>
+          </div>
+        </div>
+      </div>
+      ${aplicHist.length?`
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Aplicaciones C${selectedCn} ${gastosGridAnio}</div>
+      <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
+        <thead><tr style="background:var(--earth);color:#fff">
+          <th style="padding:6px 10px">Mes</th>
+          <th style="padding:6px 10px">Equipo</th>
+          <th style="padding:6px 10px">Predio</th>
+          <th style="padding:6px 10px">Tabla</th>
+          <th style="padding:6px 10px;text-align:right">Ha</th>
+          <th style="padding:6px 10px">Tipo</th>
+          <th style="padding:6px 10px;text-align:right">Monto</th>
+          <th></th>
+        </tr></thead>
+        <tbody>${histRows}</tbody>
+        <tfoot><tr style="background:var(--cream);font-weight:700">
+          <td colspan="6" style="padding:7px 12px">TOTAL C${selectedCn}</td>
+          <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${fmt(totAplic)}</td>
+          <td></td>
+        </tr></tfoot>
+      </table></div>`:'<div class="empty"><div class="empty-icon">🌿</div><div>Sin aplicaciones registradas</div></div>'}`;
+  } else if(gastosTab === 'aplicaciones') {
+    const mesAplic = parseInt(gastosGridDraft['aplic_mes'] || getMesesCn(cn)[0]);
+    const pct1A = parseFloat(gastosGridDraft['aplic_pct1'] ?? 100)/100;
+    const pct2A = parseFloat(gastosGridDraft['aplic_pct2'] || 0)/100;
+    const cn2A  = parseInt(gastosGridDraft['aplic_cn2'] || 0);
+    const eqId  = gastosGridDraft['aplic_eq'];
+    const piA   = parseInt(gastosGridDraft['aplic_pi'] ?? 0);
+    const tiA   = parseInt(gastosGridDraft['aplic_ti'] ?? 0);
+    const haA   = parseFloat(gastosGridDraft['aplic_ha']);
+    const montoA = parseFloat(gastosGridDraft['aplic_monto']);
+    const tipoA = gastosGridDraft['aplic_tipo'] || 'Nómina';
+    const eq = (S.equiposAplic||[]).find(e=>e.id===eqId);
+    if(eq && montoA>0) {
+      const push = (cosecha, monto) => {
+        S.gastosGenerales.push({id:uid(),cosecha,anio,categoria:'Aplicaciones',equipo:eq.nombre,actividad:tipoA,monto,prediosIdx:[piA],tablaIdx:tiA,haAplicadas:haA||null,mes:mesAplic,fecha:today()});
+        total++;
+      };
+      if(pct1A>0) push(cn, montoA*pct1A);
+      if(pct2A>0&&cn2A) push(cn2A, montoA*pct2A);
+    }
   } else if(gastosTab === 'ensilada') {
     const nomEnsilada = parseFloat(gastosGridDraft['nom_ensilada']);
     const precioDieselCn = (S.precioDiesel && S.precioDiesel[cn]) || 0;
@@ -4553,7 +4950,8 @@ function renderGrid() {
 function renderGridContent() {
   const pi = curPredioGrid, cn = curCosechaGrid;
   const p = S.predios[pi];
-  const artsCultivo = S.articulos.filter(a=>a.categoria==='Material de cultivo');
+  const CATS_MATERIAL = ['Material de cultivo','Semillas','Fertilizantes','Herbicidas','Fungicidas','Insecticidas'];
+  const artsCultivo = S.articulos.filter(a=>CATS_MATERIAL.includes(a.categoria));
 
   if(!artsCultivo.length) {
     document.getElementById('grid-content').innerHTML = `<div class="card"><div class="empty"><div class="empty-icon">🌱</div><div>No hay artículos de "Material de cultivo" en el catálogo.<br>El admin debe agregarlos primero.</div></div></div>`;
