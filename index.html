@@ -3745,6 +3745,7 @@ function renderGastos() {
     const pct1N = parseFloat(gastosGridDraft['nom_pct1'] ?? 100)/100;
     const pct2N = parseFloat(gastosGridDraft['nom_pct2'] || 0)/100;
     const cn2N  = parseInt(gastosGridDraft['nom_cn2'] || 0);
+    if(typeof total === 'undefined') var total = 0;
     S.predios.forEach((p,pi)=>{
       const labor = parseFloat(gastosGridDraft[`nom_labor_${pi}_${mesNom}`]);
       const admin = parseFloat(gastosGridDraft[`nom_admin_${pi}_${mesNom}`]);
