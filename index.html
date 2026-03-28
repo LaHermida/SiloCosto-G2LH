@@ -669,9 +669,6 @@ function calcDepTabla(pi, cn, ti, anio) {
   const ciclos = predio.ciclos || 3;
   const metaYear = anio || curAnioRep || curAnioReg || new Date().getFullYear();
 
-  // Peso fijo por ciclo: C1=20%, C2=40%, C3=40%
-  const PESO_CN = ciclos===1 ? {1:1,2:0,3:0} : {1:0.20,2:0.40,3:0.40};
-
   let total = 0;
   for(const dep of (S.depreciaciones[pi]||[])) {
     const costoAnual = parseFloat(dep.costoAnual)||0;
@@ -683,7 +680,7 @@ function calcDepTabla(pi, cn, ti, anio) {
     const cosechaInicio = dep.cosechaInicio || 1;
     if(dep.anioInicio && metaYear === dep.anioInicio && cn < cosechaInicio) continue;
 
-    // Asignación multi-predio (fracción por ha total del predio)
+    // Asignación multi-predio
     const asigDep = (dep.asignaciones||[]).find(a=>a.anio===metaYear);
     let predioFraccion = 1;
     if(asigDep) {
@@ -697,20 +694,43 @@ function calcDepTabla(pi, cn, ti, anio) {
       }
     }
 
-    // Monto fijo para este predio en este ciclo
-    const montoPredio = costoAnual * PESO_CN[cn] * predioFraccion;
-    if(!montoPredio) continue;
+    // Peso por ciclo según aplicaCultivos
+    const aplicaCultivos = dep.aplicaCultivos || 'todos';
+    let PESO_CN;
+    if(ciclos === 1) {
+      PESO_CN = {1:1, 2:0, 3:0};
+    } else if(aplicaCultivos === 'principales') {
+      // Solo C2/C3 (Maíz/Sorgo) → 0-50-50
+      PESO_CN = {1:0, 2:0.5, 3:0.5};
+    } else if(aplicaCultivos === 'triticale') {
+      // Solo C1 → 100-0-0
+      PESO_CN = {1:1, 2:0, 3:0};
+    } else {
+      // Todos → 20-40-40
+      PESO_CN = {1:0.20, 2:0.40, 3:0.40};
+    }
 
-    // Distribuir entre tablas activas proporcional a ha FIJAS
+    const pesoEste = PESO_CN[cn] || 0;
+    if(!pesoEste) continue;
+
+    // Monto fijo para este predio en este ciclo — NUNCA cambia
+    const montoPredio = costoAnual * pesoEste * predioFraccion;
+
+    // Distribuir entre tablas activas FIJAS del predio (no importa vacantes)
+    // Usamos TODAS las tablas del predio con ha fija como denominador
     const tablasAplica = dep.alcance==='tablas'
       ? (dep.tablasIdx||[])
       : predio.tablas.map((_,idx)=>idx);
 
-    const tablasActivas = tablasAplica.filter(t=>!getTablaData(pi,cn,t).sinSiembra);
-    if(!tablasActivas.includes(ti)) continue;
+    // Ha total FIJA de todas las tablas que aplican (sin importar si están vacantes)
+    const haTotal = tablasAplica.reduce((s,t)=>s+(predio.tablas[t]?.ha||0),0);
+    if(!haTotal) continue;
 
-    const haActivasTotal = tablasActivas.reduce((s,t)=>s+(predio.tablas[t]?.ha||0),0);
-    const fracTabla = haActivasTotal>0 ? tablaHa/haActivasTotal : 1/tablasActivas.length;
+    // Solo distribuir a esta tabla si aplica
+    if(!tablasAplica.includes(ti)) continue;
+
+    // Fracción basada en ha FIJA — no cambia nunca
+    const fracTabla = tablaHa / haTotal;
     total += montoPredio * fracTabla;
   }
   return total;
