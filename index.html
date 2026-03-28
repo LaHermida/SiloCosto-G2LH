@@ -3118,6 +3118,12 @@ function renderGastos() {
     }).join('');
 
     tabContent = `
+      <div style="margin-bottom:16px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina ensilada</div>
+        <input type="number" min="0" step="1" placeholder="$ nómina" value="${nomEnsiladaVal}"
+          style="width:200px;padding:8px;border:1px solid #7ec89a;font-size:14px;text-align:right"
+          onchange="gastosGridDraft['nom_ensilada']=this.value"/>
+      </div>
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🚜 Maquinaria propia ensilada ${precioDieselBadge}</div>
       ${configEqEns}
       ${equiposEnsilada.length ? `<div style="overflow-x:auto;margin-bottom:16px">
@@ -3139,12 +3145,6 @@ function renderGastos() {
 
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">🚛 Camiones — precio por tabla ($/ton)</div>
       ${camionesSections}
-      <div style="margin-top:16px">
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina ensilada</div>
-        <input type="number" min="0" step="1" placeholder="$ nómina" value="${nomEnsiladaVal}"
-          style="width:200px;padding:8px;border:1px solid #7ec89a;font-size:14px;text-align:right"
-          onchange="gastosGridDraft['nom_ensilada']=this.value"/>
-      </div>
       ${artsEnsilada.length && tablaInfoME.length ? `
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;margin-top:16px">🧪 Materiales de ensilada</div>
       <div style="overflow-x:auto;margin-bottom:16px">
@@ -3238,6 +3238,28 @@ function renderGastos() {
     const empacadoEmpSection = buildGridTableFiltered(S.predios.map((p,pi)=>({p,pi})), 'emp', '#1a3a18', CULTIVOS_EMPAQUE);
 
     tabContent = `
+      <div style="margin-bottom:16px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina empaque</div>
+        <div style="overflow-x:auto;margin-bottom:8px">
+        <table style="border-collapse:collapse;font-size:13px;min-width:500px">
+          <thead><tr style="background:var(--earth);color:#ffffff">
+            <th style="padding:7px 12px;text-align:left">Predio</th>
+            <th style="padding:7px 12px;text-align:left">Mes</th>
+            <th style="padding:7px 12px;text-align:right">Cantidad $</th>
+            <th style="padding:7px 10px;text-align:center">C1 %</th>
+            <th style="padding:7px 10px;text-align:center">C2 %</th>
+            <th style="padding:7px 10px;text-align:center">C3 %</th>
+          </tr></thead>
+          <tbody><tr>
+            <td style="padding:4px 8px"><select style="padding:5px;font-size:13px" onchange="gastosGridDraft['emp_nom_pi']=this.value">${predioOptsEmp}</select></td>
+            <td style="padding:4px 8px"><select style="padding:5px" onchange="gastosGridDraft['emp_nom_mes']=this.value">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActualEmp===i+1?'selected':''}>${m}</option>`).join('')}</select></td>
+            <td style="padding:4px 8px"><input type="number" min="0" step="1" placeholder="—" value="${montoNomEmp}" style="width:130px;padding:5px 8px;text-align:right;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['emp_nom_monto']=this.value"/></td>
+            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c1pctEmp}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['emp_nom_c1pct']=this.value"/></td>
+            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c2pctEmp}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['emp_nom_c2pct']=this.value"/></td>
+            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c3pctEmp}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['emp_nom_c3pct']=this.value"/></td>
+          </tr></tbody>
+        </table></div>
+      </div>
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🚜 Maquinaria empaque ${precioDieselBadgeEmp}</div>
       ${configEqEmp}
       ${S.equiposEmpaque.length ? `<div style="overflow-x:auto;margin-bottom:16px">
@@ -3260,28 +3282,6 @@ function renderGastos() {
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px">🚛 Camiones empaque — precio por tonelada</div>
       ${camEmpSection}
 
-      <div style="margin-top:16px">
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina empaque</div>
-        <div style="overflow-x:auto;margin-bottom:8px">
-        <table style="border-collapse:collapse;font-size:13px;min-width:500px">
-          <thead><tr style="background:var(--earth);color:#ffffff">
-            <th style="padding:7px 12px;text-align:left">Predio</th>
-            <th style="padding:7px 12px;text-align:left">Mes</th>
-            <th style="padding:7px 12px;text-align:right">Cantidad $</th>
-            <th style="padding:7px 10px;text-align:center">C1 %</th>
-            <th style="padding:7px 10px;text-align:center">C2 %</th>
-            <th style="padding:7px 10px;text-align:center">C3 %</th>
-          </tr></thead>
-          <tbody><tr>
-            <td style="padding:4px 8px"><select style="padding:5px;font-size:13px" onchange="gastosGridDraft['emp_nom_pi']=this.value">${predioOptsEmp}</select></td>
-            <td style="padding:4px 8px"><select style="padding:5px" onchange="gastosGridDraft['emp_nom_mes']=this.value">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActualEmp===i+1?'selected':''}>${m}</option>`).join('')}</select></td>
-            <td style="padding:4px 8px"><input type="number" min="0" step="1" placeholder="—" value="${montoNomEmp}" style="width:130px;padding:5px 8px;text-align:right;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['emp_nom_monto']=this.value"/></td>
-            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c1pctEmp}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['emp_nom_c1pct']=this.value"/></td>
-            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c2pctEmp}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['emp_nom_c2pct']=this.value"/></td>
-            <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${c3pctEmp}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['emp_nom_c3pct']=this.value"/></td>
-          </tr></tbody>
-        </table></div>
-      </div>
       ${ (()=>{
         const histEmp = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&['Diesel Empaque','Maquinaria Empaque','Empacado','Camiones Empaque','Nómina Empaque'].includes(g.categoria));
         if(!histEmp.length) return '';
@@ -3346,26 +3346,7 @@ function renderGastos() {
     const c3pctCort = gastosGridDraft['cort_nom_c3pct'] || '';
 
     tabContent = `
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🚜 Maquinaria de corte ${precioDieselBadgeCorte}</div>
-      ${configEqCorte}
-      ${S.equiposCorte.length ? `<div style="overflow-x:auto;margin-bottom:16px">
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:var(--earth);color:#ffffff">
-          <th style="padding:7px 12px;text-align:left">Equipo</th>
-          <th style="padding:7px 10px;text-align:left">Tipo</th>
-          <th style="padding:7px 12px;text-align:right">Diesel (L)</th>
-          <th style="padding:7px 12px;text-align:right">Servicio ($)</th>
-          <th style="padding:7px 12px;text-align:right">Reparación ($)</th>
-          <th style="padding:7px 12px;text-align:right">Acum. C${selectedCn}</th>
-          <th></th>
-        </tr></thead>
-        <tbody>${cortEqRows}</tbody>
-      </table></div>` : `<div style="color:var(--muted);font-size:12px;margin-bottom:16px">Sin equipos — agrega arriba</div>`}
-
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">✂️ Maquila de corte — $/ha</div>
-      ${maquilaCorteSection}
-
-      <div style="margin-top:16px">
+      <div style="margin-bottom:16px">
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina corte</div>
         <div style="overflow-x:auto;margin-bottom:8px">
         <table style="border-collapse:collapse;font-size:13px;min-width:500px">
@@ -3387,6 +3368,24 @@ function renderGastos() {
           </tr></tbody>
         </table></div>
       </div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🚜 Maquinaria de corte ${precioDieselBadgeCorte}</div>
+      ${configEqCorte}
+      ${S.equiposCorte.length ? `<div style="overflow-x:auto;margin-bottom:16px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:var(--earth);color:#ffffff">
+          <th style="padding:7px 12px;text-align:left">Equipo</th>
+          <th style="padding:7px 10px;text-align:left">Tipo</th>
+          <th style="padding:7px 12px;text-align:right">Diesel (L)</th>
+          <th style="padding:7px 12px;text-align:right">Servicio ($)</th>
+          <th style="padding:7px 12px;text-align:right">Reparación ($)</th>
+          <th style="padding:7px 12px;text-align:right">Acum. C${selectedCn}</th>
+          <th></th>
+        </tr></thead>
+        <tbody>${cortEqRows}</tbody>
+      </table></div>` : `<div style="color:var(--muted);font-size:12px;margin-bottom:16px">Sin equipos — agrega arriba</div>`}
+
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">✂️ Maquila de corte — $/ha</div>
+      ${maquilaCorteSection}
 
       ${(()=>{
         const histCorte = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&
@@ -3788,14 +3787,14 @@ function renderGastos() {
     </div>
 
     <div class="card">
-      <div class="card-head">💰 Gastos Generales</div>
-      <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px">
-        <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
-          <div class="field" style="margin:0"><label>Año</label><input type="number" id="g-anio" value="${curYear}" min="2020" max="2100" style="width:90px"/></div>
-          <div class="field" style="margin:0">
-            <label>Cosecha</label>
-            <select id="g-cosecha" onchange="gastosGridCn=parseInt(this.value);gastosGridDraft={};renderGastos()">${cosechaOpts}</select>
-          </div>
+      <div class="card-head" style="justify-content:space-between">
+        <span>💰 Gastos Generales</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <select style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid var(--border)"
+            onchange="gastosGridAnio=parseInt(this.value);gastosGridDraft={};renderGastos()">
+            ${Array.from({length:13},(_,i)=>2020+i).map(y=>`<option value="${y}" ${y===gastosGridAnio?'selected':''}>${y}</option>`).join('')}
+          </select>
+          ${[1,2,3].map(c=>`<button class="ctab ${gastosGridCn===c?'active':''}" onclick="gastosGridCn=${c};gastosGridDraft={};renderGastos()">C${c}</button>`).join('')}
         </div>
       </div>
       <div class="ctabs" style="margin-bottom:0">${tabsHtml}</div>
