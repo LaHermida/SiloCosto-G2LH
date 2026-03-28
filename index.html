@@ -2113,7 +2113,7 @@ function renderRepContent() {
         if(td.sinSiembra) continue;
         const cv=td.cultivo||'maiz';
         if(filterCv && cv!==filterCv) continue;
-        dep+=calcDepTabla(pi,cn,ti,curAnioRep);
+        dep+=calcDepPredio(pi,cn,curAnioRep)*(predio.tablas[ti]?.ha||0)/Math.max(1,predio.tablas.reduce((s,t)=>s+t.ha,0));
         kilos+=parseFloat(td.kilos)||0;
         kgMS+=(parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100);
         ha+=parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
@@ -2299,7 +2299,7 @@ function renderRepContent() {
 
     const ti = curTablaRep>=0?curTablaRep:0;
     const td = getTablaData(pi,cn,ti);
-    const dep = calcDepTabla(pi,cn,ti,curAnioRep);
+    const dep = calcDepPredio(pi,cn,curAnioRep)*(p.tablas[ti]?.ha||0)/Math.max(1,p.tablas.reduce((s,t)=>s+t.ha,0));
     const vars = calcConsumosTabla(pi,cn,ti);
     const total = dep+vars;
     const kilos = parseFloat(td.kilos)||0;
@@ -2471,7 +2471,7 @@ function printReporteTabla(pi, cn, ti) {
   const p=S.predios[pi];
   const t=p.tablas[ti];
   const td=getTablaData(pi,cn,ti);
-  const dep=calcDepTabla(pi,cn,ti,curAnioRep);
+  const dep=calcDepPredio(pi,cn,curAnioRep)*(S.predios[pi].tablas[ti]?.ha||0)/Math.max(1,S.predios[pi].tablas.reduce((s,t)=>s+t.ha,0));
   const vars=calcConsumosTabla(pi,cn,ti);
   const total=dep+vars;
   const kilos=parseFloat(td.kilos)||0;
