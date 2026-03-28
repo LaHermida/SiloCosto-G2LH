@@ -848,49 +848,50 @@ function renderDash() {
   const anio = curDashAnio;
   const cnLabel = cn===1?'C1 · Dic–Feb':cn===2?'C2 · Mar–Jul':'C3 · Ago–Nov';
 
-  // ── Totales globales ──
-  let totalHa=0, totalKilos=0, totalKgMS=0, totalCosto=0;
+  // ── Totales por cultivo ──
+  const cvTotals = {};
   S.predios.forEach((p,pi)=>{
     if((p.ciclos||3)===1&&cn>1) return;
     for(let ti=0;ti<p.tablas.length;ti++){
       const td=getTablaData(pi,cn,ti);
       if(td.sinSiembra) continue;
-      totalCosto += calcTotalTabla(pi,cn,ti,anio);
-      totalHa    += parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
-      totalKilos += parseFloat(td.kilos)||0;
-      totalKgMS  += (parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100);
+      const cv=td.cultivo||'maiz';
+      if(!cvTotals[cv]) cvTotals[cv]={ha:0,kilos:0,kgMS:0,costo:0};
+      cvTotals[cv].ha    += parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
+      cvTotals[cv].kilos += parseFloat(td.kilos)||0;
+      cvTotals[cv].kgMS  += (parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100);
+      cvTotals[cv].costo += calcTotalTabla(pi,cn,ti,anio);
     }
   });
+  let totalHa=0, totalKilos=0, totalKgMS=0, totalCosto=0;
+  Object.values(cvTotals).forEach(d=>{ totalHa+=d.ha; totalKilos+=d.kilos; totalKgMS+=d.kgMS; totalCosto+=d.costo; });
   const cpk   = totalKilos ? totalCosto/totalKilos : null;
   const cpkms = totalKgMS  ? totalCosto/totalKgMS  : null;
   const kgHa  = totalHa    ? totalKilos/totalHa     : null;
   const gasHa = totalHa    ? totalCosto/totalHa     : null;
 
-  document.getElementById('dash-stats').innerHTML = `
-    <div class="stat c${cn}" style="min-width:0">
-      <div class="stat-lbl">🌾 Total Ha</div>
-      <div class="stat-val">${fmtN(totalHa,1)}</div>
-      <div class="stat-unit">ha sembradas · ${cnLabel} ${anio}</div>
-    </div>
-    <div class="stat c${cn}" style="min-width:0">
-      <div class="stat-lbl">📦 Rendimiento</div>
-      <div class="stat-val">${kgHa?fmtN(kgHa,0):'—'}</div>
-      <div class="stat-unit">kg/ha · ${fmtN(totalKilos,0)} kg total</div>
-    </div>
-    <div class="stat c${cn}" style="min-width:0">
-      <div class="stat-lbl">💧 $/kg húmedo</div>
-      <div class="stat-val">${cpk?'$'+cpk.toFixed(2):'—'}</div>
-      <div class="stat-unit">costo por kg cosechado</div>
-    </div>
-    <div class="stat c${cn}" style="min-width:0">
-      <div class="stat-lbl">🧪 $/kg MS</div>
-      <div class="stat-val">${cpkms?'$'+cpkms.toFixed(2):'—'}</div>
-      <div class="stat-unit">costo por kg materia seca</div>
-    </div>
-    <div class="stat c${cn}" style="min-width:0">
+  // One stat card per cultivo + one global total
+  const cvStatCards = Object.entries(cvTotals).map(([cv,d])=>{
+    const cvInfo=CULTIVOS[cv]||CULTIVOS.otro;
+    const kgHaD=d.ha?d.kilos/d.ha:null;
+    const cpkD=d.kilos?d.costo/d.kilos:null;
+    const cpkmsD=d.kgMS?d.costo/d.kgMS:null;
+    return `<div class="stat c${cn}" style="min-width:0">
+      <div class="stat-lbl">${cvInfo.icon} ${cvInfo.label}</div>
+      <div class="stat-val" style="font-size:20px">${kgHaD?fmtN(kgHaD,0):'—'}</div>
+      <div class="stat-unit">kg/ha · ${fmtN(d.ha,1)} ha</div>
+      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+        <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${cpkD?'$'+cpkD.toFixed(2)+'/kg':''}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:12px;color:#2a6e8a">${cpkmsD?'$'+cpkmsD.toFixed(2)+'/kgMS':''}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('dash-stats').innerHTML = cvStatCards + `
+    <div class="stat c${cn}" style="min-width:0;border-left:2px solid var(--border)">
       <div class="stat-lbl">💰 Costo Total</div>
       <div class="stat-val">${fmt(totalCosto)}</div>
-      <div class="stat-unit">${gasHa?'$'+gasHa.toFixed(0)+'/ha':''}</div>
+      <div class="stat-unit">${gasHa?'$'+gasHa.toFixed(0)+'/ha · ':''} ${fmtN(totalHa,1)} ha</div>
     </div>`;
 
   // ── Cards por predio ──
@@ -926,10 +927,10 @@ function renderDash() {
       return `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:6px 8px">${cvInfo.icon} <strong>${cvInfo.label}</strong><br>
           <span style="font-size:10px;color:var(--muted)">${d.tablas.join(', ')} · ${fmtN(d.ha,1)} ha</span></td>
-        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:13px;color:var(--text)">${kgHaD?fmtN(kgHaD,0)+'<br><span style="font-size:9px;color:var(--muted)">kg/ha</span>':'—'}</td>
-        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:13px;color:var(--amber)">${cpkD?'$'+cpkD.toFixed(2)+'<br><span style="font-size:9px;color:var(--muted)">$/kg</span>':'—'}</td>
-        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:13px;color:#2a6e8a">${cpkmsD?'$'+cpkmsD.toFixed(2)+'<br><span style="font-size:9px;color:var(--muted)">$/kg MS</span>':'—'}</td>
-        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:13px;color:var(--muted)">${gasHaD?'$'+gasHaD.toFixed(0)+'<br><span style="font-size:9px;color:var(--muted)">$/ha</span>':'—'}</td>
+        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:15px;color:var(--text)">${kgHaD?fmtN(kgHaD,0)+'<br><span style="font-size:10px;color:var(--muted)">kg/ha</span>':'—'}</td>
+        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:15px;color:var(--amber)">${cpkD?'$'+cpkD.toFixed(2)+'<br><span style="font-size:10px;color:var(--muted)">$/kg</span>':'—'}</td>
+        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:15px;color:#2a6e8a">${cpkmsD?'$'+cpkmsD.toFixed(2)+'<br><span style="font-size:10px;color:var(--muted)">$/kg MS</span>':'—'}</td>
+        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:15px;color:var(--muted)">${gasHaD?'$'+gasHaD.toFixed(0)+'<br><span style="font-size:10px;color:var(--muted)">$/ha</span>':'—'}</td>
       </tr>`;
     }).join('');
 
@@ -940,25 +941,25 @@ function renderDash() {
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">
         <div style="background:var(--cream);padding:7px 8px;border-radius:6px;text-align:center">
-          <div style="font-size:9px;color:var(--muted);text-transform:uppercase">kg/ha</div>
-          <div style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700">${predioHa&&predioKilos?fmtN(predioKilos/predioHa,0):'—'}</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">kg/ha</div>
+          <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700">${predioHa&&predioKilos?fmtN(predioKilos/predioHa,0):'—'}</div>
         </div>
         <div style="background:var(--cream);padding:7px 8px;border-radius:6px;text-align:center">
-          <div style="font-size:9px;color:var(--muted);text-transform:uppercase">$/kg</div>
-          <div style="font-family:'DM Mono',monospace;font-size:15px;color:var(--amber);font-weight:700">${predioKilos?'$'+(predioCosto/predioKilos).toFixed(2):'—'}</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">$/kg</div>
+          <div style="font-family:'DM Mono',monospace;font-size:18px;color:var(--amber);font-weight:700">${predioKilos?'$'+(predioCosto/predioKilos).toFixed(2):'—'}</div>
         </div>
         <div style="background:var(--cream);padding:7px 8px;border-radius:6px;text-align:center">
-          <div style="font-size:9px;color:var(--muted);text-transform:uppercase">$/kg MS</div>
-          <div style="font-family:'DM Mono',monospace;font-size:15px;color:#2a6e8a;font-weight:700">${predioKgMS?'$'+(predioCosto/predioKgMS).toFixed(2):'—'}</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">$/kg MS</div>
+          <div style="font-family:'DM Mono',monospace;font-size:18px;color:#2a6e8a;font-weight:700">${predioKgMS?'$'+(predioCosto/predioKgMS).toFixed(2):'—'}</div>
         </div>
         <div style="background:var(--cream);padding:7px 8px;border-radius:6px;text-align:center">
-          <div style="font-size:9px;color:var(--muted);text-transform:uppercase">$/ha</div>
-          <div style="font-family:'DM Mono',monospace;font-size:15px;color:var(--muted);font-weight:700">${predioHa?'$'+(predioCosto/predioHa).toFixed(0):'—'}</div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase">$/ha</div>
+          <div style="font-family:'DM Mono',monospace;font-size:18px;color:var(--muted);font-weight:700">${predioHa?'$'+(predioCosto/predioHa).toFixed(0):'—'}</div>
         </div>
       </div>
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr style="background:var(--earth);color:#fff;font-size:10px">
-          <th style="padding:5px 8px;text-align:left">Cultivo</th>
+      <table style="width:100%;border-collapse:collapse;font-size:14px">
+        <thead><tr style="background:var(--earth);color:#fff;font-size:11px">
+          <th style="padding:6px 10px;text-align:left">Cultivo</th>
           <th style="padding:5px 8px;text-align:right">kg/ha</th>
           <th style="padding:5px 8px;text-align:right">$/kg</th>
           <th style="padding:5px 8px;text-align:right">$/kg MS</th>
