@@ -706,8 +706,8 @@ function calcDepTabla(pi, cn, ti, anio) {
     if(aplicaCultivos === 'principales' && !esPrincipal) continue;
     if(aplicaCultivos === 'triticale' && !esTriticale) continue;
 
-    // Cosecha weight — calculado tabla por tabla según cultivo real
-    // Suma pesos de TODAS las cosechas para normalizar
+    // cosechaWeight — fracción del año que corresponde a este ciclo según cultivos del predio
+    // Es FIJO para el predio/ciclo, no varía por tabla ni por ha sembradas
     let cosechaWeight = 1;
     if(ciclos === 1) {
       cosechaWeight = cn === 1 ? 1 : 0;
@@ -716,8 +716,9 @@ function calcDepTabla(pi, cn, ti, anio) {
         ? (dep.tablasIdx||[])
         : predio.tablas.map((_,idx)=>idx);
 
-      // Peso total acumulado en todos los ciclos
+      // Peso total del predio en todos los ciclos (usando ha fijas)
       let pesoTotal = 0;
+      let pesoCn = 0;
       for(let c=1;c<=3;c++) {
         for(const t of tablasAplica) {
           const tdC = getTablaData(pi,c,t);
@@ -727,39 +728,46 @@ function calcDepTabla(pi, cn, ti, anio) {
           const esT = cv==='trigo'||cv==='triticale'||cv==='triticale_heno';
           if(aplicaCultivos==='principales'&&!esP) continue;
           if(aplicaCultivos==='triticale'&&!esT) continue;
-          const cvHa = predio.tablas[t]?.ha || 0;  // ha fija
-          pesoTotal += (CULTIVOS[cv]?.pct||40) * cvHa;
+          const cvHa = predio.tablas[t]?.ha || 0;
+          const peso = (CULTIVOS[cv]?.pct||40) * cvHa;
+          pesoTotal += peso;
+          if(c===cn) pesoCn += peso;
         }
       }
+      cosechaWeight = pesoTotal > 0 ? pesoCn / pesoTotal : (cn===1?1:0);
 
-      // Peso de esta tabla en este ciclo
+      // Verificar que este cultivo aplica al filtro
       const miCv = cultivo;
       const esPCn = miCv==='maiz'||miCv==='sorgo';
       const esTCn = miCv==='trigo'||miCv==='triticale'||miCv==='triticale_heno';
       if(aplicaCultivos==='principales'&&!esPCn) { cosechaWeight=0; }
       else if(aplicaCultivos==='triticale'&&!esTCn) { cosechaWeight=0; }
-      else {
-        const miPeso = (CULTIVOS[miCv]?.pct||40) * tablaHa;
-        cosechaWeight = pesoTotal > 0 ? miPeso / pesoTotal : 0;
-      }
     }
 
-    // Alcance — con redistribución de vacantes
-    if(dep.alcance === 'general') {
-      total += costoAnual * cosechaWeight * predioFraccion;
-    } else {
-      const tablasSelec = dep.tablasIdx||[];
-      const tablasActivas = tablasSelec.filter(t=>!getTablaData(pi,cn,t).sinSiembra);
-      const tablasVacantes = tablasSelec.filter(t=>getTablaData(pi,cn,t).sinSiembra);
+    // Alcance — distribuir el costo entre tablas activas del ciclo por ha fija
+    const tablasSelec = dep.alcance==='tablas' ? (dep.tablasIdx||[]) : predio.tablas.map((_,idx)=>idx);
+    const tablasActivas = tablasSelec.filter(t=>!getTablaData(pi,cn,t).sinSiembra);
+    const tablasVacantes = tablasSelec.filter(t=>getTablaData(pi,cn,t).sinSiembra);
+    const haActivasSelec = tablasActivas.reduce((s,t)=>s+(predio.tablas[t]?.ha||0),0);
 
-      if(tablasActivas.length === 0 && tablasVacantes.length > 0) {
-        // Todas vacantes — redistribuir a tablas activas del predio por ha
-        if(totalHaActivas > 0) {
-          total += costoAnual * (tablaHa/totalHaActivas) * cosechaWeight * predioFraccion;
-        }
-      } else if(tablasActivas.includes(ti)) {
-        total += costoAnual * cosechaWeight * predioFraccion;
+    let fracTabla = 0;
+    if(dep.alcance === 'general') {
+      // Distribuir entre todas las tablas activas del predio proporcionalmente por ha fija
+      fracTabla = haActivasSelec > 0 ? tablaHa / haActivasSelec : (tablasActivas.includes(ti) ? 1/tablasActivas.length : 0);
+      if(!tablasActivas.includes(ti) && tablasVacantes.includes(ti)) {
+        // Esta tabla está vacante — no recibe depreciación
+        fracTabla = 0;
       }
+    } else {
+      if(tablasActivas.length === 0 && tablasVacantes.includes(ti)) {
+        // Todas las tablas seleccionadas vacantes — redistribuir al predio activo por ha
+        fracTabla = totalHaActivas > 0 ? tablaHa / totalHaActivas : 0;
+      } else if(tablasActivas.includes(ti)) {
+        fracTabla = haActivasSelec > 0 ? tablaHa / haActivasSelec : 1/tablasActivas.length;
+      }
+    }
+    if(fracTabla > 0) {
+      total += costoAnual * cosechaWeight * predioFraccion * fracTabla;
     }
   }
   return total;
