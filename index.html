@@ -660,27 +660,61 @@ function getCurrentPrice(artId, anio) {
 
 // ── DEPRECIATION CALC ──
 // For a given predio + cosecha + tabla, sum up applicable depreciations
+function calcDepPredio(pi, cn, anio) {
+  // Calcula el total FIJO de depreciacion para un predio/ciclo
+  // Este numero NUNCA cambia sin importar tablas vacantes o ha sembradas
+  const predio = S.predios[pi];
+  const ciclos = predio.ciclos || 3;
+  const metaYear = anio || curAnioRep || curAnioReg || new Date().getFullYear();
+  let total = 0;
+  for(const dep of (S.depreciaciones[pi]||[])) {
+    const costoAnual = parseFloat(dep.costoAnual)||0;
+    if(!costoAnual) continue;
+    if(dep.anioInicio && metaYear < dep.anioInicio) continue;
+    if(dep.anioFin && metaYear > dep.anioFin) continue;
+    const cosechaInicio = dep.cosechaInicio || 1;
+    if(dep.anioInicio && metaYear === dep.anioInicio && cn < cosechaInicio) continue;
+    const asigDep = (dep.asignaciones||[]).find(a=>a.anio===metaYear);
+    let predioFraccion = 1;
+    if(asigDep) {
+      const isAssigned = (asigDep.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(cn));
+      if(!isAssigned) continue;
+      const prediosAsig = (asigDep.prediosCosechas||[]).filter(pc=>(pc.cosechas||[]).includes(cn)).map(pc=>pc.pi);
+      if(prediosAsig.length > 1) {
+        const totalHaPredios = prediosAsig.reduce((s,pIdx2)=>s+S.predios[pIdx2].tablas.reduce((sh,t)=>sh+t.ha,0),0);
+        const miHa = predio.tablas.reduce((s,t)=>s+t.ha,0);
+        predioFraccion = totalHaPredios>0 ? miHa/totalHaPredios : 1/prediosAsig.length;
+      }
+    }
+    const aplicaCultivos = dep.aplicaCultivos || 'todos';
+    let peso;
+    if(ciclos===1) peso = cn===1?1:0;
+    else if(aplicaCultivos==='principales') peso = cn===1?0:0.5;
+    else if(aplicaCultivos==='triticale') peso = cn===1?1:0;
+    else peso = cn===1?0.20:0.40;
+    total += costoAnual * peso * predioFraccion;
+  }
+  return total;
+}
+
 function calcDepTabla(pi, cn, ti, anio) {
+  // Distribuye el total FIJO del predio entre las tablas activas por ha fija
   const predio = S.predios[pi];
   const td = getTablaData(pi,cn,ti);
   if(td.sinSiembra) return 0;
 
   const tablaHa = predio.tablas[ti]?.ha || 0;
-  const ciclos = predio.ciclos || 3;
   const metaYear = anio || curAnioRep || curAnioReg || new Date().getFullYear();
 
   let total = 0;
   for(const dep of (S.depreciaciones[pi]||[])) {
     const costoAnual = parseFloat(dep.costoAnual)||0;
     if(!costoAnual) continue;
-
-    // Vigencia
     if(dep.anioInicio && metaYear < dep.anioInicio) continue;
     if(dep.anioFin && metaYear > dep.anioFin) continue;
     const cosechaInicio = dep.cosechaInicio || 1;
     if(dep.anioInicio && metaYear === dep.anioInicio && cn < cosechaInicio) continue;
 
-    // Asignación multi-predio
     const asigDep = (dep.asignaciones||[]).find(a=>a.anio===metaYear);
     let predioFraccion = 1;
     if(asigDep) {
@@ -694,47 +728,30 @@ function calcDepTabla(pi, cn, ti, anio) {
       }
     }
 
-    // Peso por ciclo según aplicaCultivos
+    const ciclos = predio.ciclos || 3;
     const aplicaCultivos = dep.aplicaCultivos || 'todos';
-    let PESO_CN;
-    if(ciclos === 1) {
-      PESO_CN = {1:1, 2:0, 3:0};
-    } else if(aplicaCultivos === 'principales') {
-      // Solo C2/C3 (Maíz/Sorgo) → 0-50-50
-      PESO_CN = {1:0, 2:0.5, 3:0.5};
-    } else if(aplicaCultivos === 'triticale') {
-      // Solo C1 → 100-0-0
-      PESO_CN = {1:1, 2:0, 3:0};
-    } else {
-      // Todos → 20-40-40
-      PESO_CN = {1:0.20, 2:0.40, 3:0.40};
-    }
+    let peso;
+    if(ciclos===1) peso = cn===1?1:0;
+    else if(aplicaCultivos==='principales') peso = cn===1?0:0.5;
+    else if(aplicaCultivos==='triticale') peso = cn===1?1:0;
+    else peso = cn===1?0.20:0.40;
+    if(!peso) continue;
 
-    const pesoEste = PESO_CN[cn] || 0;
-    if(!pesoEste) continue;
+    const montoPredio = costoAnual * peso * predioFraccion;
 
-    // Monto fijo para este predio en este ciclo — NUNCA cambia
-    const montoPredio = costoAnual * pesoEste * predioFraccion;
-
-    // Distribuir entre tablas activas FIJAS del predio (no importa vacantes)
-    // Usamos TODAS las tablas del predio con ha fija como denominador
+    // Denominator: ha FIJA de TODAS las tablas que aplican (vacantes o no)
     const tablasAplica = dep.alcance==='tablas'
       ? (dep.tablasIdx||[])
       : predio.tablas.map((_,idx)=>idx);
-
-    // Ha total FIJA de todas las tablas que aplican (sin importar si están vacantes)
+    if(!tablasAplica.includes(ti)) continue;
     const haTotal = tablasAplica.reduce((s,t)=>s+(predio.tablas[t]?.ha||0),0);
     if(!haTotal) continue;
 
-    // Solo distribuir a esta tabla si aplica
-    if(!tablasAplica.includes(ti)) continue;
-
-    // Fracción basada en ha FIJA — no cambia nunca
-    const fracTabla = tablaHa / haTotal;
-    total += montoPredio * fracTabla;
+    total += montoPredio * (tablaHa/haTotal);
   }
   return total;
 }
+
 function calcConsumosTabla(pi, cn, ti) {
   const td = getTablaData(pi,cn,ti);
   return (td.consumos||[]).reduce((s,c)=>s+(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0),0);
@@ -2405,9 +2422,9 @@ function printReportePredio(pi, cn) {
   cats.forEach(c=>catTotals[c]=0);
   let totalDep=0, totKilos=0, totKgMS=0;
   // Sum consumos por tabla
+  totalDep = calcDepPredio(pi,cn,curAnioRep);
   for(let ti=0;ti<p.tablas.length;ti++) {
     const td=getTablaData(pi,cn,ti);
-    totalDep+=calcDepTabla(pi,cn,ti,curAnioRep);
     totKilos+=parseFloat(td.kilos)||0;
     totKgMS+=((parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100));
     (td.consumos||[]).forEach(c=>{
