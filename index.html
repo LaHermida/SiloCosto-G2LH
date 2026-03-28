@@ -664,12 +664,12 @@ function calcDepTabla(pi, cn, ti, anio) {
   const predio = S.predios[pi];
   const td = getTablaData(pi,cn,ti);
   if(td.sinSiembra) return 0;
-  const tablaHa = parseFloat(td.haSembradas) || predio.tablas[ti]?.ha || 0;
-  // Total ha activas en este ciclo
+  const tablaHa = predio.tablas[ti]?.ha || 0;  // ha fija del activo, no haSembradas
+  // Total ha activas en este ciclo (ha fija)
   const totalHaActivas = predio.tablas.reduce((s,t,idx)=>{
     const tdx = getTablaData(pi,cn,idx);
     if(tdx.sinSiembra) return s;
-    return s + (parseFloat(tdx.haSembradas) || t.ha || 0);
+    return s + (t.ha || 0);
   },0);
   const ciclos = predio.ciclos || 3;
   const cultivo = td.cultivo || 'maiz';
@@ -727,7 +727,7 @@ function calcDepTabla(pi, cn, ti, anio) {
           const esT = cv==='trigo'||cv==='triticale'||cv==='triticale_heno';
           if(aplicaCultivos==='principales'&&!esP) continue;
           if(aplicaCultivos==='triticale'&&!esT) continue;
-          const cvHa = parseFloat(tdC.haSembradas)||predio.tablas[t]?.ha||0;
+          const cvHa = predio.tablas[t]?.ha || 0;  // ha fija
           pesoTotal += (CULTIVOS[cv]?.pct||40) * cvHa;
         }
       }
