@@ -3245,6 +3245,43 @@ function renderGastos() {
         </table>
       </div>`:''}`;
   } else if(gastosTab === 'ensilada') {
+    const mesActual_ens = parseInt(gastosGridDraft['ens_mes'] || getMesesCn(selectedCn)[0]);
+    const precioDiesel_ens = parseFloat(gastosGridDraft['ens_diesel'] || S.precioDiesel?.[selectedCn] || 0);
+    const pct1_ens = parseFloat(gastosGridDraft['ens_pct1'] ?? 100);
+    const pct2_ens = parseFloat(gastosGridDraft['ens_pct2'] || 0);
+    const cn2_ens  = parseInt(gastosGridDraft['ens_cn2'] || 0);
+    const mesOpts_ens = [1,2,3,4,5,6,7,8,9,10,11,12].map(m=>
+      `<option value="${m}" ${m===mesActual_ens?'selected':''}>${MESES_G[m-1]}</option>`).join('');
+    const cicloOpts_ens = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
+    const sharedBar_ens = `
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0fdf4;border:1px solid #7ec89a;margin-bottom:14px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted)">📅 Mes:</span>
+          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['ens_mes']=this.value;renderGastos()">${mesOpts_ens}</select>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted)">💧 $/Lt:</span>
+          <input type="number" min="0" step="0.01" placeholder="$/Lt" value="${precioDiesel_ens||''}"
+            style="width:85px;padding:4px 8px;border:1px solid #7ec89a;font-size:13px;font-family:'DM Mono',monospace;text-align:right"
+            onchange="gastosGridDraft['ens_diesel']=this.value;if(!S.precioDiesel)S.precioDiesel={};S.precioDiesel[${selectedCn}]=parseFloat(this.value)||0;save();renderGastos()"/>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #7ec89a;padding-left:14px">
+          <span style="font-size:12px;color:var(--muted)">Split:</span>
+          <input type="number" min="0" max="100" step="1" value="${pct1_ens}"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['ens_pct1']=this.value;renderGastos()"/>
+          <span style="font-size:11px;color:var(--muted)">%C${selectedCn}</span>
+          <input type="number" min="0" max="100" step="1" value="${pct2_ens||''}" placeholder="0"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['ens_pct2']=this.value"/>
+          <select style="font-size:12px;padding:3px;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['ens_cn2']=this.value">
+            <option value="">C?</option>${cicloOpts_ens}
+          </select>
+        </div>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto">C${selectedCn} · ${gastosGridAnio}</span>
+      </div>`;
     const artsEnsilada = S.articulos.filter(a=>a.categoria==='Materiales de ensilada');
     const nomEnsiladaVal = gastosGridDraft['nom_ensilada'] || '';
 
@@ -3388,7 +3425,7 @@ function renderGastos() {
       </tr>`;
     }).join('');
 
-    tabContent = `
+    tabContent = `${sharedBar_ens}
       <div style="margin-bottom:16px">
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina ensilada</div>
         <input type="number" min="0" step="1" placeholder="$ nómina" value="${nomEnsiladaVal}"
@@ -3508,7 +3545,7 @@ function renderGastos() {
     // Empacado ($/ton)
     const empacadoEmpSection = buildGridTableFiltered(S.predios.map((p,pi)=>({p,pi})), 'emp', '#1a3a18', CULTIVOS_EMPAQUE);
 
-    tabContent = `
+    tabContent = `${sharedBar_emp2}
       <div style="margin-bottom:16px">
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina empaque</div>
         <div style="overflow-x:auto;margin-bottom:8px">
@@ -3566,6 +3603,43 @@ function renderGastos() {
       })() }`;
 
   } else if(gastosTab === 'corte') {
+    const mesActual_cort2 = parseInt(gastosGridDraft['cort2_mes'] || getMesesCn(selectedCn)[0]);
+    const precioDiesel_cort2 = parseFloat(gastosGridDraft['cort2_diesel'] || S.precioDiesel?.[selectedCn] || 0);
+    const pct1_cort2 = parseFloat(gastosGridDraft['cort2_pct1'] ?? 100);
+    const pct2_cort2 = parseFloat(gastosGridDraft['cort2_pct2'] || 0);
+    const cn2_cort2  = parseInt(gastosGridDraft['cort2_cn2'] || 0);
+    const mesOpts_cort2 = [1,2,3,4,5,6,7,8,9,10,11,12].map(m=>
+      `<option value="${m}" ${m===mesActual_cort2?'selected':''}>${MESES_G[m-1]}</option>`).join('');
+    const cicloOpts_cort2 = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
+    const sharedBar_cort2 = `
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0fdf4;border:1px solid #7ec89a;margin-bottom:14px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted)">📅 Mes:</span>
+          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['cort2_mes']=this.value;renderGastos()">${mesOpts_cort2}</select>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted)">💧 $/Lt:</span>
+          <input type="number" min="0" step="0.01" placeholder="$/Lt" value="${precioDiesel_cort2||''}"
+            style="width:85px;padding:4px 8px;border:1px solid #7ec89a;font-size:13px;font-family:'DM Mono',monospace;text-align:right"
+            onchange="gastosGridDraft['cort2_diesel']=this.value;if(!S.precioDiesel)S.precioDiesel={};S.precioDiesel[${selectedCn}]=parseFloat(this.value)||0;save();renderGastos()"/>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #7ec89a;padding-left:14px">
+          <span style="font-size:12px;color:var(--muted)">Split:</span>
+          <input type="number" min="0" max="100" step="1" value="${pct1_cort2}"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['cort2_pct1']=this.value;renderGastos()"/>
+          <span style="font-size:11px;color:var(--muted)">%C${selectedCn}</span>
+          <input type="number" min="0" max="100" step="1" value="${pct2_cort2||''}" placeholder="0"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['cort2_pct2']=this.value"/>
+          <select style="font-size:12px;padding:3px;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['cort2_cn2']=this.value">
+            <option value="">C?</option>${cicloOpts_cort2}
+          </select>
+        </div>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto">C${selectedCn} · ${gastosGridAnio}</span>
+      </div>`;
     if(!S.equiposCorte) S.equiposCorte = [];
   if(!S.sistemasRiego) S.sistemasRiego = [];
     const precioDieselCorte = S.precioDiesel?.[selectedCn] || '';
@@ -3616,7 +3690,7 @@ function renderGastos() {
     const c2pctCort = gastosGridDraft['cort_nom_c2pct'] || '';
     const c3pctCort = gastosGridDraft['cort_nom_c3pct'] || '';
 
-    tabContent = `
+    tabContent = `${sharedBar_cort2}
       <div style="margin-bottom:16px">
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina corte</div>
         <div style="overflow-x:auto;margin-bottom:8px">
@@ -3864,7 +3938,11 @@ function renderGastos() {
           <tbody>${histRows}</tbody></table></div>`;
     }
   } else if(gastosTab === 'empaque') {
-    const precioDieselCnEmp = (S.precioDiesel && S.precioDiesel[cn]) || 0;
+    const mesEmp2 = parseInt(gastosGridDraft['emp2_mes'] || getMesesCn(cn)[0]);
+    const pct1Emp2 = parseFloat(gastosGridDraft['emp2_pct1'] ?? 100)/100;
+    const pct2Emp2 = parseFloat(gastosGridDraft['emp2_pct2'] || 0)/100;
+    const cn2Emp2  = parseInt(gastosGridDraft['emp2_cn2'] || 0);
+    const precioDieselCnEmp = parseFloat(gastosGridDraft['emp2_diesel'] || S.precioDiesel?.[cn] || 0);
     // Maquinaria empaque
     (S.equiposEmpaque||[]).forEach(eq=>{
       const litros = parseFloat(gastosGridDraft[`empdiesel_${eq.id}`]);
@@ -4513,7 +4591,11 @@ function capturarGastos() {
     }
   } else if(gastosTab === 'ensilada') {
     const nomEnsilada = parseFloat(gastosGridDraft['nom_ensilada']);
-    const precioDieselCn = (S.precioDiesel && S.precioDiesel[cn]) || 0;
+    const mesEns = parseInt(gastosGridDraft['ens_mes'] || getMesesCn(cn)[0]);
+    const pct1Ens = parseFloat(gastosGridDraft['ens_pct1'] ?? 100)/100;
+    const pct2Ens = parseFloat(gastosGridDraft['ens_pct2'] || 0)/100;
+    const cn2Ens  = parseInt(gastosGridDraft['ens_cn2'] || 0);
+    const precioDieselCn = parseFloat(gastosGridDraft['ens_diesel'] || S.precioDiesel?.[cn] || 0);
     // Maquinaria propia ensilada — lista independiente S.equiposEnsilada
     (S.equiposEnsilada||[]).forEach(eq=>{
       const litros = parseFloat(gastosGridDraft[`ens_d_${eq.id}`]);
@@ -4521,8 +4603,8 @@ function capturarGastos() {
       const rep    = parseFloat(gastosGridDraft[`ens_r_${eq.id}`]);
       if(litros>0) {
         const montoDiesel = precioDieselCn ? litros*precioDieselCn : litros;
-        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel Ensilada',equipo:eq.nombre,litros,precioPorLitro:precioDieselCn,monto:montoDiesel,prediosIdx,fecha:today()});
-        total++;
+        if(pct1Ens>0){S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel Ensilada',equipo:eq.nombre,litros:litros*pct1Ens,precioPorLitro:precioDieselCn,monto:montoDiesel*pct1Ens,prediosIdx,mes:mesEns,fecha:today()});total++;}
+        if(pct2Ens>0&&cn2Ens){S.gastosGenerales.push({id:uid(),cosecha:cn2Ens,anio,categoria:'Diesel Ensilada',equipo:eq.nombre,litros:litros*pct2Ens,precioPorLitro:precioDieselCn,monto:montoDiesel*pct2Ens,prediosIdx,mes:mesEns,fecha:today()});total++;}
       }
       if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Ensilada',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,fecha:today()}); total++; }
       if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Ensilada',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,fecha:today()}); total++; }
@@ -4623,7 +4705,11 @@ function capturarGastos() {
     });
 
   } else if(gastosTab === 'corte') {
-    const precioDieselCnCort = (S.precioDiesel && S.precioDiesel[cn]) || 0;
+    const mesCort = parseInt(gastosGridDraft['cort2_mes'] || getMesesCn(cn)[0]);
+    const pct1Cort = parseFloat(gastosGridDraft['cort2_pct1'] ?? 100)/100;
+    const pct2Cort = parseFloat(gastosGridDraft['cort2_pct2'] || 0)/100;
+    const cn2Cort  = parseInt(gastosGridDraft['cort2_cn2'] || 0);
+    const precioDieselCnCort = parseFloat(gastosGridDraft['cort2_diesel'] || S.precioDiesel?.[cn] || 0);
     // Maquinaria corte
     (S.equiposCorte||[]).forEach(eq=>{
       const litros = parseFloat(gastosGridDraft[`cortd_${eq.id}`]);
@@ -4631,7 +4717,8 @@ function capturarGastos() {
       const rep    = parseFloat(gastosGridDraft[`cortr_${eq.id}`]);
       if(litros>0) {
         const monto = precioDieselCnCort ? litros*precioDieselCnCort : litros;
-        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel Corte',equipo:eq.nombre,litros,precioPorLitro:precioDieselCnCort,monto,prediosIdx,fecha:today()}); total++;
+        if(pct1Cort>0){S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel Corte',equipo:eq.nombre,litros:litros*pct1Cort,precioPorLitro:precioDieselCnCort,monto:monto*pct1Cort,prediosIdx,mes:mesCort,fecha:today()});total++;}
+        if(pct2Cort>0&&cn2Cort){S.gastosGenerales.push({id:uid(),cosecha:cn2Cort,anio,categoria:'Diesel Corte',equipo:eq.nombre,litros:litros*pct2Cort,precioPorLitro:precioDieselCnCort,monto:monto*pct2Cort,prediosIdx,mes:mesCort,fecha:today()});total++;} total++;
       }
       if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Corte',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,fecha:today()}); total++; }
       if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Corte',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,fecha:today()}); total++; }
