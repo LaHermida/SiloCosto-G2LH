@@ -2879,108 +2879,100 @@ function renderGastos() {
           <tbody>${repHistRows||'<tr><td colspan="99" style="padding:12px;text-align:center;color:var(--muted)">Sin registros</td></tr>'}</tbody></table></div>`;
     }
   } else if(gastosTab === 'luz') {
-    if(!S.luzPct) S.luzPct = {};
-    if(!S.luzNoriaPredios) S.luzNoriaPredios = {}; // {noriaId: {pi: pct}} % por predio
-
-    // Collect unique norias (by nombre) across all predios
-    const noriaMap = {}; // {nombre: [{pi, pt}]}
-    S.predios.forEach((p,pi)=>{
-      (S.equipos[pi]||[]).filter(e=>e.tipo==='luz').forEach(pt=>{
-        if(!noriaMap[pt.nombre]) noriaMap[pt.nombre] = [];
-        noriaMap[pt.nombre].push({pi,p,pt});
-      });
-    });
-    const uniqueNorias = Object.entries(noriaMap); // [[nombre, [{pi,p,pt}]]]
-
-    const configLuz = isAdmin ? `
+    if(!S.sistemasLuz) S.sistemasLuz = [];
+    const mesActual = parseInt(gastosGridDraft['luz_mes'] || getMesesCn(selectedCn)[0]);
+    const mesOpts = [1,2,3,4,5,6,7,8,9,10,11,12].map(m=>
+      `<option value="${m}" ${m===mesActual?'selected':''}>${MESES_G[m-1]}</option>`).join('');
+    const pct1G = parseFloat(gastosGridDraft['luz_pct1'] ?? 100);
+    const pct2G = parseFloat(gastosGridDraft['luz_pct2'] || 0);
+    const cn2G  = parseInt(gastosGridDraft['luz_cn2'] || 0);
+    const cicloOpts = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
+    const configEq = isAdmin ? `
       <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">⚙️ Agregar noria:</div>
-        <input type="text" id="eq-nombre-luz" placeholder="Ej: Noria 212, Rebombeo..." style="padding:5px;width:180px;font-size:13px"/>
-        <button class="btn btn-s" onclick="addEquipoLuzMulti()">+ Agregar</button>
-        <span style="font-size:11px;color:var(--muted)">Se agrega a todos los predios, configura % abajo</span>
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar noria/sistema:</span>
+        <input type="text" id="luz-nombre" placeholder="Ej: Noria 212, Sistema LG..." style="padding:5px;width:200px;font-size:13px"/>
+        <button class="btn btn-s" onclick="addSistemaLuz()">+ Agregar</button>
       </div>` : '';
-
-    const mesActual = parseInt(gastosGridDraft['mes']||new Date().getMonth()+1);
-    const mesSelector = `
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:#f0fdf4;border:1px solid #7ec89a">
-        <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">MES</div>
-          <select style="padding:5px" onchange="gastosGridDraft['mes']=this.value;renderGastos()">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActual===i+1?'selected':''}>${m}</option>`).join('')}</select>
+    const sharedBar = `
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0fdf4;border:1px solid #7ec89a;margin-bottom:14px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted)">📅 Mes:</span>
+          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['luz_mes']=this.value;renderGastos()">${mesOpts}</select>
         </div>
-        <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">2ª COSECHA (split)</div>
-          <select style="padding:5px" onchange="gastosGridDraft['cn_split_b']=this.value">${[{v:'',l:'— Solo una —'},...[1,2,3].map(c=>({v:c,l:`C${c}`}))].map(o=>`<option value="${o.v}" ${(gastosGridDraft['cn_split_b']||'')==String(o.v)?'selected':''}>${o.l}</option>`).join('')}</select>
+        <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #7ec89a;padding-left:14px">
+          <span style="font-size:12px;color:var(--muted)">Split:</span>
+          <input type="number" min="0" max="100" step="1" value="${pct1G}"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['luz_pct1']=this.value;renderGastos()"/>
+          <span style="font-size:11px;color:var(--muted)">%C${selectedCn}</span>
+          <input type="number" min="0" max="100" step="1" value="${pct2G||''}" placeholder="0"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['luz_pct2']=this.value"/>
+          <select style="font-size:12px;padding:3px;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['luz_cn2']=this.value">
+            <option value="">C?</option>${cicloOpts}
+          </select>
         </div>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto">C${selectedCn} · ${gastosGridAnio}</span>
       </div>`;
-
-    if(!uniqueNorias.length) {
-      tabContent = `${configLuz}<div class="empty"><div class="empty-icon">💡</div><div>Sin norias configuradas</div></div>`;
+    if(!S.sistemasLuz.length) {
+      tabContent = `${configEq}${sharedBar}<div class="empty"><div class="empty-icon">💡</div><div>Sin norias/sistemas. Agrégalos arriba.</div></div>`;
     } else {
-      // Build header columns: Noria | La Hermida % | La Cruz % | Los Higos % | Luz $ | Acum C${selectedCn}
-      const predioHeaders = S.predios.map(p=>`<th style="padding:7px 10px;text-align:center">${p.emoji} ${p.nombre} %</th>`).join('');
-      const luzRows = uniqueNorias.map(([nombre, entries])=>{
-        const firstEntry = entries[0];
-        const noriaId = firstEntry.pt.id;
-        // % por predio — stored in S.luzNoriaPredios[noriaId][pi]
-        const prediosPct = S.predios.map((p,pi)=>{
-          const key = `${noriaId}_${pi}`;
-          const pct = (S.luzNoriaPredios[key] !== undefined) ? S.luzNoriaPredios[key] : (entries.find(e=>e.pi===pi) ? Math.round(100/entries.length) : 0);
-          return `<td style="padding:4px 6px;text-align:center">
-            <input type="number" min="0" max="100" step="1" value="${pct}"
-              style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px"
-              onchange="if(!S.luzNoriaPredios)S.luzNoriaPredios={};S.luzNoriaPredios['${noriaId}_${pi}']=parseFloat(this.value)||0;save()"/>
-          </td>`;
+      const luzRows = S.sistemasLuz.map(eq=>{
+        const predioChecks = S.predios.map((p,pi)=>{
+          const col=pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
+          const chk = gastosGridDraft[`luz_pi_${eq.id}_${pi}`]!==undefined
+            ? gastosGridDraft[`luz_pi_${eq.id}_${pi}`]==='1' : true;
+          return `<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;margin-right:6px">
+            <input type="checkbox" ${chk?'checked':''} style="accent-color:${col}"
+              onchange="gastosGridDraft['luz_pi_${eq.id}_${pi}']=this.checked?'1':'0'"/>
+            <span style="color:${col}">${p.emoji} ${p.nombre}</span>
+          </label>`;
         }).join('');
-
-        const val = gastosGridDraft[`luz_${noriaId}`] || '';
-        const histN = (S.gastosGenerales||[]).filter(g=>g.categoria==='Luz'&&g.equipo===nombre&&getGastoCosecha(g)===selectedCn);
-        const acumTotal = histN.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-        const mesDetalle = {};
-        histN.forEach(g=>{ const m=g.mes||'?'; mesDetalle[m]=(mesDetalle[m]||0)+parseFloat(g.monto||0); });
-        const acumStr = Object.entries(mesDetalle).map(([m,v])=>`${MESES[(parseInt(m)||1)-1]?.slice(0,3)||m}: ${fmt(v)}`).join(' · ');
-
-        return `<tr>
-          <td style="padding:7px 12px;font-weight:600;white-space:nowrap">💡 ${nombre}</td>
-          ${prediosPct}
-          <td style="padding:4px 8px;text-align:right">
-            <input type="number" min="0" step="1" placeholder="—" value="${val}"
-              style="width:120px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:14px"
-              onchange="gastosGridDraft['luz_${noriaId}']=this.value"/>
+        const val = gastosGridDraft[`luz_${eq.id}_${mesActual}`]||'';
+        const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Luz'&&getGastoMes(g)===mesActual&&getGastoCosecha(g)===selectedCn);
+        const acum=histMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
+          <td style="padding:6px 10px"><div style="display:flex;flex-wrap:wrap">${predioChecks}</div></td>
+          <td style="padding:6px 8px;text-align:right">
+            <input type="number" min="0" step="1" placeholder="$" value="${val}"
+              style="width:130px;padding:5px;text-align:right;border:1px solid var(--border);font-size:13px;font-family:'DM Mono',monospace"
+              onchange="gastosGridDraft['luz_${eq.id}_${mesActual}']=this.value"/>
           </td>
-          <td style="padding:7px 12px;text-align:right">
-            <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumTotal?fmt(acumTotal):'—'}</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:2px">${acumStr}</div>
-          </td>
-          ${isAdmin?`<td style="padding:4px"><button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delNoriaByNombre('${nombre}')">✕</button></td>`:'<td></td>'}
+          <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:right">${acum?fmt(acum)+' acum':'—'}</td>
+          ${isAdmin?`<td><button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delSistemaLuz('${eq.id}')">✕</button></td>`:'<td></td>'}
         </tr>`;
       }).join('');
-
-      tabContent = `
-        ${configLuz}
-        ${mesSelector}
-        <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead><tr style="background:var(--earth);color:#ffffff">
-            <th style="padding:7px 12px;text-align:left">Equipo</th>
-            ${predioHeaders}
-            <th style="padding:7px 12px;text-align:right">Luz $</th>
-            <th style="padding:7px 12px;text-align:right">Acum. C${selectedCn}</th>
+      const mesesHist = selectedCn===1?[10,11,12,1,2,3]:selectedCn===2?[2,3,4,5,6,7]:[6,7,8,9,10,11,12];
+      const mesesHdr = mesesHist.map(m=>`<th style="padding:6px 10px;text-align:right;min-width:90px">${MESES_G[m-1].slice(0,3)}</th>`).join('');
+      const histRows = S.sistemasLuz.map(eq=>{
+        const celdas = mesesHist.map(m=>{
+          const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Luz'&&getGastoMes(g)===m&&getGastoCosecha(g)===selectedCn);
+          const monto=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+          const delBtn=isAdmin&&monto?`<button class="del-gasto-mes" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Luz" data-mes="${m}" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:9px;padding:0;margin-left:4px">✕</button>`:'';
+          return `<td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:11px">${monto?`<div style="color:var(--amber)">${fmt(monto)}</div>${delBtn}`:'<span style="color:var(--muted)">—</span>'}</td>`;
+        }).join('');
+        const tot=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Luz'&&getGastoCosecha(g)===selectedCn).reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        const delCiclo=isAdmin&&tot?`<button class="del-gasto-ciclo" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Luz" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:10px;padding:0;margin-left:4px">✕ C${selectedCn}</button>`:'';
+        return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>${celdas}<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);font-weight:600;white-space:nowrap">${tot?fmt(tot):'—'} ${delCiclo}</td></tr>`;
+      }).join('');
+      tabContent = `${configEq}${sharedBar}
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">💡 Luz — ${MESES_G[mesActual-1]}</div>
+        <div style="overflow-x:auto;margin-bottom:24px"><table style="border-collapse:collapse;font-size:13px;width:100%">
+          <thead><tr style="background:var(--earth);color:#fff">
+            <th style="padding:7px 12px;text-align:left">Noria / Sistema</th>
+            <th style="padding:7px 10px;text-align:left">Predios (prorrateo)</th>
+            <th style="padding:7px 10px;text-align:right">$ Luz</th>
+            <th style="padding:7px 10px;text-align:right">Acum este mes</th>
             <th></th>
-          </tr></thead>
-          <tbody>${luzRows}</tbody>
-        </table></div>
-        ${ (()=>{
-          const histLuz = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.categoria==='Luz');
-          if(!histLuz.length) return '';
-          return gridHistorial(
-            'Historial Luz C'+selectedCn+' — Mes x Noria',
-            histLuz,
-            g => MESES[(parseInt(g.mes||1))-1],
-            g => { const obj={}; obj[g.equipo||'Sin noria']=parseFloat(g.monto||0); return obj; },
-            uniqueNorias.map(([nombre])=>({key:nombre, label:nombre}))
-          );
-        })() }
-        `;
+          </tr></thead><tbody>${luzRows}</tbody></table></div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Historial Luz — C${selectedCn} ${gastosGridAnio}</div>
+        <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
+          <thead><tr style="background:#2d5a1b;color:#fff"><th style="padding:6px 12px;text-align:left">Noria / Sistema</th>${mesesHdr}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
+          <tbody>${histRows}</tbody></table></div>`;
     }
-
   } else if(gastosTab === 'ensilada') {
     const artsEnsilada = S.articulos.filter(a=>a.categoria==='Materiales de ensilada');
     const nomEnsiladaVal = gastosGridDraft['nom_ensilada'] || '';
@@ -3507,135 +3499,100 @@ function renderGastos() {
           <th style="padding:6px 10px;text-align:right">Total $</th>
         </tr></thead><tbody>${histRows}</tbody></table></div>`
   } else if(gastosTab === 'reparaciones') {
-    // ── Sección 1: Norias (igual que Luz, con % por predio) ──
-    if(!S.luzPct) S.luzPct = {};
-    // Group norias by nombre (same as Luz tab)
-    const noriaMapRep = {};
-    S.predios.forEach((p,pi)=>{
-      (S.equipos[pi]||[]).filter(e=>e.tipo==='luz').forEach(pt=>{
-        if(!noriaMapRep[pt.nombre]) noriaMapRep[pt.nombre] = {id:pt.id, entries:[]};
-        noriaMapRep[pt.nombre].entries.push({pi,p,pt});
-      });
-    });
-    const noriaRepRows = Object.entries(noriaMapRep).map(([nombre, {id:noriaId, entries}])=>{
-      const val  = gastosGridDraft[`rnoria_${noriaId}`] || '';
-      const desc = gastosGridDraft[`rnoria_desc_${noriaId}`] || '';
-      const histN = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.categoria==='Reparaciones Noria'&&g.equipo===nombre);
-      const acumN = histN.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-      // Checkboxes per predio
-      const predioChecks = S.predios.map((p,pi)=>{
-        const hasPredio = entries.find(e=>e.pi===pi);
-        const isChk = gastosGridDraft[`rnoria_pi_${noriaId}_${pi}`]!=='0' && gastosGridDraft[`rnoria_pi_${noriaId}_${pi}`]!==false && (gastosGridDraft[`rnoria_pi_${noriaId}_${pi}`]!==undefined ? true : !!hasPredio);
-        return `<label style="display:flex;align-items:center;gap:4px;margin-bottom:3px;font-size:11px;cursor:pointer"><input type="checkbox" ${isChk?'checked':''} onchange="gastosGridDraft['rnoria_pi_${noriaId}_${pi}']=this.checked?'1':'0'"/> ${p.emoji} ${p.nombre}</label>`;
+    if(!S.sistemasLuz) S.sistemasLuz = [];
+    const mesActual = parseInt(gastosGridDraft['rep_mes'] || getMesesCn(selectedCn)[0]);
+    const mesOpts = [1,2,3,4,5,6,7,8,9,10,11,12].map(m=>
+      `<option value="${m}" ${m===mesActual?'selected':''}>${MESES_G[m-1]}</option>`).join('');
+    const pct1G = parseFloat(gastosGridDraft['rep_pct1'] ?? 100);
+    const pct2G = parseFloat(gastosGridDraft['rep_pct2'] || 0);
+    const cn2G  = parseInt(gastosGridDraft['rep_cn2'] || 0);
+    const cicloOpts = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
+    const sharedBar = `
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0fdf4;border:1px solid #7ec89a;margin-bottom:14px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted)">📅 Mes:</span>
+          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['rep_mes']=this.value;renderGastos()">${mesOpts}</select>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #7ec89a;padding-left:14px">
+          <span style="font-size:12px;color:var(--muted)">Split:</span>
+          <input type="number" min="0" max="100" step="1" value="${pct1G}"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['rep_pct1']=this.value;renderGastos()"/>
+          <span style="font-size:11px;color:var(--muted)">%C${selectedCn}</span>
+          <input type="number" min="0" max="100" step="1" value="${pct2G||''}" placeholder="0"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['rep_pct2']=this.value"/>
+          <select style="font-size:12px;padding:3px;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['rep_cn2']=this.value">
+            <option value="">C?</option>${cicloOpts}
+          </select>
+        </div>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto">C${selectedCn} · ${gastosGridAnio}</span>
+      </div>`;
+    if(!S.sistemasLuz.length) {
+      tabContent = `${sharedBar}<div class="empty"><div class="empty-icon">🔧</div><div>Sin norias/sistemas configurados en Luz.</div></div>`;
+    } else {
+      const repRows = S.sistemasLuz.map(eq=>{
+        const predioChecks = S.predios.map((p,pi)=>{
+          const col=pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
+          const chk = gastosGridDraft[`rep_pi_${eq.id}_${pi}`]!==undefined
+            ? gastosGridDraft[`rep_pi_${eq.id}_${pi}`]==='1' : true;
+          return `<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;margin-right:6px">
+            <input type="checkbox" ${chk?'checked':''} style="accent-color:${col}"
+              onchange="gastosGridDraft['rep_pi_${eq.id}_${pi}']=this.checked?'1':'0'"/>
+            <span style="color:${col}">${p.emoji} ${p.nombre}</span>
+          </label>`;
+        }).join('');
+        const val = gastosGridDraft[`rep_${eq.id}_${mesActual}`]||'';
+        const desc = gastosGridDraft[`rep_desc_${eq.id}_${mesActual}`]||'';
+        const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Noria'&&getGastoMes(g)===mesActual&&getGastoCosecha(g)===selectedCn);
+        const acum=histMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
+          <td style="padding:6px 10px"><div style="display:flex;flex-wrap:wrap">${predioChecks}</div></td>
+          <td style="padding:6px 8px;text-align:right">
+            <input type="number" min="0" step="1" placeholder="$" value="${val}"
+              style="width:120px;padding:5px;text-align:right;border:1px solid var(--border);font-size:13px;font-family:'DM Mono',monospace;display:block;margin-bottom:3px"
+              onchange="gastosGridDraft['rep_${eq.id}_${mesActual}']=this.value"/>
+          </td>
+          <td style="padding:6px 8px">
+            <input type="text" placeholder="Descripción..." value="${desc}"
+              style="width:200px;padding:5px 6px;border:1px solid var(--border);font-size:12px"
+              onchange="gastosGridDraft['rep_desc_${eq.id}_${mesActual}']=this.value"/>
+          </td>
+          <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:right">${acum?fmt(acum)+' acum':'—'}</td>
+        </tr>`;
       }).join('');
-      return `<tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:8px 14px;font-weight:600;white-space:nowrap">${nombre}</td>
-        <td style="padding:8px 14px">${predioChecks}</td>
-        <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:100%;padding:4px 7px;border:1px solid #7ec89a;font-size:12px" onchange="gastosGridDraft['rnoria_desc_${noriaId}']=this.value"/></td>
-        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:120px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['rnoria_${noriaId}']=this.value"/></td>
-        <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumN?fmt(acumN):'—'}</td>
-        <td style="padding:4px;text-align:center">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delNoriaRep('${nombre}')">✕</button>`:''}</td>
-      </tr>`;
-    }).join('');
-
-    // ── Sección 2: Sistemas de Riego configurables ──
-    if(!S.sistemasRiego) S.sistemasRiego = [];
-    // Config: add sistema
-    const allTablaOpts = S.predios.map((p,pi)=>p.tablas.map((t,ti)=>`<option value="${pi}_${ti}">${p.emoji} ${p.nombre} · ${t.nombre}</option>`).join('')).join('');
-    const configSR = isAdmin ? `
-      <div style="padding:10px 16px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
-        <div>
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">+ Agregar sistema</div>
-          <input type="text" id="sr-nombre" placeholder="Ej: Sistema Goteo LH..." style="padding:5px 8px;width:200px;font-size:12px"/>
-        </div>
-        <div>
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Tablas (ctrl+click)</div>
-          <select id="sr-tablas" multiple style="padding:4px;width:220px;height:72px;font-size:11px">${allTablaOpts}</select>
-        </div>
-        <button class="btn btn-s" style="margin-bottom:2px" onclick="addSistemaRiego()">+ Agregar</button>
-      </div>` : '';
-
-    const riegoRows = S.sistemasRiego.map((sr,sri)=>{
-      const val  = gastosGridDraft[`rriego_${sr.id}`] || '';
-      const desc = gastosGridDraft[`rriego_desc_${sr.id}`] || '';
-      const tablaLabels = (sr.tablas||[]).map(({pi,ti})=>`<span style="white-space:nowrap">${S.predios[pi]?.emoji} ${S.predios[pi]?.tablas[ti]?.nombre}</span>`).join(', ');
-      const histR = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.categoria==='Reparaciones Riego'&&g.equipo===sr.nombre);
-      const acumR = histR.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-      return `<tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:8px 14px;font-weight:600;white-space:nowrap">${sr.nombre}</td>
-        <td style="padding:8px 14px;font-size:11px;color:var(--muted)">${tablaLabels}</td>
-        <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:100%;padding:4px 7px;border:1px solid #7ec89a;font-size:12px" onchange="gastosGridDraft['rriego_desc_${sr.id}']=this.value"/></td>
-        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:120px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['rriego_${sr.id}']=this.value"/></td>
-        <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${acumR?fmt(acumR):'—'}</td>
-        <td style="padding:4px;text-align:center">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delSistemaRiego(${sri})">✕</button>`:''}</td>
-      </tr>`;
-    }).join('');
-
-    // Acumulado
-    const histRep = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&['Reparaciones Noria','Reparaciones Riego'].includes(g.categoria));
-    const totRep = histRep.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-    const acumRowsRep = histRep.map(g=>`<tr style="font-size:12px">
-      <td style="padding:5px 10px">${g.categoria}${g.equipo?' · '+g.equipo:''}${g.descripcion?' — '+g.descripcion:''}</td>
-      <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
-      <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
-      <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${S.gastosGenerales.indexOf(g)})">✕</button>`:''}</td>
-    </tr>`).join('');
-
-    // Config agregar noria en reparaciones
-    const configNoriaRep = isAdmin ? `
-      <div style="padding:10px 16px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
-        <div>
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">+ Agregar noria</div>
-          <input type="text" id="rep-noria-nombre" placeholder="Ej: Cerro, 212..." style="padding:5px 8px;width:160px;font-size:12px"/>
-        </div>
-        <div>
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Predios</div>
-          <div style="display:flex;gap:8px">${S.predios.map((p,i)=>`<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer"><input type="checkbox" class="rep-noria-pi" value="${i}"/> ${p.emoji} ${p.nombre}</label>`).join('')}</div>
-        </div>
-        <button class="btn btn-s" style="margin-bottom:2px" onclick="addNoriaRep()">+ Agregar</button>
-      </div>` : '';
-
-    tabContent = `
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🔧 Norias</div>
-      ${configNoriaRep}
-      ${Object.keys(noriaMapRep).length ? `<div style="overflow-x:auto;margin-bottom:16px">
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <colgroup><col style="width:140px"/><col style="width:160px"/><col/><col style="width:140px"/><col style="width:130px"/><col style="width:36px"/></colgroup>
-        <thead><tr style="background:var(--earth);color:#ffffff">
-          <th style="padding:7px 14px;text-align:left">Noria</th>
-          <th style="padding:7px 14px;text-align:left">Predios</th>
-          <th style="padding:7px 14px;text-align:left">Descripción</th>
-          <th style="padding:7px 14px;text-align:right">Monto ($)</th>
-          <th style="padding:7px 14px;text-align:right">Acum. C${selectedCn}</th>
-          <th></th>
-        </tr></thead>
-        <tbody>${noriaRepRows}</tbody>
-      </table></div>` : '<div style="color:var(--muted);font-size:12px;margin-bottom:16px">Sin norias configuradas — agrega arriba</div>'}
-
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">💧 Sistemas de Riego</div>
-      ${configSR}
-      ${S.sistemasRiego.length ? `<div style="overflow-x:auto;margin-bottom:16px">
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <colgroup><col style="width:180px"/><col style="width:260px"/><col/><col style="width:140px"/><col style="width:130px"/><col style="width:36px"/></colgroup>
-        <thead><tr style="background:var(--earth);color:#ffffff">
-          <th style="padding:7px 14px;text-align:left">Sistema</th>
-          <th style="padding:7px 14px;text-align:left">Tablas</th>
-          <th style="padding:7px 14px;text-align:left">Descripción</th>
-          <th style="padding:7px 14px;text-align:right">Monto ($)</th>
-          <th style="padding:7px 14px;text-align:right">Acum. C${selectedCn}</th>
-          <th></th>
-        </tr></thead>
-        <tbody>${riegoRows}</tbody>
-      </table></div>` : '<div style="color:var(--muted);font-size:12px;margin-bottom:16px">Sin sistemas configurados — agrega arriba</div>'}
-
-      ${totRep>0?`<div style="border-top:2px solid var(--border);padding-top:12px">
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Acumulado Reparaciones C${selectedCn}</div>
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead><tr style="font-size:10px;color:var(--muted)"><th style="padding:4px 10px;text-align:left">Concepto</th><th style="padding:4px 10px;text-align:left">Predio</th><th style="padding:4px 10px;text-align:right">Monto</th><th></th></tr></thead>
-          <tbody>${acumRowsRep}</tbody>
-          <tfoot><tr style="background:var(--earth);color:#ffffff"><td colspan="2" style="padding:8px 12px;font-weight:700">TOTAL</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmt(totRep)}</td><td></td></tr></tfoot>
-        </table></div>`:''}`;
-
+      const mesesHist = selectedCn===1?[10,11,12,1,2,3]:selectedCn===2?[2,3,4,5,6,7]:[6,7,8,9,10,11,12];
+      const mesesHdr = mesesHist.map(m=>`<th style="padding:6px 10px;text-align:right;min-width:90px">${MESES_G[m-1].slice(0,3)}</th>`).join('');
+      const histRows = S.sistemasLuz.map(eq=>{
+        const celdas = mesesHist.map(m=>{
+          const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Noria'&&getGastoMes(g)===m&&getGastoCosecha(g)===selectedCn);
+          const monto=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+          const descs=hist.map(g=>g.descripcion).filter(Boolean).join(', ');
+          const delBtn=isAdmin&&monto?`<button class="del-gasto-mes" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Reparaciones Noria" data-mes="${m}" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:9px;padding:0;margin-left:4px">✕</button>`:'';
+          return `<td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:11px">${monto?`<div style="color:var(--amber)">${fmt(monto)}</div>${descs?`<div style="font-size:9px;color:var(--muted)">${descs}</div>`:''} ${delBtn}`:'<span style="color:var(--muted)">—</span>'}</td>`;
+        }).join('');
+        const tot=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Noria'&&getGastoCosecha(g)===selectedCn).reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        const delCiclo=isAdmin&&tot?`<button class="del-gasto-ciclo" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Reparaciones Noria" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:10px;padding:0;margin-left:4px">✕ C${selectedCn}</button>`:'';
+        return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>${celdas}<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);font-weight:600;white-space:nowrap">${tot?fmt(tot):'—'} ${delCiclo}</td></tr>`;
+      }).join('');
+      tabContent = `${sharedBar}
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🔧 Reparaciones — ${MESES_G[mesActual-1]}</div>
+        <div style="overflow-x:auto;margin-bottom:24px"><table style="border-collapse:collapse;font-size:13px;width:100%">
+          <thead><tr style="background:var(--earth);color:#fff">
+            <th style="padding:7px 12px;text-align:left">Noria / Sistema</th>
+            <th style="padding:7px 10px;text-align:left">Predios (prorrateo)</th>
+            <th style="padding:7px 10px;text-align:right">Monto</th>
+            <th style="padding:7px 10px;text-align:left">Descripción</th>
+            <th style="padding:7px 10px;text-align:right">Acum este mes</th>
+          </tr></thead><tbody>${repRows}</tbody></table></div>
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Historial Reparaciones — C${selectedCn} ${gastosGridAnio}</div>
+        <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
+          <thead><tr style="background:#2d5a1b;color:#fff"><th style="padding:6px 12px;text-align:left">Noria / Sistema</th>${mesesHdr}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
+          <tbody>${histRows}</tbody></table></div>`;
+    }
   } else if(gastosTab === 'empaque') {
     const precioDieselCnEmp = (S.precioDiesel && S.precioDiesel[cn]) || 0;
     // Maquinaria empaque
@@ -3875,6 +3832,22 @@ function renderEquiposList() {
     </tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>`;
+}
+
+function addSistemaLuz() {
+  const nombre = document.getElementById('luz-nombre')?.value.trim();
+  if(!nombre) { toast('⚠️ Ingresa el nombre',true); return; }
+  if(!S.sistemasLuz) S.sistemasLuz = [];
+  if(S.sistemasLuz.find(t=>t.nombre===nombre)) { toast('⚠️ Ya existe',true); return; }
+  S.sistemasLuz.push({id:uid(), nombre});
+  if(document.getElementById('luz-nombre')) document.getElementById('luz-nombre').value='';
+  save(); renderGastos(); toast('✓ Sistema agregado');
+}
+
+function delSistemaLuz(id) {
+  if(!confirm('¿Eliminar este sistema?')) return;
+  S.sistemasLuz = (S.sistemasLuz||[]).filter(t=>t.id!==id);
+  save(); renderGastos(); toast('✓ Eliminado');
 }
 
 function addTractorGlobal() {
@@ -4177,37 +4150,22 @@ function capturarGastos() {
       }
     });
   } else if(gastosTab === 'luz') {
-    const mes = parseInt(gastosGridDraft['mes'] || new Date().getMonth()+1);
-    const cnB = gastosGridDraft['cn_split_b'] ? parseInt(gastosGridDraft['cn_split_b']) : null;
-    if(!S.luzNoriaPredios) S.luzNoriaPredios = {};
-    // Collect unique norias
-    const noriaMapCap = {};
-    S.predios.forEach((p,pi)=>{
-      (S.equipos[pi]||[]).filter(e=>e.tipo==='luz').forEach(pt=>{
-        if(!noriaMapCap[pt.nombre]) noriaMapCap[pt.nombre] = {id:pt.id, entries:[]};
-        noriaMapCap[pt.nombre].entries.push({pi,pt});
+    const mesLuz = parseInt(gastosGridDraft['luz_mes'] || getMesesCn(cn)[0]);
+    const pct1L = parseFloat(gastosGridDraft['luz_pct1'] ?? 100)/100;
+    const pct2L = parseFloat(gastosGridDraft['luz_pct2'] || 0)/100;
+    const cn2L  = parseInt(gastosGridDraft['luz_cn2'] || 0);
+    (S.sistemasLuz||[]).forEach(eq=>{
+      const val = parseFloat(gastosGridDraft[`luz_${eq.id}_${mesLuz}`]);
+      if(!val||val<=0) return;
+      const prediosChk = S.predios.map((_,pi)=>({pi, chk: gastosGridDraft[`luz_pi_${eq.id}_${pi}`]!==undefined ? gastosGridDraft[`luz_pi_${eq.id}_${pi}`]==='1' : true})).filter(x=>x.chk);
+      const totalHa = prediosChk.reduce((s,{pi})=>s+S.predios[pi].tablas.reduce((sh,t)=>sh+t.ha,0),0);
+      prediosChk.forEach(({pi})=>{
+        const ha = S.predios[pi].tablas.reduce((s,t)=>s+t.ha,0);
+        const pct = totalHa>0 ? ha/totalHa : 1/prediosChk.length;
+        if(pct1L>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Luz',equipo:eq.nombre,monto:val*pct*pct1L,prediosIdx:[pi],mes:mesLuz,fecha:today()}); total++; }
+        if(pct2L>0&&cn2L) { S.gastosGenerales.push({id:uid(),cosecha:cn2L,anio,categoria:'Luz',equipo:eq.nombre,monto:val*pct*pct2L,prediosIdx:[pi],mes:mesLuz,fecha:today()}); total++; }
       });
     });
-    Object.entries(noriaMapCap).forEach(([nombre, {id:noriaId, entries}])=>{
-      const monto = parseFloat(gastosGridDraft[`luz_${noriaId}`]);
-      if(!monto||monto<=0) return;
-      // Distribute by predio % 
-      S.predios.forEach((p,pi)=>{
-        const pctKey = `${noriaId}_${pi}`;
-        const pct = (S.luzNoriaPredios[pctKey] !== undefined ? parseFloat(S.luzNoriaPredios[pctKey]) : (entries.find(e=>e.pi===pi) ? Math.round(100/entries.length) : 0)) / 100;
-        if(!pct) return;
-        const montoPreio = monto * pct;
-        if(cnB) {
-          const pctCnA = 1; // full amount to cn, split is cosecha-based
-          S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Luz',equipo:nombre,mes,monto:montoPreio,prediosIdx:[pi],fecha:today()});
-          total++;
-        } else {
-          S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Luz',equipo:nombre,mes,monto:montoPreio,prediosIdx:[pi],fecha:today()});
-          total++;
-        }
-      });
-    });
-
   } else if(gastosTab === 'ensilada') {
     const nomEnsilada = parseFloat(gastosGridDraft['nom_ensilada']);
     const precioDieselCn = (S.precioDiesel && S.precioDiesel[cn]) || 0;
@@ -4377,45 +4335,23 @@ function capturarGastos() {
       }
     });
   } else if(gastosTab === 'reparaciones') {
-    // Norias reparaciones — agrupadas por nombre, predios via checkboxes
-    const noriaMapCap = {};
-    S.predios.forEach((p,pi)=>{
-      (S.equipos[pi]||[]).filter(e=>e.tipo==='luz').forEach(pt=>{
-        if(!noriaMapCap[pt.nombre]) noriaMapCap[pt.nombre] = {id:pt.id};
+    const mesRep = parseInt(gastosGridDraft['rep_mes'] || getMesesCn(cn)[0]);
+    const pct1R = parseFloat(gastosGridDraft['rep_pct1'] ?? 100)/100;
+    const pct2R = parseFloat(gastosGridDraft['rep_pct2'] || 0)/100;
+    const cn2R  = parseInt(gastosGridDraft['rep_cn2'] || 0);
+    (S.sistemasLuz||[]).forEach(eq=>{
+      const val = parseFloat(gastosGridDraft[`rep_${eq.id}_${mesRep}`]);
+      if(!val||val<=0) return;
+      const desc = gastosGridDraft[`rep_desc_${eq.id}_${mesRep}`]||'';
+      const prediosChk = S.predios.map((_,pi)=>({pi, chk: gastosGridDraft[`rep_pi_${eq.id}_${pi}`]!==undefined ? gastosGridDraft[`rep_pi_${eq.id}_${pi}`]==='1' : true})).filter(x=>x.chk);
+      const totalHa = prediosChk.reduce((s,{pi})=>s+S.predios[pi].tablas.reduce((sh,t)=>sh+t.ha,0),0);
+      prediosChk.forEach(({pi})=>{
+        const ha = S.predios[pi].tablas.reduce((s,t)=>s+t.ha,0);
+        const pct = totalHa>0 ? ha/totalHa : 1/prediosChk.length;
+        if(pct1R>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Reparaciones Noria',equipo:eq.nombre,descripcion:desc,monto:val*pct*pct1R,prediosIdx:[pi],mes:mesRep,fecha:today()}); total++; }
+        if(pct2R>0&&cn2R) { S.gastosGenerales.push({id:uid(),cosecha:cn2R,anio,categoria:'Reparaciones Noria',equipo:eq.nombre,descripcion:desc,monto:val*pct*pct2R,prediosIdx:[pi],mes:mesRep,fecha:today()}); total++; }
       });
     });
-    Object.entries(noriaMapCap).forEach(([nombre, {id:noriaId}])=>{
-      const monto = parseFloat(gastosGridDraft[`rnoria_${noriaId}`]);
-      const desc  = gastosGridDraft[`rnoria_desc_${noriaId}`] || '';
-      if(!monto||monto<=0) return;
-      // Distribute by checked predios using luzPct
-      S.predios.forEach((p,pi)=>{
-        const chkKey = `rnoria_pi_${noriaId}_${pi}`;
-        const hasPredio = (S.equipos[pi]||[]).find(e=>e.tipo==='luz'&&e.nombre===nombre);
-        const isChk = gastosGridDraft[chkKey]!=='0' && gastosGridDraft[chkKey]!==false && (gastosGridDraft[chkKey]!==undefined ? true : !!hasPredio);
-        if(!isChk) return;
-        const pctKey = `${noriaId}_${pi}`;
-        const pct = (S.luzNoriaPredios&&S.luzNoriaPredios[pctKey]!==undefined) ? parseFloat(S.luzNoriaPredios[pctKey])/100 : 1/Object.keys(noriaMapCap).length;
-        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Reparaciones Noria',equipo:nombre,descripcion:desc,monto:monto*pct,prediosIdx:[pi],fecha:today()});
-        total++;
-      });
-    });
-    // Sistemas de riego configurables
-    (S.sistemasRiego||[]).forEach(sr=>{
-      const monto = parseFloat(gastosGridDraft[`rriego_${sr.id}`]);
-      const desc  = gastosGridDraft[`rriego_desc_${sr.id}`] || '';
-      if(!monto||monto<=0) return;
-      // Distribute by ha across tablas
-      const tablas = sr.tablas||[];
-      const totalHaSR = tablas.reduce((s,{pi,ti})=>s+(parseFloat(getTablaData(pi,cn,ti).haSembradas)||S.predios[pi]?.tablas[ti]?.ha||0),0);
-      tablas.forEach(({pi,ti})=>{
-        const ha = parseFloat(getTablaData(pi,cn,ti).haSembradas)||S.predios[pi]?.tablas[ti]?.ha||0;
-        const pct = totalHaSR ? ha/totalHaSR : 1/tablas.length;
-        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Reparaciones Riego',equipo:sr.nombre,descripcion:desc,tablaIdx:ti,monto:monto*pct,prediosIdx:[pi],fecha:today()});
-        total++;
-      });
-    });
-
   } else if(gastosTab === 'empaque') {
     const precioDieselCnEmp = (S.precioDiesel && S.precioDiesel[cn]) || 0;
     // Maquinaria empaque
