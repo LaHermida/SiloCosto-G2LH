@@ -239,7 +239,7 @@ tr:hover td { background:var(--cream); }
       <button class="ctab" id="dash-cn-2" onclick="setDashCn(2)">C2 · Mar-Jul</button>
       <button class="ctab" id="dash-cn-3" onclick="setDashCn(3)">C3 · Ago-Nov</button>
     </div>
-    <div class="stats-row" id="dash-stats" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))"></div>
+    <div class="stats-row" id="dash-stats" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))"></div>
     <div id="dash-charts" style="margin:16px 0"></div>
     <div class="card">
       <div class="card-head">🗺️ Resumen por predio y cultivo</div>
@@ -876,23 +876,28 @@ function renderDash() {
     const kgHaD=d.ha?d.kilos/d.ha:null;
     const cpkD=d.kilos?d.costo/d.kilos:null;
     const cpkmsD=d.kgMS?d.costo/d.kgMS:null;
-    return `<div class="stat c${cn}" style="min-width:0">
-      <div class="stat-lbl">${cvInfo.icon} ${cvInfo.label}</div>
-      <div class="stat-val" style="font-size:20px">${kgHaD?fmtN(kgHaD,0):'—'}</div>
-      <div class="stat-unit">kg/ha · ${fmtN(d.ha,1)} ha</div>
-      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
-        <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${cpkD?'$'+cpkD.toFixed(2)+'/kg':''}</span>
-        <span style="font-family:'DM Mono',monospace;font-size:12px;color:#2a6e8a">${cpkmsD?'$'+cpkmsD.toFixed(2)+'/kgMS':''}</span>
+    const gasHaD=d.ha?d.costo/d.ha:null;
+    return `<div class="stat c${cn}" style="min-width:0;padding:18px 20px">
+      <div class="stat-lbl" style="font-size:12px;margin-bottom:4px">${cvInfo.icon} ${cvInfo.label} · ${fmtN(d.ha,1)} ha</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px">
+        <div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">kg/ha</div>
+          <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:700;color:var(--text)">${kgHaD?fmtN(kgHaD,0):'—'}</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">$/kg húmedo</div>
+          <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:700;color:var(--amber)">${cpkD?'$'+cpkD.toFixed(2):'—'}</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">$/kg MS</div>
+          <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:700;color:#2a6e8a">${cpkmsD?'$'+cpkmsD.toFixed(2):'—'}</div>
+        </div>
       </div>
+      <div style="margin-top:10px;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${gasHaD?'$'+gasHaD.toFixed(0)+'/ha · ':''} ${fmt(d.costo)} total</div>
     </div>`;
   }).join('');
 
-  document.getElementById('dash-stats').innerHTML = cvStatCards + `
-    <div class="stat c${cn}" style="min-width:0;border-left:2px solid var(--border)">
-      <div class="stat-lbl">💰 Costo Total</div>
-      <div class="stat-val">${fmt(totalCosto)}</div>
-      <div class="stat-unit">${gasHa?'$'+gasHa.toFixed(0)+'/ha · ':''} ${fmtN(totalHa,1)} ha</div>
-    </div>`;
+  document.getElementById('dash-stats').innerHTML = cvStatCards;
 
   // ── Cards por predio ──
   let predioCards = '';
