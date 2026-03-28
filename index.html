@@ -226,13 +226,18 @@ tr:hover td { background:var(--cream); }
   <!-- DASHBOARD -->
   <section id="sec-dashboard" class="page active">
     <div class="pg-title">Dashboard</div>
-    <div class="pg-sub">// Resumen de costos · Selecciona año y ciclo</div>
+    <div class="pg-sub">// Rendimiento · Costo húmedo y seco · Por predio y cultivo</div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
       <select id="dash-anio" style="padding:5px 10px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid var(--border)"
         onchange="renderDash()">
-        ${Array.from({length:13},(_,i)=>2020+i).map(y=>`<option value="${y}">${y}</option>`).join('')}
+        <option value="2020">2020</option><option value="2021">2021</option><option value="2022">2022</option>
+        <option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option>
+        <option value="2026" selected>2026</option><option value="2027">2027</option><option value="2028">2028</option>
+        <option value="2029">2029</option><option value="2030">2030</option>
       </select>
-      ${[1,2,3].map(c=>`<button class="ctab" id="dash-cn-${c}" onclick="setDashCn(${c})">${c===1?'C1 · Dic-Feb':c===2?'C2 · Mar-Jul':'C3 · Ago-Nov'}</button>`).join('')}
+      <button class="ctab active" id="dash-cn-1" onclick="setDashCn(1)">C1 · Dic-Feb</button>
+      <button class="ctab" id="dash-cn-2" onclick="setDashCn(2)">C2 · Mar-Jul</button>
+      <button class="ctab" id="dash-cn-3" onclick="setDashCn(3)">C3 · Ago-Nov</button>
     </div>
     <div class="stats-row" id="dash-stats" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))"></div>
     <div id="dash-charts" style="margin:16px 0"></div>
@@ -843,194 +848,164 @@ function renderDash() {
   const anio = curDashAnio;
   const cnLabel = cn===1?'C1 · Dic–Feb':cn===2?'C2 · Mar–Jul':'C3 · Ago–Nov';
 
-  // ── Collect all data ──
-  let totalCosto=0, totalHa=0, totalKilos=0, totalKgMS=0;
-  const catTotals = {};
+  // ── Totales globales ──
+  let totalHa=0, totalKilos=0, totalKgMS=0, totalCosto=0;
   S.predios.forEach((p,pi)=>{
     if((p.ciclos||3)===1&&cn>1) return;
     for(let ti=0;ti<p.tablas.length;ti++){
-      const td = getTablaData(pi,cn,ti);
+      const td=getTablaData(pi,cn,ti);
       if(td.sinSiembra) continue;
       totalCosto += calcTotalTabla(pi,cn,ti,anio);
-      totalHa += parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
+      totalHa    += parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
       totalKilos += parseFloat(td.kilos)||0;
-      totalKgMS += (parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100);
+      totalKgMS  += (parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100);
     }
-    (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===cn&&(g.prediosIdx||[]).includes(pi)).forEach(g=>{
-      const cat = g.categoria||'Otros';
-      catTotals[cat]=(catTotals[cat]||0)+parseFloat(g.monto||0);
-    });
-    const dep = p.tablas.reduce((_,__,ti)=>_+calcDepTabla(pi,cn,ti,anio),0);
-    if(dep>0) catTotals['Depreciaciones']=(catTotals['Depreciaciones']||0)+dep;
-    const cons = p.tablas.reduce((_,__,ti)=>_+calcConsumosTabla(pi,cn,ti),0);
-    if(cons>0) catTotals['Material de cultivo']=(catTotals['Material de cultivo']||0)+cons;
   });
+  const cpk   = totalKilos ? totalCosto/totalKilos : null;
+  const cpkms = totalKgMS  ? totalCosto/totalKgMS  : null;
+  const kgHa  = totalHa    ? totalKilos/totalHa     : null;
+  const gasHa = totalHa    ? totalCosto/totalHa     : null;
 
-  const cpk = totalKilos?totalCosto/totalKilos:null;
-  const cpkms = totalKgMS?totalCosto/totalKgMS:null;
-  const gasHa = totalHa?totalCosto/totalHa:null;
-
-  // ── KPI Cards ──
   document.getElementById('dash-stats').innerHTML = `
     <div class="stat c${cn}" style="min-width:0">
-      <div class="stat-lbl">💰 Costo Total</div>
-      <div class="stat-val">${fmt(totalCosto)}</div>
-      <div class="stat-unit">${cnLabel} ${anio}</div>
+      <div class="stat-lbl">🌾 Total Ha</div>
+      <div class="stat-val">${fmtN(totalHa,1)}</div>
+      <div class="stat-unit">ha sembradas · ${cnLabel} ${anio}</div>
     </div>
     <div class="stat c${cn}" style="min-width:0">
-      <div class="stat-lbl">🌾 $/Ha</div>
-      <div class="stat-val">${gasHa?'$'+gasHa.toFixed(0):'—'}</div>
-      <div class="stat-unit">${fmtN(totalHa,1)} ha sembradas</div>
+      <div class="stat-lbl">📦 Rendimiento</div>
+      <div class="stat-val">${kgHa?fmtN(kgHa,0):'—'}</div>
+      <div class="stat-unit">kg/ha · ${fmtN(totalKilos,0)} kg total</div>
     </div>
     <div class="stat c${cn}" style="min-width:0">
-      <div class="stat-lbl">📦 $/kg húmedo</div>
+      <div class="stat-lbl">💧 $/kg húmedo</div>
       <div class="stat-val">${cpk?'$'+cpk.toFixed(2):'—'}</div>
-      <div class="stat-unit">${fmtN(totalKilos,0)} kg cosechados</div>
+      <div class="stat-unit">costo por kg cosechado</div>
     </div>
     <div class="stat c${cn}" style="min-width:0">
       <div class="stat-lbl">🧪 $/kg MS</div>
       <div class="stat-val">${cpkms?'$'+cpkms.toFixed(2):'—'}</div>
-      <div class="stat-unit">${fmtN(totalKgMS,0)} kg MS</div>
+      <div class="stat-unit">costo por kg materia seca</div>
+    </div>
+    <div class="stat c${cn}" style="min-width:0">
+      <div class="stat-lbl">💰 Costo Total</div>
+      <div class="stat-val">${fmt(totalCosto)}</div>
+      <div class="stat-unit">${gasHa?'$'+gasHa.toFixed(0)+'/ha':''}</div>
     </div>`;
-
-  // ── Desglose por categoría (barras) ──
-  const catsSorted = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
-  const catBars = catsSorted.map(([cat,monto])=>{
-    const pct = totalCosto>0?Math.round(monto/totalCosto*100):0;
-    return `<div style="display:grid;grid-template-columns:160px 1fr 90px;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border)">
-      <span style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cat}</span>
-      <div style="background:var(--cream);border-radius:3px;height:8px">
-        <div style="width:${pct}%;height:8px;background:var(--green);border-radius:3px;transition:width 0.3s"></div>
-      </div>
-      <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);text-align:right">${fmt(monto)} <span style="color:var(--muted)">(${pct}%)</span></span>
-    </div>`;
-  }).join('');
 
   // ── Cards por predio ──
   let predioCards = '';
   S.predios.forEach((p,pi)=>{
     if((p.ciclos||3)===1&&cn>1) return;
-    let predioHa=0,predioKilos=0,predioKgMS=0,predioCosto=0;
-    const cultivoMap={};
-    const tablaRows = p.tablas.map((t,ti)=>{
-      const td = getTablaData(pi,cn,ti);
-      if(td.sinSiembra) return `<tr style="opacity:0.4"><td style="padding:4px 8px;font-size:11px">${t.nombre}</td><td colspan="5" style="font-size:11px;color:var(--muted);padding:4px 8px">⏸ Vacante</td></tr>`;
-      const cv = td.cultivo||'maiz';
-      const ha = parseFloat(td.haSembradas)||t.ha||0;
-      const kilos = parseFloat(td.kilos)||0;
-      const kgMS = kilos*((parseFloat(td.pctMS)||0)/100);
-      const costo = calcTotalTabla(pi,cn,ti,anio);
-      predioHa+=ha; predioKilos+=kilos; predioKgMS+=kgMS; predioCosto+=costo;
-      if(!cultivoMap[cv]) cultivoMap[cv]={ha:0,kilos:0,costo:0};
-      cultivoMap[cv].ha+=ha; cultivoMap[cv].kilos+=kilos; cultivoMap[cv].costo+=costo;
-      const cpkT = kilos?costo/kilos:null;
-      const cvInfo = CULTIVOS[cv]||CULTIVOS.otro;
-      return `<tr style="border-bottom:1px solid var(--border);font-size:12px">
-        <td style="padding:4px 8px;font-weight:600">${t.nombre}</td>
-        <td style="padding:4px 8px">${cvInfo.icon} ${cvInfo.label}</td>
-        <td style="padding:4px 8px;text-align:right;font-family:'DM Mono',monospace">${fmtN(ha,1)}</td>
-        <td style="padding:4px 8px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${fmt(costo)}</td>
-        <td style="padding:4px 8px;text-align:right;font-family:'DM Mono',monospace;color:var(--muted)">${ha?'$'+(costo/ha).toFixed(0):'-'}</td>
-        <td style="padding:4px 8px;text-align:right;font-family:'DM Mono',monospace;color:#2a7a2a">${cpkT?'$'+cpkT.toFixed(2):'-'}</td>
-      </tr>`;
-    }).join('');
-
-    const predioColor=pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
-    const cpkP = predioKilos?predioCosto/predioKilos:null;
-    const cpkmsP = predioKgMS?predioCosto/predioKgMS:null;
-    const gasHaP = predioHa?predioCosto/predioHa:null;
-
-    predioCards += `<div class="card">
-      <div class="card-head" style="color:${predioColor};justify-content:space-between">
-        <span>${p.emoji} ${p.nombre}</span>
-        <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--amber)">${fmt(predioCosto)}</span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
-        <div style="background:var(--cream);padding:8px;border-radius:6px;text-align:center">
-          <div style="font-size:9px;color:var(--muted);text-transform:uppercase">$/ha</div>
-          <div style="font-family:'DM Mono',monospace;font-size:15px;color:var(--amber);font-weight:700">${gasHaP?'$'+gasHaP.toFixed(0):'—'}</div>
-        </div>
-        <div style="background:var(--cream);padding:8px;border-radius:6px;text-align:center">
-          <div style="font-size:9px;color:var(--muted);text-transform:uppercase">$/kg</div>
-          <div style="font-family:'DM Mono',monospace;font-size:15px;color:var(--amber);font-weight:700">${cpkP?'$'+cpkP.toFixed(2):'—'}</div>
-        </div>
-        <div style="background:var(--cream);padding:8px;border-radius:6px;text-align:center">
-          <div style="font-size:9px;color:var(--muted);text-transform:uppercase">$/kg MS</div>
-          <div style="font-family:'DM Mono',monospace;font-size:15px;color:var(--amber);font-weight:700">${cpkmsP?'$'+cpkmsP.toFixed(2):'—'}</div>
-        </div>
-      </div>
-      <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr style="background:var(--earth);color:#fff;font-size:10px">
-          <th style="padding:5px 8px;text-align:left">Tabla</th>
-          <th style="padding:5px 8px;text-align:left">Cultivo</th>
-          <th style="padding:5px 8px;text-align:right">Ha</th>
-          <th style="padding:5px 8px;text-align:right">Costo</th>
-          <th style="padding:5px 8px;text-align:right">$/ha</th>
-          <th style="padding:5px 8px;text-align:right">$/kg</th>
-        </tr></thead>
-        <tbody>${tablaRows}</tbody>
-      </table></div>
-    </div>`;
-  });
-
-  document.getElementById('dash-charts').innerHTML = `
-    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:16px;margin-bottom:16px">
-      <div class="card">
-        <div class="card-head">📊 Desglose por categoría</div>
-        ${catBars||'<div class="empty" style="padding:12px">Sin gastos</div>'}
-        ${totalCosto?`<div style="display:flex;justify-content:space-between;padding:8px 0;margin-top:4px;border-top:2px solid var(--border)">
-          <span style="font-size:12px;font-weight:600">TOTAL</span>
-          <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--amber);font-weight:700">${fmt(totalCosto)}</span>
-        </div>`:''}
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;align-content:start">
-        ${predioCards}
-      </div>
-    </div>`;
-
-  // ── Tabla detalle ──
-  let html='';
-  S.predios.forEach((p,pi)=>{
-    if((p.ciclos||3)===1&&cn>1) return;
-    const cvGroups={};
+    // Group by cultivo
+    const cvGroups = {};
     for(let ti=0;ti<p.tablas.length;ti++){
       const td=getTablaData(pi,cn,ti);
       if(td.sinSiembra) continue;
       const cv=td.cultivo||'maiz';
-      if(!cvGroups[cv]) cvGroups[cv]={tablas:[],ha:0,kilos:0,kgMS:0,cost:0};
-      const haTabla=parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
+      if(!cvGroups[cv]) cvGroups[cv]={ha:0,kilos:0,kgMS:0,costo:0,tablas:[]};
+      const ha=parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
       const kilos=parseFloat(td.kilos)||0;
       const kgMS=kilos*((parseFloat(td.pctMS)||0)/100);
-      const total=calcTotalTabla(pi,cn,ti,anio);
+      const costo=calcTotalTabla(pi,cn,ti,anio);
+      cvGroups[cv].ha+=ha; cvGroups[cv].kilos+=kilos; cvGroups[cv].kgMS+=kgMS; cvGroups[cv].costo+=costo;
       cvGroups[cv].tablas.push(p.tablas[ti].nombre);
-      cvGroups[cv].ha+=haTabla; cvGroups[cv].kilos+=kilos; cvGroups[cv].kgMS+=kgMS; cvGroups[cv].cost+=total;
     }
-    Object.entries(cvGroups).forEach(([cv,d])=>{
-      if(!d.tablas.length) return;
+    const predioHa = Object.values(cvGroups).reduce((s,d)=>s+d.ha,0);
+    const predioKilos = Object.values(cvGroups).reduce((s,d)=>s+d.kilos,0);
+    const predioKgMS = Object.values(cvGroups).reduce((s,d)=>s+d.kgMS,0);
+    const predioCosto = Object.values(cvGroups).reduce((s,d)=>s+d.costo,0);
+    const predioColor = pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
+
+    const cvRows = Object.entries(cvGroups).map(([cv,d])=>{
       const cvInfo=CULTIVOS[cv]||CULTIVOS.otro;
-      const gasHa2=d.ha?d.cost/d.ha:null;
-      const kgHa=d.ha?d.kilos/d.ha:null;
-      const cpk2=d.kilos?d.cost/d.kilos:null;
-      const cpkms2=d.kgMS?d.cost/d.kgMS:null;
+      const kgHaD=d.ha?d.kilos/d.ha:null;
+      const cpkD=d.kilos?d.costo/d.kilos:null;
+      const cpkmsD=d.kgMS?d.costo/d.kgMS:null;
+      const gasHaD=d.ha?d.costo/d.ha:null;
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:6px 8px">${cvInfo.icon} <strong>${cvInfo.label}</strong><br>
+          <span style="font-size:10px;color:var(--muted)">${d.tablas.join(', ')} · ${fmtN(d.ha,1)} ha</span></td>
+        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:13px;color:var(--text)">${kgHaD?fmtN(kgHaD,0)+'<br><span style="font-size:9px;color:var(--muted)">kg/ha</span>':'—'}</td>
+        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:13px;color:var(--amber)">${cpkD?'$'+cpkD.toFixed(2)+'<br><span style="font-size:9px;color:var(--muted)">$/kg</span>':'—'}</td>
+        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:13px;color:#2a6e8a">${cpkmsD?'$'+cpkmsD.toFixed(2)+'<br><span style="font-size:9px;color:var(--muted)">$/kg MS</span>':'—'}</td>
+        <td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:13px;color:var(--muted)">${gasHaD?'$'+gasHaD.toFixed(0)+'<br><span style="font-size:9px;color:var(--muted)">$/ha</span>':'—'}</td>
+      </tr>`;
+    }).join('');
+
+    predioCards += `<div class="card">
+      <div class="card-head" style="color:${predioColor};justify-content:space-between">
+        <span>${p.emoji} ${p.nombre}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${fmtN(predioHa,1)} ha</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">
+        <div style="background:var(--cream);padding:7px 8px;border-radius:6px;text-align:center">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase">kg/ha</div>
+          <div style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700">${predioHa&&predioKilos?fmtN(predioKilos/predioHa,0):'—'}</div>
+        </div>
+        <div style="background:var(--cream);padding:7px 8px;border-radius:6px;text-align:center">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase">$/kg</div>
+          <div style="font-family:'DM Mono',monospace;font-size:15px;color:var(--amber);font-weight:700">${predioKilos?'$'+(predioCosto/predioKilos).toFixed(2):'—'}</div>
+        </div>
+        <div style="background:var(--cream);padding:7px 8px;border-radius:6px;text-align:center">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase">$/kg MS</div>
+          <div style="font-family:'DM Mono',monospace;font-size:15px;color:#2a6e8a;font-weight:700">${predioKgMS?'$'+(predioCosto/predioKgMS).toFixed(2):'—'}</div>
+        </div>
+        <div style="background:var(--cream);padding:7px 8px;border-radius:6px;text-align:center">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase">$/ha</div>
+          <div style="font-family:'DM Mono',monospace;font-size:15px;color:var(--muted);font-weight:700">${predioHa?'$'+(predioCosto/predioHa).toFixed(0):'—'}</div>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--earth);color:#fff;font-size:10px">
+          <th style="padding:5px 8px;text-align:left">Cultivo</th>
+          <th style="padding:5px 8px;text-align:right">kg/ha</th>
+          <th style="padding:5px 8px;text-align:right">$/kg</th>
+          <th style="padding:5px 8px;text-align:right">$/kg MS</th>
+          <th style="padding:5px 8px;text-align:right">$/ha</th>
+        </tr></thead>
+        <tbody>${cvRows||`<tr><td colspan="5" style="padding:10px;text-align:center;color:var(--muted)">Sin siembras</td></tr>`}</tbody>
+      </table>
+    </div>`;
+  });
+
+  document.getElementById('dash-charts').innerHTML =
+    `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">${predioCards}</div>`;
+
+  // ── Tabla detalle por tabla ──
+  let html='';
+  S.predios.forEach((p,pi)=>{
+    if((p.ciclos||3)===1&&cn>1) return;
+    for(let ti=0;ti<p.tablas.length;ti++){
+      const td=getTablaData(pi,cn,ti);
+      if(td.sinSiembra) continue;
+      const cv=td.cultivo||'maiz';
+      const cvInfo=CULTIVOS[cv]||CULTIVOS.otro;
+      const ha=parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
+      const kilos=parseFloat(td.kilos)||0;
+      const kgMS=kilos*((parseFloat(td.pctMS)||0)/100);
+      const costo=calcTotalTabla(pi,cn,ti,anio);
+      const kgHaT=ha?kilos/ha:null;
+      const cpkT=kilos?costo/kilos:null;
+      const cpkmsT=kgMS?costo/kgMS:null;
       html+=`<tr>
         <td>${p.emoji} <strong>${p.nombre}</strong></td>
+        <td>${p.tablas[ti].nombre}</td>
         <td>${cultivoBadge(cv)}</td>
-        <td style="font-size:11px;color:var(--muted)">${d.tablas.join(', ')}</td>
-        <td class="mono tr">${d.ha.toFixed(2)} ha</td>
-        <td class="mono tr">${fmt(d.cost)}</td>
-        <td class="mono tr amber">${gasHa2?'$'+gasHa2.toFixed(0):'—'}</td>
-        <td class="mono tr" style="color:#2a7a2a">${kgHa?fmtN(kgHa,0)+' kg':'—'}</td>
-        <td class="mono tr amber">${cpk2?'$'+cpk2.toFixed(2):'—'}</td>
-        <td class="mono tr green">${cpkms2?'$'+cpkms2.toFixed(2):'—'}</td>
+        <td class="mono tr">${fmtN(ha,2)}</td>
+        <td class="mono tr">${fmtN(kilos,0)}</td>
+        <td class="mono tr" style="color:#2a7a2a">${kgHaT?fmtN(kgHaT,0):'—'}</td>
+        <td class="mono tr">${fmt(costo)}</td>
+        <td class="mono tr amber">${cpkT?'$'+cpkT.toFixed(2):'—'}</td>
+        <td class="mono tr" style="color:#2a6e8a">${cpkmsT?'$'+cpkmsT.toFixed(2):'—'}</td>
       </tr>`;
-    });
+    }
   });
   document.getElementById('dash-detail').innerHTML = html?`<div class="tbl-wrap"><table>
     <thead><tr>
-      <th>Predio</th><th>Cultivo</th><th>Tablas</th>
-      <th class="tr">Ha</th><th class="tr">Gasto Total</th><th class="tr">$/ha</th>
-      <th class="tr">kg/ha</th><th class="tr">$/kg húmedo</th><th class="tr">$/kg MS</th>
+      <th>Predio</th><th>Tabla</th><th>Cultivo</th>
+      <th class="tr">Ha</th><th class="tr">kg total</th><th class="tr">kg/ha</th>
+      <th class="tr">Costo</th><th class="tr">$/kg</th><th class="tr">$/kg MS</th>
     </tr></thead>
     <tbody>${html}</tbody>
   </table></div>`:`<div class="empty"><div class="empty-icon">🌱</div><div>Sin datos para C${cn} ${anio}</div></div>`;
