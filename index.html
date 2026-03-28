@@ -3095,7 +3095,44 @@ function renderGastos() {
     }
   } else if(gastosTab === 'aplicaciones') {
     if(!S.equiposAplic) S.equiposAplic = [];
-    const precioDieselAplic = S.precioDiesel?.[selectedCn] || '';
+    const mesActual_aplic = parseInt(gastosGridDraft['aplic_mes'] || getMesesCn(selectedCn)[0]);
+    const precioDiesel_aplic = parseFloat(gastosGridDraft['aplic_diesel'] || S.precioDiesel?.[selectedCn] || 0);
+    const pct1_aplic = parseFloat(gastosGridDraft['aplic_pct1'] ?? 100);
+    const pct2_aplic = parseFloat(gastosGridDraft['aplic_pct2'] || 0);
+    const cn2_aplic  = parseInt(gastosGridDraft['aplic_cn2'] || 0);
+    const mesOpts_aplic = [1,2,3,4,5,6,7,8,9,10,11,12].map(m=>
+      `<option value="${m}" ${m===mesActual_aplic?'selected':''}>${MESES_G[m-1]}</option>`).join('');
+    const cicloOpts_aplic = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
+    const sharedBar_aplic = `
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0fdf4;border:1px solid #7ec89a;margin-bottom:14px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted)">📅 Mes:</span>
+          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['aplic_mes']=this.value;renderGastos()">${mesOpts_aplic}</select>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted)">💧 $/Lt:</span>
+          <input type="number" min="0" step="0.01" placeholder="$/Lt" value="${precioDiesel_aplic||''}"
+            style="width:85px;padding:4px 8px;border:1px solid #7ec89a;font-size:13px;text-align:right"
+            onchange="gastosGridDraft['aplic_diesel']=this.value;if(!S.precioDiesel)S.precioDiesel={};S.precioDiesel[${selectedCn}]=parseFloat(this.value)||0;save();renderGastos()"/>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #7ec89a;padding-left:14px">
+          <span style="font-size:12px;color:var(--muted)">Split:</span>
+          <input type="number" min="0" max="100" step="1" value="${pct1_aplic}"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['aplic_pct1']=this.value;renderGastos()"/>
+          <span style="font-size:11px;color:var(--muted)">%C${selectedCn}</span>
+          <input type="number" min="0" max="100" step="1" value="${pct2_aplic||''}" placeholder="0"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['aplic_pct2']=this.value"/>
+          <select style="font-size:12px;padding:3px;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['aplic_cn2']=this.value">
+            <option value="">C?</option>${cicloOpts_aplic}
+          </select>
+        </div>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto">C${selectedCn} · ${gastosGridAnio}</span>
+      </div>`;
+    const precioDieselAplic = precioDiesel_aplic;
     const precioDieselBadgeAplic = precioDieselAplic
       ? `<span style="font-size:11px;color:var(--muted);background:#f0fdf4;padding:3px 8px;border:1px solid #7ec89a">💧 $${precioDieselAplic}/L</span>`
       : `<span style="font-size:11px;color:#999;font-style:italic">💧 precio diesel pendiente</span>`;
@@ -3202,7 +3239,7 @@ function renderGastos() {
       </tr>`;
     }).join('');
 
-    tabContent = `
+    tabContent = `${sharedBar_aplic}
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina aplicaciones</div>
       <div style="overflow-x:auto;margin-bottom:20px">
       <table style="border-collapse:collapse;font-size:13px;min-width:500px">
@@ -3505,6 +3542,43 @@ function renderGastos() {
 
   } else if(gastosTab === 'empaque') {
     // Empaque: Alfalfa + Triticale Heno
+    const mesActual_emp2 = parseInt(gastosGridDraft['emp2_mes'] || getMesesCn(selectedCn)[0]);
+    const precioDiesel_emp2 = parseFloat(gastosGridDraft['emp2_diesel'] || S.precioDiesel?.[selectedCn] || 0);
+    const pct1_emp2 = parseFloat(gastosGridDraft['emp2_pct1'] ?? 100);
+    const pct2_emp2 = parseFloat(gastosGridDraft['emp2_pct2'] || 0);
+    const cn2_emp2  = parseInt(gastosGridDraft['emp2_cn2'] || 0);
+    const mesOpts_emp2 = [1,2,3,4,5,6,7,8,9,10,11,12].map(m=>
+      `<option value="${m}" ${m===mesActual_emp2?'selected':''}>${MESES_G[m-1]}</option>`).join('');
+    const cicloOpts_emp2 = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
+    const sharedBar_emp2 = `
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0fdf4;border:1px solid #7ec89a;margin-bottom:14px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted)">📅 Mes:</span>
+          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['emp2_mes']=this.value;renderGastos()">${mesOpts_emp2}</select>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--muted)">💧 $/Lt:</span>
+          <input type="number" min="0" step="0.01" placeholder="$/Lt" value="${precioDiesel_emp2||''}"
+            style="width:85px;padding:4px 8px;border:1px solid #7ec89a;font-size:13px;text-align:right"
+            onchange="gastosGridDraft['emp2_diesel']=this.value;if(!S.precioDiesel)S.precioDiesel={};S.precioDiesel[${selectedCn}]=parseFloat(this.value)||0;save();renderGastos()"/>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #7ec89a;padding-left:14px">
+          <span style="font-size:12px;color:var(--muted)">Split:</span>
+          <input type="number" min="0" max="100" step="1" value="${pct1_emp2}"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['emp2_pct1']=this.value;renderGastos()"/>
+          <span style="font-size:11px;color:var(--muted)">%C${selectedCn}</span>
+          <input type="number" min="0" max="100" step="1" value="${pct2_emp2||''}" placeholder="0"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['emp2_pct2']=this.value"/>
+          <select style="font-size:12px;padding:3px;border:1px solid #7ec89a"
+            onchange="gastosGridDraft['emp2_cn2']=this.value">
+            <option value="">C?</option>${cicloOpts_emp2}
+          </select>
+        </div>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto">C${selectedCn} · ${gastosGridAnio}</span>
+      </div>`;
     // Diesel (tractores), Camiones, Nómina, Empacado
     const precioDieselEmp = S.precioDiesel?.[selectedCn] || '';
     const precioDieselBadgeEmp = precioDieselEmp
