@@ -667,8 +667,10 @@ function calcDepTabla(pi, cn, ti, anio) {
 
   const tablaHa = predio.tablas[ti]?.ha || 0;
   const ciclos = predio.ciclos || 3;
-  const cultivo = td.cultivo || 'maiz';
   const metaYear = anio || curAnioRep || curAnioReg || new Date().getFullYear();
+
+  // Peso fijo por ciclo: C1=20%, C2=40%, C3=40%
+  const PESO_CN = ciclos===1 ? {1:1,2:0,3:0} : {1:0.20,2:0.40,3:0.40};
 
   let total = 0;
   for(const dep of (S.depreciaciones[pi]||[])) {
@@ -676,12 +678,12 @@ function calcDepTabla(pi, cn, ti, anio) {
     if(!costoAnual) continue;
 
     // Vigencia
-    const cosechaInicio = dep.cosechaInicio || 1;
     if(dep.anioInicio && metaYear < dep.anioInicio) continue;
-    if(dep.anioInicio && metaYear === dep.anioInicio && cn < cosechaInicio) continue;
     if(dep.anioFin && metaYear > dep.anioFin) continue;
+    const cosechaInicio = dep.cosechaInicio || 1;
+    if(dep.anioInicio && metaYear === dep.anioInicio && cn < cosechaInicio) continue;
 
-    // Asignación multi-predio
+    // Asignación multi-predio (fracción por ha total del predio)
     const asigDep = (dep.asignaciones||[]).find(a=>a.anio===metaYear);
     let predioFraccion = 1;
     if(asigDep) {
@@ -695,60 +697,21 @@ function calcDepTabla(pi, cn, ti, anio) {
       }
     }
 
-    // Filtro cultivo
-    const aplicaCultivos = dep.aplicaCultivos || 'todos';
-    const esPrincipal = cultivo==='maiz'||cultivo==='sorgo';
-    const esTriticale = cultivo==='trigo'||cultivo==='triticale'||cultivo==='triticale_heno';
-    if(aplicaCultivos==='principales'&&!esPrincipal) continue;
-    if(aplicaCultivos==='triticale'&&!esTriticale) continue;
-
-    // cosechaWeight — fracción del año para este ciclo (basado en ha FIJAS del predio)
-    let cosechaWeight = 1;
-    if(ciclos === 1) {
-      cosechaWeight = cn===1 ? 1 : 0;
-    } else {
-      const tablasAplica = dep.alcance==='tablas'
-        ? (dep.tablasIdx||[])
-        : predio.tablas.map((_,idx)=>idx);
-      let pesoTotal=0, pesoCn=0;
-      for(let c=1;c<=3;c++) {
-        for(const t of tablasAplica) {
-          const tdC = getTablaData(pi,c,t);
-          if(tdC.sinSiembra) continue;
-          const cv = tdC.cultivo||'maiz';
-          const esP=cv==='maiz'||cv==='sorgo';
-          const esT=cv==='trigo'||cv==='triticale'||cv==='triticale_heno';
-          if(aplicaCultivos==='principales'&&!esP) continue;
-          if(aplicaCultivos==='triticale'&&!esT) continue;
-          const peso = (CULTIVOS[cv]?.pct||40) * (predio.tablas[t]?.ha||0);
-          pesoTotal += peso;
-          if(c===cn) pesoCn += peso;
-        }
-      }
-      cosechaWeight = pesoTotal>0 ? pesoCn/pesoTotal : (cn===1?1:0);
-    }
-    if(!cosechaWeight) continue;
-
-    // Monto fijo del predio en este ciclo
-    const montoPredio = costoAnual * cosechaWeight * predioFraccion;
+    // Monto fijo para este predio en este ciclo
+    const montoPredio = costoAnual * PESO_CN[cn] * predioFraccion;
+    if(!montoPredio) continue;
 
     // Distribuir entre tablas activas proporcional a ha FIJAS
-    const tablasAplica2 = dep.alcance==='tablas' ? (dep.tablasIdx||[]) : predio.tablas.map((_,idx)=>idx);
-    const tablasActivas = tablasAplica2.filter(t=>!getTablaData(pi,cn,t).sinSiembra);
-    const tablasVacantes = tablasAplica2.filter(t=>getTablaData(pi,cn,t).sinSiembra);
+    const tablasAplica = dep.alcance==='tablas'
+      ? (dep.tablasIdx||[])
+      : predio.tablas.map((_,idx)=>idx);
 
-    if(tablasActivas.length === 0) {
-      // Todas vacantes — no asignar a ninguna tabla
-      continue;
-    }
+    const tablasActivas = tablasAplica.filter(t=>!getTablaData(pi,cn,t).sinSiembra);
+    if(!tablasActivas.includes(ti)) continue;
 
     const haActivasTotal = tablasActivas.reduce((s,t)=>s+(predio.tablas[t]?.ha||0),0);
-
-    if(tablasActivas.includes(ti)) {
-      const fracTabla = haActivasTotal>0 ? tablaHa/haActivasTotal : 1/tablasActivas.length;
-      total += montoPredio * fracTabla;
-    }
-    // Si esta tabla está vacante y hay activas, no recibe nada
+    const fracTabla = haActivasTotal>0 ? tablaHa/haActivasTotal : 1/tablasActivas.length;
+    total += montoPredio * fracTabla;
   }
   return total;
 }
