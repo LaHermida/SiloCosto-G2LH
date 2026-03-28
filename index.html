@@ -1547,8 +1547,8 @@ function toggleAsigDep(depId, originPi, anio, cn, pi, checked) {
   }
   let pc = (asig.prediosCosechas||[]).find(x=>x.pi===pi);
   if(checked) {
-    if(!pc) { pc={pi,cosechas:[]}; asig.prediosCosechas.push(pc); }
-    if(!pc.cosechas.includes(cn)) pc.cosechas.push(cn);
+    if(!pc) { pc={pi,cosechas:[1,2,3]}; asig.prediosCosechas.push(pc); }
+    else { pc.cosechas = [1,2,3]; }
   } else {
     if(pc) pc.cosechas = pc.cosechas.filter(c=>c!==cn);
   }
