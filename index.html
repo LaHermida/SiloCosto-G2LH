@@ -3081,109 +3081,169 @@ function renderGastos() {
     }
   } else if(gastosTab === 'aplicaciones') {
     if(!S.equiposAplic) S.equiposAplic = [];
-    const mesActual = parseInt(gastosGridDraft['aplic_mes'] || getMesesCn(selectedCn)[0]);
-    const mesOpts = [1,2,3,4,5,6,7,8,9,10,11,12].map(m=>
-      `<option value="${m}" ${m===mesActual?'selected':''}>${MESES_G[m-1]}</option>`).join('');
-    const pct1G = parseFloat(gastosGridDraft['aplic_pct1'] ?? 100);
-    const pct2G = parseFloat(gastosGridDraft['aplic_pct2'] || 0);
-    const cn2G  = parseInt(gastosGridDraft['aplic_cn2'] || 0);
-    const cicloOpts = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
-    const configEq = isAdmin ? `
-      <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar equipo:</span>
-        <input type="text" id="aplic-eq-nombre" placeholder="Ej: Dron, Aspersora..." style="padding:5px;width:180px;font-size:13px"/>
-        <select id="aplic-eq-tipo" style="padding:5px"><option value="dron">Dron</option><option value="aspersora">Aspersora</option><option value="tractor">Tractor</option><option value="otro">Otro</option></select>
+    const precioDieselAplic = S.precioDiesel?.[selectedCn] || '';
+    const precioDieselBadgeAplic = precioDieselAplic
+      ? `<span style="font-size:11px;color:var(--muted);background:#f0fdf4;padding:3px 8px;border:1px solid #7ec89a">💧 $${precioDieselAplic}/L</span>`
+      : `<span style="font-size:11px;color:#999;font-style:italic">💧 precio diesel pendiente</span>`;
+
+    // ── Config equipos ──
+    const configEqAplic = isAdmin ? `
+      <div style="padding:8px 12px;background:var(--cream);border:1px solid var(--border);margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar equipo aplicaciones:</span>
+        <input type="text" id="aplic-eq-nombre" placeholder="Ej: Dron, Aspersora..." style="padding:5px;width:200px;font-size:13px"/>
+        <select id="aplic-eq-tipo" style="padding:5px">
+          <option value="dron">Dron</option>
+          <option value="aspersora">Aspersora</option>
+          <option value="tractor">Tractor</option>
+          <option value="otro">Otro</option>
+        </select>
         <button class="btn btn-s" onclick="addEquipoAplic()">+ Agregar</button>
       </div>` : '';
-    const sharedBar = `
-      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0fdf4;border:1px solid #7ec89a;margin-bottom:14px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:12px;color:var(--muted)">📅 Mes:</span>
-          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #7ec89a"
-            onchange="gastosGridDraft['aplic_mes']=this.value;renderGastos()">${mesOpts}</select>
+
+    // ── Maquinaria rows ──
+    const aplicEqRows = (S.equiposAplic||[]).map(eq=>{
+      const dDiesel = gastosGridDraft[`aplcd_${eq.id}`] || '';
+      const dServ   = gastosGridDraft[`aplcs_${eq.id}`] || '';
+      const dRep    = gastosGridDraft[`aplcr_${eq.id}`] || '';
+      const hist = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.equipo===eq.nombre&&['Diesel Aplicaciones','Maquinaria Aplicaciones'].includes(g.categoria)&&g.anio===(gastosGridAnio));
+      const totEq = hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      return `<tr>
+        <td style="padding:7px 12px;font-weight:600">${eq.nombre}</td>
+        <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${eq.tipo}</td>
+        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="0.1" placeholder="—" value="${dDiesel}"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
+          onchange="gastosGridDraft['aplcd_${eq.id}']=this.value"/></td>
+        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dServ}"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
+          onchange="gastosGridDraft['aplcs_${eq.id}']=this.value"/></td>
+        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dRep}"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
+          onchange="gastosGridDraft['aplcr_${eq.id}']=this.value"/></td>
+        <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber);font-size:12px">${totEq?fmt(totEq):'—'}</td>
+        <td style="padding:4px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delEquipoAplic('${eq.id}')">✕</button>`:''}</td>
+      </tr>`;
+    }).join('');
+
+    // ── Nómina aplicaciones ──
+    const predioOptsAplic = S.predios.map((p,i)=>`<option value="${i}" ${(gastosGridDraft['aplic_nom_pi']||'0')==String(i)?'selected':''}>${p.emoji} ${p.nombre}</option>`).join('');
+    const mesActualAplic = parseInt(gastosGridDraft['aplic_nom_mes']||new Date().getMonth()+1);
+    const montoNomAplic = gastosGridDraft['aplic_nom_monto'] || '';
+    const pct1Aplic = gastosGridDraft['aplic_nom_c1pct'] || '';
+    const pct2Aplic = gastosGridDraft['aplic_nom_c2pct'] || '';
+    const pct3Aplic = gastosGridDraft['aplic_nom_c3pct'] || '';
+
+    // ── Maquila: por predio, selector de ha por tabla ──
+    const maquilaAplicSections = S.predios.map((p,pi)=>{
+      const ppt = gastosGridDraft[`aplic_maq_ppt_${pi}`] || '';
+      const tablaRows = p.tablas.map((t,ti)=>{
+        const td = getTablaData(pi,selectedCn,ti);
+        if(td.sinSiembra) return '';
+        const key = `aplic_maq_ha_${pi}_${ti}`;
+        const haVal = gastosGridDraft[key] || '';
+        const monto = ppt && haVal ? fmt(parseFloat(ppt)*parseFloat(haVal)) : '—';
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:5px 10px;font-size:12px">${t.nombre} <span style="color:var(--muted);font-size:10px">(${t.ha} ha)</span></td>
+          <td style="padding:4px 8px;text-align:right">
+            <input type="number" min="0" step="0.01" placeholder="0 ha" value="${haVal}"
+              style="width:90px;padding:4px 7px;text-align:right;border:1px solid #7ec89a;font-size:13px"
+              onchange="gastosGridDraft['${key}']=this.value;renderGastos()"/>
+          </td>
+          <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${monto}</td>
+        </tr>`;
+      }).filter(Boolean).join('');
+      if(!tablaRows) return '';
+      const col = pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
+      return `<div style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <span style="font-weight:600;color:${col}">${p.emoji} ${p.nombre}</span>
+          <label style="font-size:12px;color:var(--muted)">$/ha:</label>
+          <input type="number" min="0" step="1" placeholder="—" value="${ppt}"
+            style="width:120px;padding:4px 8px;border:1px solid #7ec89a;font-size:13px;text-align:right"
+            onchange="gastosGridDraft['aplic_maq_ppt_${pi}']=this.value;renderGastos()"/>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #7ec89a;padding-left:14px">
-          <span style="font-size:12px;color:var(--muted)">Split:</span>
-          <input type="number" min="0" max="100" step="1" value="${pct1G}"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
-            onchange="gastosGridDraft['aplic_pct1']=this.value;renderGastos()"/>
-          <span style="font-size:11px;color:var(--muted)">%C${selectedCn}</span>
-          <input type="number" min="0" max="100" step="1" value="${pct2G||''}" placeholder="0"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
-            onchange="gastosGridDraft['aplic_pct2']=this.value"/>
-          <select style="font-size:12px;padding:3px;border:1px solid #7ec89a"
-            onchange="gastosGridDraft['aplic_cn2']=this.value">
-            <option value="">C?</option>${cicloOpts}
-          </select>
-        </div>
-        <span style="font-size:11px;color:var(--muted);margin-left:auto">C${selectedCn} · ${gastosGridAnio}</span>
+        <table style="border-collapse:collapse;font-size:13px;width:100%;max-width:400px">
+          <thead><tr style="background:var(--earth);color:#fff;font-size:11px">
+            <th style="padding:5px 10px;text-align:left">Tabla</th>
+            <th style="padding:5px 8px;text-align:right">Ha aplicadas</th>
+            <th style="padding:5px 10px;text-align:right">Monto</th>
+          </tr></thead>
+          <tbody>${tablaRows}</tbody>
+        </table>
       </div>`;
-    const aplicHist = (S.gastosGenerales||[]).filter(g=>g.categoria==='Aplicaciones'&&getGastoCosecha(g)===selectedCn);
-    const histRows = aplicHist.map(g=>{
-      const tabNom = g.tablaIdx!==undefined && g.prediosIdx?.[0]!==undefined ?
-        S.predios[g.prediosIdx[0]]?.tablas[g.tablaIdx]?.nombre||'' : '';
+    }).join('');
+
+    // ── Historial ──
+    const aplicHist = (S.gastosGenerales||[]).filter(g=>['Diesel Aplicaciones','Maquinaria Aplicaciones','Nómina Aplicaciones','Maquila Aplicaciones'].includes(g.categoria)&&getGastoCosecha(g)===selectedCn);
+    const totAplic = aplicHist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+    const histAplicRows = aplicHist.map(g=>{
       const gi = S.gastosGenerales.indexOf(g);
-      return `<tr style="border-bottom:1px solid var(--border);font-size:12px">
-        <td style="padding:5px 10px">${MESES_G[(g.mes||1)-1]||''}</td>
+      const tabNom = g.tablaIdx!==undefined&&g.prediosIdx?.[0]!==undefined ? S.predios[g.prediosIdx[0]]?.tablas[g.tablaIdx]?.nombre||'' : '';
+      return `<tr style="font-size:12px;border-bottom:1px solid var(--border)">
+        <td style="padding:5px 10px">${g.categoria}</td>
         <td style="padding:5px 10px;font-weight:600">${g.equipo||'—'}</td>
-        <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.emoji+' '+S.predios[pi]?.nombre).join(', ')}</td>
-        <td style="padding:5px 10px;color:var(--muted)">${tabNom}</td>
-        <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--muted)">${g.haAplicadas?fmtN(g.haAplicadas,2)+' ha':'—'}</td>
-        <td style="padding:5px 10px;color:var(--muted);font-size:11px">${g.actividad||''}</td>
+        <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
+        <td style="padding:5px 10px;color:var(--muted);font-size:11px">${tabNom}${g.haAplicadas?' · '+fmtN(g.haAplicadas,2)+'ha':''}</td>
         <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${fmt(g.monto)}</td>
         <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delGasto(${gi})">✕</button>`:''}</td>
       </tr>`;
     }).join('');
-    const totAplic = aplicHist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-    const equipOpts = (S.equiposAplic||[]).map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
-    const predioOpts = S.predios.map((p,pi)=>`<option value="${pi}" ${gastosGridDraft['aplic_pi']==String(pi)?'selected':''}>${p.emoji} ${p.nombre}</option>`).join('');
-    const piSel = parseInt(gastosGridDraft['aplic_pi']??0);
-    const tablaOpts = S.predios[piSel]?.tablas.map((t,ti)=>
-      `<option value="${ti}" ${gastosGridDraft['aplic_ti']==String(ti)?'selected':''}>${t.nombre} (${t.ha} ha)</option>`).join('')||'';
-    const tipoSel = gastosGridDraft['aplic_tipo']||'Nómina';
-    tabContent = `${configEq}${sharedBar}
-      <div class="card" style="background:var(--cream);border:1px solid #7ec89a;margin-bottom:16px">
-        <div class="card-head">➕ Registrar aplicación</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:4px 0">
-          <div class="field" style="margin:0"><label>Equipo</label>
-            <select style="padding:5px;font-size:13px" onchange="gastosGridDraft['aplic_eq']=this.value">
-              <option value="">— selecciona —</option>${equipOpts}</select></div>
-          <div class="field" style="margin:0"><label>Predio</label>
-            <select style="padding:5px;font-size:13px" onchange="gastosGridDraft['aplic_pi']=this.value;renderGastos()">${predioOpts}</select></div>
-          <div class="field" style="margin:0"><label>Tabla</label>
-            <select style="padding:5px;font-size:13px" onchange="gastosGridDraft['aplic_ti']=this.value">${tablaOpts}</select></div>
-          <div class="field" style="margin:0"><label>Ha aplicadas</label>
-            <input type="number" min="0" step="0.01" placeholder="ha" value="${gastosGridDraft['aplic_ha']||''}"
-              style="width:80px;padding:5px;border:1px solid #7ec89a;font-size:13px;text-align:right"
-              onchange="gastosGridDraft['aplic_ha']=this.value"/></div>
-          <div class="field" style="margin:0"><label>Tipo</label>
-            <select style="padding:5px;font-size:13px" onchange="gastosGridDraft['aplic_tipo']=this.value">
-              <option value="Nómina" ${tipoSel==='Nómina'?'selected':''}>👷 Nómina</option>
-              <option value="Diesel" ${tipoSel==='Diesel'?'selected':''}>🛢 Diesel</option>
-              <option value="Reparación" ${tipoSel==='Reparación'?'selected':''}>🔧 Reparación/Servicio</option>
-              <option value="Maquila" ${tipoSel==='Maquila'?'selected':''}>💵 Maquila ($/ha)</option>
-            </select></div>
-          <div class="field" style="margin:0"><label>Monto $</label>
-            <input type="number" min="0" step="1" placeholder="$" value="${gastosGridDraft['aplic_monto']||''}"
-              style="width:120px;padding:5px;border:1px solid #7ec89a;font-size:13px;text-align:right"
-              onchange="gastosGridDraft['aplic_monto']=this.value"/></div>
-        </div>
-      </div>
-      ${aplicHist.length?`
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Aplicaciones C${selectedCn} ${gastosGridAnio}</div>
-      <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
-        <thead><tr style="background:var(--earth);color:#fff">
-          <th style="padding:6px 10px">Mes</th><th style="padding:6px 10px">Equipo</th>
-          <th style="padding:6px 10px">Predio</th><th style="padding:6px 10px">Tabla</th>
-          <th style="padding:6px 10px;text-align:right">Ha</th><th style="padding:6px 10px">Tipo</th>
-          <th style="padding:6px 10px;text-align:right">Monto</th><th></th>
+
+    tabContent = `
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina aplicaciones</div>
+      <div style="overflow-x:auto;margin-bottom:20px">
+      <table style="border-collapse:collapse;font-size:13px;min-width:500px">
+        <thead><tr style="background:var(--earth);color:#ffffff">
+          <th style="padding:7px 12px;text-align:left">Predio</th>
+          <th style="padding:7px 12px;text-align:left">Mes</th>
+          <th style="padding:7px 12px;text-align:right">Cantidad $</th>
+          <th style="padding:7px 10px;text-align:center">C1 %</th>
+          <th style="padding:7px 10px;text-align:center">C2 %</th>
+          <th style="padding:7px 10px;text-align:center">C3 %</th>
         </tr></thead>
-        <tbody>${histRows}</tbody>
-        <tfoot><tr style="background:var(--cream);font-weight:700">
-          <td colspan="6" style="padding:7px 12px">TOTAL C${selectedCn}</td>
-          <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${fmt(totAplic)}</td><td></td>
-        </tr></tfoot>
-      </table></div>`:'<div class="empty"><div class="empty-icon">🌿</div><div>Sin aplicaciones registradas</div></div>'}`;
+        <tbody><tr>
+          <td style="padding:4px 8px"><select style="padding:5px;font-size:13px" onchange="gastosGridDraft['aplic_nom_pi']=this.value">${predioOptsAplic}</select></td>
+          <td style="padding:4px 8px"><select style="padding:5px" onchange="gastosGridDraft['aplic_nom_mes']=this.value">${MESES.map((m,i)=>`<option value="${i+1}" ${mesActualAplic===i+1?'selected':''}>${m}</option>`).join('')}</select></td>
+          <td style="padding:4px 8px"><input type="number" min="0" step="1" placeholder="—" value="${montoNomAplic}" style="width:130px;padding:5px 8px;text-align:right;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['aplic_nom_monto']=this.value"/></td>
+          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${pct1Aplic}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['aplic_nom_c1pct']=this.value"/></td>
+          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${pct2Aplic}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['aplic_nom_c2pct']=this.value"/></td>
+          <td style="padding:4px 6px;text-align:center"><input type="number" min="0" max="100" step="1" placeholder="0" value="${pct3Aplic}" style="width:55px;padding:4px;text-align:center;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['aplic_nom_c3pct']=this.value"/></td>
+        </tr></tbody>
+      </table></div>
+
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🚜 Maquinaria aplicaciones ${precioDieselBadgeAplic}</div>
+      ${configEqAplic}
+      ${(S.equiposAplic||[]).length ? `<div style="overflow-x:auto;margin-bottom:20px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:var(--earth);color:#ffffff">
+          <th style="padding:7px 12px;text-align:left">Equipo</th>
+          <th style="padding:7px 10px;text-align:left">Tipo</th>
+          <th style="padding:7px 12px;text-align:right">Diesel (L)</th>
+          <th style="padding:7px 12px;text-align:right">Servicio ($)</th>
+          <th style="padding:7px 12px;text-align:right">Reparación ($)</th>
+          <th style="padding:7px 12px;text-align:right">Acum. C${selectedCn}</th>
+          <th></th>
+        </tr></thead>
+        <tbody>${aplicEqRows}</tbody>
+      </table></div>` : `<div style="color:var(--muted);font-size:12px;margin-bottom:16px">Sin equipos — agrega arriba</div>`}
+
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌿 Maquila aplicaciones — $/ha por tabla</div>
+      ${maquilaAplicSections||`<div style="color:var(--muted);font-size:12px;margin-bottom:16px">Sin tablas activas en C${selectedCn}</div>`}
+
+      ${aplicHist.length?`
+      <div style="border-top:2px solid var(--border);padding-top:12px;margin-top:8px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Acumulado Aplicaciones C${selectedCn} — Total: ${fmt(totAplic)}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="font-size:10px;color:var(--muted)">
+            <th style="padding:4px 10px;text-align:left">Categoría</th>
+            <th style="padding:4px 10px;text-align:left">Equipo</th>
+            <th style="padding:4px 10px;text-align:left">Predio</th>
+            <th style="padding:4px 10px;text-align:left">Tabla · Ha</th>
+            <th style="padding:4px 10px;text-align:right">Monto</th>
+            <th></th>
+          </tr></thead>
+          <tbody>${histAplicRows}</tbody>
+        </table>
+      </div>`:''}`;
   } else if(gastosTab === 'ensilada') {
     const artsEnsilada = S.articulos.filter(a=>a.categoria==='Materiales de ensilada');
     const nomEnsiladaVal = gastosGridDraft['nom_ensilada'] || '';
@@ -4044,6 +4104,12 @@ function renderEquiposList() {
   </table>`;
 }
 
+function delEquipoAplic(id) {
+  if(!confirm('¿Eliminar este equipo?')) return;
+  S.equiposAplic = (S.equiposAplic||[]).filter(t=>t.id!==id);
+  save(); renderGastos(); toast('✓ Eliminado');
+}
+
 function addEquipoAplic() {
   const nombre = document.getElementById('aplic-eq-nombre')?.value.trim();
   const tipo = document.getElementById('aplic-eq-tipo')?.value;
@@ -4388,137 +4454,43 @@ function capturarGastos() {
       });
     });
   } else if(gastosTab === 'aplicaciones') {
-    if(!S.equiposAplic) S.equiposAplic = [];
-    const mesActual = parseInt(gastosGridDraft['aplic_mes'] || getMesesCn(selectedCn)[0]);
-    const mesOpts = [1,2,3,4,5,6,7,8,9,10,11,12].map(m=>
-      `<option value="${m}" ${m===mesActual?'selected':''}>${MESES_G[m-1]}</option>`).join('');
-    const pct1G = parseFloat(gastosGridDraft['aplic_pct1'] ?? 100);
-    const pct2G = parseFloat(gastosGridDraft['aplic_pct2'] || 0);
-    const cn2G  = parseInt(gastosGridDraft['aplic_cn2'] || 0);
-    const cicloOpts = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
-
-    const configEq = isAdmin ? `
-      <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar equipo:</span>
-        <input type="text" id="aplic-eq-nombre" placeholder="Ej: Dron, Aspersora..." style="padding:5px;width:180px;font-size:13px"/>
-        <select id="aplic-eq-tipo" style="padding:5px"><option value="dron">Dron</option><option value="aspersora">Aspersora</option><option value="tractor">Tractor</option><option value="otro">Otro</option></select>
-        <button class="btn btn-s" onclick="addEquipoAplic()">+ Agregar</button>
-      </div>` : '';
-
-    const sharedBar = `
-      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0fdf4;border:1px solid #7ec89a;margin-bottom:14px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:12px;color:var(--muted)">📅 Mes:</span>
-          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #7ec89a"
-            onchange="gastosGridDraft['aplic_mes']=this.value;renderGastos()">${mesOpts}</select>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #7ec89a;padding-left:14px">
-          <span style="font-size:12px;color:var(--muted)">Split:</span>
-          <input type="number" min="0" max="100" step="1" value="${pct1G}"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
-            onchange="gastosGridDraft['aplic_pct1']=this.value;renderGastos()"/>
-          <span style="font-size:11px;color:var(--muted)">%C${selectedCn}</span>
-          <input type="number" min="0" max="100" step="1" value="${pct2G||''}" placeholder="0"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #7ec89a"
-            onchange="gastosGridDraft['aplic_pct2']=this.value"/>
-          <select style="font-size:12px;padding:3px;border:1px solid #7ec89a"
-            onchange="gastosGridDraft['aplic_cn2']=this.value">
-            <option value="">C?</option>${cicloOpts}
-          </select>
-        </div>
-        <span style="font-size:11px;color:var(--muted);margin-left:auto">C${selectedCn} · ${gastosGridAnio}</span>
-      </div>`;
-
-    // ── Aplicaciones registradas (historial) ──
-    const aplicHist = (S.gastosGenerales||[]).filter(g=>g.categoria==='Aplicaciones'&&getGastoCosecha(g)===selectedCn);
-    const histRows = aplicHist.map((g,gi)=>{
-      const tabNom = g.tablaIdx!==undefined && g.prediosIdx?.[0]!==undefined ?
-        S.predios[g.prediosIdx[0]]?.tablas[g.tablaIdx]?.nombre||'' : '';
-      return `<tr style="border-bottom:1px solid var(--border);font-size:12px">
-        <td style="padding:5px 10px">${MESES_G[(g.mes||1)-1]||''}</td>
-        <td style="padding:5px 10px;font-weight:600">${g.equipo||'—'}</td>
-        <td style="padding:5px 10px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.emoji+' '+S.predios[pi]?.nombre).join(', ')}</td>
-        <td style="padding:5px 10px;color:var(--muted)">${tabNom}</td>
-        <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--muted)">${g.haAplicadas?fmtN(g.haAplicadas,2)+' ha':'—'}</td>
-        <td style="padding:5px 10px;color:var(--muted);font-size:11px">${g.actividad||''}</td>
-        <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${fmt(g.monto)}</td>
-        <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delGasto(${S.gastosGenerales.indexOf(g)})">✕</button>`:''}</td>
-      </tr>`;
-    }).join('');
-    const totAplic = aplicHist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-
-    // ── Form de captura ──
-    const equipOpts = (S.equiposAplic||[]).map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
-    const predioOpts = S.predios.map((p,pi)=>`<option value="${pi}">${p.emoji} ${p.nombre}</option>`).join('');
-    const piSel = parseInt(gastosGridDraft['aplic_pi']??0);
-    const tablaOpts = S.predios[piSel]?.tablas.map((t,ti)=>
-      `<option value="${ti}" ${gastosGridDraft['aplic_ti']==String(ti)?'selected':''}>${t.nombre} (${t.ha} ha)</option>`).join('')||'';
-
-    tabContent = `${configEq}${sharedBar}
-      <div class="card" style="background:var(--cream);border:1px solid #7ec89a;margin-bottom:16px">
-        <div class="card-head">➕ Registrar aplicación</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:4px 0">
-          <div class="field" style="margin:0">
-            <label>Equipo</label>
-            <select style="padding:5px;font-size:13px" onchange="gastosGridDraft['aplic_eq']=this.value">
-              <option value="">— selecciona —</option>${equipOpts}
-            </select>
-          </div>
-          <div class="field" style="margin:0">
-            <label>Predio</label>
-            <select style="padding:5px;font-size:13px" onchange="gastosGridDraft['aplic_pi']=this.value;renderGastos()">
-              ${predioOpts}
-            </select>
-          </div>
-          <div class="field" style="margin:0">
-            <label>Tabla</label>
-            <select style="padding:5px;font-size:13px" onchange="gastosGridDraft['aplic_ti']=this.value">
-              ${tablaOpts}
-            </select>
-          </div>
-          <div class="field" style="margin:0">
-            <label>Ha aplicadas</label>
-            <input type="number" min="0" step="0.1" placeholder="ha" value="${gastosGridDraft['aplic_ha']||''}"
-              style="width:80px;padding:5px;border:1px solid #7ec89a;font-size:13px;text-align:right"
-              onchange="gastosGridDraft['aplic_ha']=this.value"/>
-          </div>
-          <div class="field" style="margin:0">
-            <label>Tipo</label>
-            <select style="padding:5px;font-size:13px" onchange="gastosGridDraft['aplic_tipo']=this.value">
-              <option value="Nómina">👷 Nómina</option>
-              <option value="Diesel">🛢 Diesel</option>
-              <option value="Reparación">🔧 Reparación/Servicio</option>
-              <option value="Maquila">💵 Maquila ($/ha)</option>
-            </select>
-          </div>
-          <div class="field" style="margin:0">
-            <label>Monto $</label>
-            <input type="number" min="0" step="1" placeholder="$" value="${gastosGridDraft['aplic_monto']||''}"
-              style="width:120px;padding:5px;border:1px solid #7ec89a;font-size:13px;text-align:right"
-              onchange="gastosGridDraft['aplic_monto']=this.value"/>
-          </div>
-        </div>
-      </div>
-      ${aplicHist.length?`
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Aplicaciones C${selectedCn} ${gastosGridAnio}</div>
-      <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
-        <thead><tr style="background:var(--earth);color:#fff">
-          <th style="padding:6px 10px">Mes</th>
-          <th style="padding:6px 10px">Equipo</th>
-          <th style="padding:6px 10px">Predio</th>
-          <th style="padding:6px 10px">Tabla</th>
-          <th style="padding:6px 10px;text-align:right">Ha</th>
-          <th style="padding:6px 10px">Tipo</th>
-          <th style="padding:6px 10px;text-align:right">Monto</th>
-          <th></th>
-        </tr></thead>
-        <tbody>${histRows}</tbody>
-        <tfoot><tr style="background:var(--cream);font-weight:700">
-          <td colspan="6" style="padding:7px 12px">TOTAL C${selectedCn}</td>
-          <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${fmt(totAplic)}</td>
-          <td></td>
-        </tr></tfoot>
-      </table></div>`:'<div class="empty"><div class="empty-icon">🌿</div><div>Sin aplicaciones registradas</div></div>'}`;
+    const precioDieselCap = (S.precioDiesel && S.precioDiesel[cn]) || 0;
+    // Nómina
+    const nomAplicMonto = parseFloat(gastosGridDraft['aplic_nom_monto']);
+    const nomAplicPi    = parseInt(gastosGridDraft['aplic_nom_pi'] || 0);
+    const nomAplicMes   = parseInt(gastosGridDraft['aplic_nom_mes'] || new Date().getMonth()+1);
+    const c1pA = parseFloat(gastosGridDraft['aplic_nom_c1pct']||0)/100;
+    const c2pA = parseFloat(gastosGridDraft['aplic_nom_c2pct']||0)/100;
+    const c3pA = parseFloat(gastosGridDraft['aplic_nom_c3pct']||0)/100;
+    if(nomAplicMonto>0) {
+      if(c1pA>0) { S.gastosGenerales.push({id:uid(),cosecha:1,anio,categoria:'Nómina Aplicaciones',actividad:'Aplicaciones',monto:nomAplicMonto*c1pA,prediosIdx:[nomAplicPi],mes:nomAplicMes,fecha:today()}); total++; }
+      if(c2pA>0) { S.gastosGenerales.push({id:uid(),cosecha:2,anio,categoria:'Nómina Aplicaciones',actividad:'Aplicaciones',monto:nomAplicMonto*c2pA,prediosIdx:[nomAplicPi],mes:nomAplicMes,fecha:today()}); total++; }
+      if(c3pA>0) { S.gastosGenerales.push({id:uid(),cosecha:3,anio,categoria:'Nómina Aplicaciones',actividad:'Aplicaciones',monto:nomAplicMonto*c3pA,prediosIdx:[nomAplicPi],mes:nomAplicMes,fecha:today()}); total++; }
+      if(!c1pA&&!c2pA&&!c3pA) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina Aplicaciones',actividad:'Aplicaciones',monto:nomAplicMonto,prediosIdx:[nomAplicPi],mes:nomAplicMes,fecha:today()}); total++; }
+    }
+    // Maquinaria
+    (S.equiposAplic||[]).forEach(eq=>{
+      const litros = parseFloat(gastosGridDraft[`aplcd_${eq.id}`]);
+      const serv   = parseFloat(gastosGridDraft[`aplcs_${eq.id}`]);
+      const rep    = parseFloat(gastosGridDraft[`aplcr_${eq.id}`]);
+      if(litros>0) {
+        const monto = precioDieselCap ? litros*precioDieselCap : litros;
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel Aplicaciones',equipo:eq.nombre,litros,precioPorLitro:precioDieselCap,monto,prediosIdx,fecha:today()}); total++;
+      }
+      if(serv>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Aplicaciones',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,fecha:today()}); total++; }
+      if(rep>0)   { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Aplicaciones',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,fecha:today()}); total++; }
+    });
+    // Maquila por predio/tabla
+    S.predios.forEach((p,pi)=>{
+      const ppt = parseFloat(gastosGridDraft[`aplic_maq_ppt_${pi}`]);
+      if(!ppt||ppt<=0) return;
+      p.tablas.forEach((t,ti)=>{
+        const haVal = parseFloat(gastosGridDraft[`aplic_maq_ha_${pi}_${ti}`]);
+        if(!haVal||haVal<=0) return;
+        const monto = ppt * haVal;
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquila Aplicaciones',equipo:'Maquila',monto,prediosIdx:[pi],tablaIdx:ti,haAplicadas:haVal,fecha:today()}); total++;
+      });
+    });
   } else if(gastosTab === 'aplicaciones') {
     const mesAplic = parseInt(gastosGridDraft['aplic_mes'] || getMesesCn(cn)[0]);
     const pct1A = parseFloat(gastosGridDraft['aplic_pct1'] ?? 100)/100;
