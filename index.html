@@ -1279,6 +1279,10 @@ function renderDepContent() {
             ${Array.from({length:13},(_,i)=>2020+i).map(y=>`<option value="${y}" ${y===curAnioDep?'selected':''}>${y}</option>`).join('')}
           </select>
           ${[1,2,3].map(c=>`<button class="ctab ${curCnDep===c?'active':''}" style="padding:3px 10px;font-size:12px" onclick="curCnDep=${c};renderDepContent()">C${c}</button>`).join('')}
+          ${isAdmin ? `<button class="btn ${depCicloCerrado(curAnioDep,curCnDep)?'btn-s':'btn-d'}" style="font-size:11px;padding:3px 10px;margin-left:6px"
+            onclick="toggleCierreDep(${curAnioDep},${curCnDep})">
+            ${depCicloCerrado(curAnioDep,curCnDep)?'🔓 Reabrir':'🔒 Cerrar'} C${curCnDep}
+          </button>` : depCicloCerrado(curAnioDep,curCnDep) ? `<span style="font-size:11px;color:var(--muted);margin-left:6px">🔒 Cerrado</span>` : ''}
         </div>
       </div>
       <div style="overflow-x:auto">
@@ -1327,10 +1331,11 @@ function renderDepContent() {
 
             const checks=predios3.map(({p,pi})=>{
               if(!vigente) return `<td style="padding:6px 10px;text-align:center;color:var(--muted)">—</td>`;
-              const isChk=asig?(asig.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(curCnDep)):pi===pIdx;
+              const isChk = asig ? (asig.prediosCosechas||[]).some(pc=>pc.pi===pi&&(pc.cosechas||[]).includes(curCnDep)) : pi===pIdx;
               const col=pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
               return `<td style="padding:6px 10px;text-align:center">
                 <input type="checkbox" ${isChk?'checked':''} style="width:15px;height:15px;cursor:pointer;accent-color:${col}"
+                  ${depCicloCerrado(curAnioDep,curCnDep)?'disabled title="Ciclo cerrado"':''}
                   onchange="toggleAsigDep('${dep.id}',${pIdx},${curAnioDep},${curCnDep},${pi},this.checked)"/>
               </td>`;
             }).join('');
@@ -1521,6 +1526,28 @@ function renderDepContent() {
     </div>`;
 }
 
+function depCicloCerrado(anio, cn) {
+  if(!S.depCiclosCerrados) S.depCiclosCerrados = [];
+  return S.depCiclosCerrados.some(d => d.anio===anio && d.cn===cn);
+}
+
+function toggleCierreDep(anio, cn) {
+  const accion = depCicloCerrado(anio,cn) ? 'reabrir' : 'cerrar';
+  const pass = prompt(`Ingresa tu contraseña para ${accion} Depreciaciones C${cn} ${anio}:`);
+  if(pass===null) return;
+  const u = USERS[currentUser.nombre];
+  if(!u||pass!==u.pass) { toast('⚠️ Contraseña incorrecta',true); return; }
+  if(!S.depCiclosCerrados) S.depCiclosCerrados = [];
+  if(depCicloCerrado(anio,cn)) {
+    S.depCiclosCerrados = S.depCiclosCerrados.filter(d=>!(d.anio===anio&&d.cn===cn));
+    toast(`🔓 Depreciaciones C${cn} ${anio} reabiertas`);
+  } else {
+    S.depCiclosCerrados.push({anio,cn});
+    toast(`🔒 Depreciaciones C${cn} ${anio} cerradas`);
+  }
+  save(); renderDepContent();
+}
+
 function toggleAsigDep(depId, originPi, anio, cn, pi, checked) {
   let dep = null;
   (S.depreciaciones[originPi]||[]).forEach(d=>{ if(d.id===depId) dep=d; });
@@ -1528,19 +1555,22 @@ function toggleAsigDep(depId, originPi, anio, cn, pi, checked) {
   if(!dep.asignaciones) dep.asignaciones=[];
   let asig = dep.asignaciones.find(a=>a.anio===anio);
   if(!asig) {
-    // Initialize with default: origin predio gets all cosechas
+    // Primera vez — inicializar con el predio dueño en todos los ciclos
     asig = {anio, prediosCosechas:[{pi:originPi, cosechas:[1,2,3]}]};
     dep.asignaciones.push(asig);
   }
-  let pc = (asig.prediosCosechas||[]).find(x=>x.pi===pi);
+  let pc = asig.prediosCosechas.find(x=>x.pi===pi);
   if(checked) {
-    if(!pc) { pc={pi,cosechas:[1,2,3]}; asig.prediosCosechas.push(pc); }
-    else { [1,2,3].forEach(c=>{ if(!pc.cosechas.includes(c)) pc.cosechas.push(c); }); }
+    // Agregar este ciclo a este predio
+    if(!pc) { pc={pi,cosechas:[cn]}; asig.prediosCosechas.push(pc); }
+    else if(!pc.cosechas.includes(cn)) pc.cosechas.push(cn);
   } else {
-    // Uncheck: remove this predio entirely
-    if(pc) pc.cosechas = pc.cosechas.filter(c=>c!==cn);
+    // Quitar este ciclo de este predio
+    if(pc) {
+      pc.cosechas = pc.cosechas.filter(c=>c!==cn);
+      if(pc.cosechas.length===0) asig.prediosCosechas = asig.prediosCosechas.filter(x=>x.pi!==pi);
+    }
   }
-  asig.prediosCosechas = asig.prediosCosechas.filter(pc=>(pc.cosechas||[]).length>0);
   save(); renderDepContent(); toast('✓ Guardado');
 }
 
