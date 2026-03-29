@@ -335,6 +335,7 @@ tr:hover td { background:var(--cream); }
     <div class="pg-sub">// General (aplica a todo el predio) · Por tabla(s) específicas</div>
     <div class="ptabs" id="dep-ptabs"></div>
     <div id="dep-content"></div>
+    <div id="dep-cierre-bar" style="display:none;padding:8px 0"></div>
   </section>
 
   <!-- GASTOS GENERALES -->
@@ -1175,6 +1176,28 @@ function renderDep() {
   renderDepContent();
 }
 
+function depCicloCerrado(anio, cn) {
+  if(!S.depCiclosCerrados) S.depCiclosCerrados = [];
+  return S.depCiclosCerrados.some(d => d.anio===anio && d.cn===cn);
+}
+
+function toggleCierreDep(anio, cn) {
+  const accion = depCicloCerrado(anio,cn) ? 'reabrir' : 'cerrar';
+  const pass = prompt('Contraseña para ' + accion + ':');
+  if(pass===null) return;
+  const u = USERS[currentUser.nombre];
+  if(!u||pass!==u.pass) { toast('⚠️ Contraseña incorrecta',true); return; }
+  if(!S.depCiclosCerrados) S.depCiclosCerrados = [];
+  if(depCicloCerrado(anio,cn)) {
+    S.depCiclosCerrados = S.depCiclosCerrados.filter(d=>!(d.anio===anio&&d.cn===cn));
+    toast('🔓 Reabierto');
+  } else {
+    S.depCiclosCerrados.push({anio,cn});
+    toast('🔒 Cerrado');
+  }
+  save(); renderDepContent();
+}
+
 function renderDepContent() {
   const pi = curPredioDep;
   const p = S.predios[pi];
@@ -1521,6 +1544,16 @@ function renderDepContent() {
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">Costo anual = Valor ÷ Vida útil</span>
       </div>
     </div>`;
+  const bar = document.getElementById('dep-cierre-bar');
+  if(bar) {
+    if(isAdmin) {
+      const cerrado = depCicloCerrado(curAnioDep, curCnDep);
+      bar.style.display = 'block';
+      bar.innerHTML = '<button class="btn ' + (cerrado?'btn-s':'btn-d') + '" onclick="toggleCierreDep(' + curAnioDep + ',' + curCnDep + ')">' + (cerrado?'🔓 Reabrir':'🔒 Cerrar') + ' Depreciaciones C' + curCnDep + ' ' + curAnioDep + '</button>';
+    } else {
+      bar.style.display = 'none';
+    }
+  }
 }
 
 function toggleAsigDep(depId, originPi, anio, cn, pi, checked) {
