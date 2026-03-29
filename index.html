@@ -1175,28 +1175,6 @@ function renderDep() {
   renderDepContent();
 }
 
-function depCicloCerrado(anio, cn) {
-  if(!S.depCiclosCerrados) S.depCiclosCerrados = [];
-  return S.depCiclosCerrados.some(d => d.anio===anio && d.cn===cn);
-}
-
-function toggleCierreDep(anio, cn) {
-  const accion = depCicloCerrado(anio,cn) ? 'reabrir' : 'cerrar';
-  const pass = prompt(`Ingresa tu contraseña para ${accion} Depreciaciones C${cn} ${anio}:`);
-  if(pass===null) return;
-  const u = USERS[currentUser.nombre];
-  if(!u||pass!==u.pass) { toast('⚠️ Contraseña incorrecta',true); return; }
-  if(!S.depCiclosCerrados) S.depCiclosCerrados = [];
-  if(depCicloCerrado(anio,cn)) {
-    S.depCiclosCerrados = S.depCiclosCerrados.filter(d=>!(d.anio===anio&&d.cn===cn));
-    toast(`🔓 Depreciaciones C${cn} ${anio} reabiertas`);
-  } else {
-    S.depCiclosCerrados.push({anio,cn});
-    toast(`🔒 Depreciaciones C${cn} ${anio} cerradas`);
-  }
-  save(); renderDepContent();
-}
-
 function renderDepContent() {
   const pi = curPredioDep;
   const p = S.predios[pi];
@@ -1249,11 +1227,6 @@ function renderDepContent() {
     </tr>`;
   }).join('');
 
-  const _depCerradoBtn = (()=>{
-    if(!isAdmin) return depCicloCerrado(curAnioDep,curCnDep) ? '<span style="font-size:11px;color:var(--muted);margin-left:6px">🔒 Cerrado</span>' : '';
-    const cerrado = depCicloCerrado(curAnioDep,curCnDep);
-    return '<button class="btn ' + (cerrado?'btn-s':'btn-d') + '" style="font-size:11px;padding:3px 10px;margin-left:6px" onclick="toggleCierreDep(' + curAnioDep + ',' + curCnDep + ')">' + (cerrado?'🔓 Reabrir':'🔒 Cerrar') + ' C' + curCnDep + '</button>';
-  })();
   document.getElementById('dep-content').innerHTML = `
     <div class="card" id="card-editar-dep" style="display:none">
       <div class="card-head">✏️ Editar activo</div>
@@ -1306,7 +1279,7 @@ function renderDepContent() {
             ${Array.from({length:13},(_,i)=>2020+i).map(y=>`<option value="${y}" ${y===curAnioDep?'selected':''}>${y}</option>`).join('')}
           </select>
           ${[1,2,3].map(c=>`<button class="ctab ${curCnDep===c?'active':''}" style="padding:3px 10px;font-size:12px" onclick="curCnDep=${c};renderDepContent()">C${c}</button>`).join('')}
-          ${_depCerradoBtn}
+
         </div>
       </div>
       <div style="overflow-x:auto">
@@ -1359,7 +1332,7 @@ function renderDepContent() {
               const col=pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
               return `<td style="padding:6px 10px;text-align:center">
                 <input type="checkbox" ${isChk?'checked':''} style="width:15px;height:15px;cursor:pointer;accent-color:${col}"
-                  ${depCicloCerrado(curAnioDep,curCnDep)?"disabled":""}
+
                   onchange="toggleAsigDep('${dep.id}',${pIdx},${curAnioDep},${curCnDep},${pi},this.checked)"/>
               </td>`;
             }).join('');
