@@ -2057,14 +2057,20 @@ function renderRep() {
     <button class="ctab ${curTablaRep>=0?'active':''}" onclick="curTablaRep=0;renderRep()">📋 Por tabla</button>`;
 
   document.getElementById('rep-ctabs').innerHTML = `
-    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:6px 0">
-      <div style="display:flex;align-items:center;gap:6px">
-        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</span>
-        <select style="padding:5px 10px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid var(--border)"
+    <div style="background:var(--cream);border:2px solid var(--green);border-radius:8px;padding:10px 16px;margin-bottom:4px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">📅 Año</span>
+        <select style="padding:6px 12px;font-family:'DM Mono',monospace;font-size:15px;font-weight:700;border:2px solid var(--green);border-radius:6px;background:#fff;color:var(--text)"
           onchange="curAnioRep=parseInt(this.value);renderRep()">${anioOpts}</select>
       </div>
-      <div style="display:flex;gap:0">${cicloButtons}</div>
-      <div style="display:flex;gap:0">${tipoButtons}</div>
+      <div style="display:flex;gap:4px;align-items:center">
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-right:4px">Ciclo</span>
+        ${cicloButtons}
+      </div>
+      <div style="display:flex;gap:4px;border-left:1px solid var(--border);padding-left:16px">${tipoButtons}</div>
+      <div style="margin-left:auto;font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--green);background:#fff;border:2px solid var(--green);padding:5px 14px;border-radius:6px">
+        ${curAnioRep} · C${curCosechaRep} · ${p.emoji} ${p.nombre}
+      </div>
     </div>`;
 
   renderRepContent();
@@ -2104,7 +2110,7 @@ function renderRepContent() {
         if(td.sinSiembra) continue;
         const cv=td.cultivo||'maiz';
         if(filterCv && cv!==filterCv) continue;
-        dep+=calcDepPredio(pi,cn,curAnioRep)*(predio.tablas[ti]?.ha||0)/Math.max(1,predio.tablas.reduce((s,t)=>s+t.ha,0));
+        dep+=calcDepPredio(pi,cn,curAnioRep)*(p.tablas[ti]?.ha||0)/Math.max(1,p.tablas.reduce((s,t)=>s+t.ha,0));
         kilos+=parseFloat(td.kilos)||0;
         kgMS+=(parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100);
         ha+=parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
