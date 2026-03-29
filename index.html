@@ -1359,7 +1359,7 @@ function renderDepContent() {
               const col=pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
               return `<td style="padding:6px 10px;text-align:center">
                 <input type="checkbox" ${isChk?'checked':''} style="width:15px;height:15px;cursor:pointer;accent-color:${col}"
-                  ${depCicloCerrado(curAnioDep,curCnDep)?'disabled title="Ciclo cerrado"':''}
+                  ${depCicloCerrado(curAnioDep,curCnDep)?"disabled":""}
                   onchange="toggleAsigDep('${dep.id}',${pIdx},${curAnioDep},${curCnDep},${pi},this.checked)"/>
               </td>`;
             }).join('');
