@@ -1175,6 +1175,28 @@ function renderDep() {
   renderDepContent();
 }
 
+function depCicloCerrado(anio, cn) {
+  if(!S.depCiclosCerrados) S.depCiclosCerrados = [];
+  return S.depCiclosCerrados.some(d => d.anio===anio && d.cn===cn);
+}
+
+function toggleCierreDep(anio, cn) {
+  const accion = depCicloCerrado(anio,cn) ? 'reabrir' : 'cerrar';
+  const pass = prompt(`Ingresa tu contraseña para ${accion} Depreciaciones C${cn} ${anio}:`);
+  if(pass===null) return;
+  const u = USERS[currentUser.nombre];
+  if(!u||pass!==u.pass) { toast('⚠️ Contraseña incorrecta',true); return; }
+  if(!S.depCiclosCerrados) S.depCiclosCerrados = [];
+  if(depCicloCerrado(anio,cn)) {
+    S.depCiclosCerrados = S.depCiclosCerrados.filter(d=>!(d.anio===anio&&d.cn===cn));
+    toast(`🔓 Depreciaciones C${cn} ${anio} reabiertas`);
+  } else {
+    S.depCiclosCerrados.push({anio,cn});
+    toast(`🔒 Depreciaciones C${cn} ${anio} cerradas`);
+  }
+  save(); renderDepContent();
+}
+
 function renderDepContent() {
   const pi = curPredioDep;
   const p = S.predios[pi];
@@ -1525,28 +1547,6 @@ function renderDepContent() {
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">Costo anual = Valor ÷ Vida útil</span>
       </div>
     </div>`;
-}
-
-function depCicloCerrado(anio, cn) {
-  if(!S.depCiclosCerrados) S.depCiclosCerrados = [];
-  return S.depCiclosCerrados.some(d => d.anio===anio && d.cn===cn);
-}
-
-function toggleCierreDep(anio, cn) {
-  const accion = depCicloCerrado(anio,cn) ? 'reabrir' : 'cerrar';
-  const pass = prompt(`Ingresa tu contraseña para ${accion} Depreciaciones C${cn} ${anio}:`);
-  if(pass===null) return;
-  const u = USERS[currentUser.nombre];
-  if(!u||pass!==u.pass) { toast('⚠️ Contraseña incorrecta',true); return; }
-  if(!S.depCiclosCerrados) S.depCiclosCerrados = [];
-  if(depCicloCerrado(anio,cn)) {
-    S.depCiclosCerrados = S.depCiclosCerrados.filter(d=>!(d.anio===anio&&d.cn===cn));
-    toast(`🔓 Depreciaciones C${cn} ${anio} reabiertas`);
-  } else {
-    S.depCiclosCerrados.push({anio,cn});
-    toast(`🔒 Depreciaciones C${cn} ${anio} cerradas`);
-  }
-  save(); renderDepContent();
 }
 
 function toggleAsigDep(depId, originPi, anio, cn, pi, checked) {
