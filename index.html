@@ -1340,7 +1340,8 @@ function renderDepContent() {
               const asigM=(dep.asignaciones||[]).find(a=>a.anio===curAnioDep);
               const isAssigned = getPredioFraccion(dep, pIdx, curCnDep, curAnioDep) > 0;
               const depMonto = calcDepActivo(dep, pIdx, curCnDep, curAnioDep);
-              return `<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);border-left:1px solid var(--border)">${depMonto?fmt(depMonto):'—'}</td>`;
+              const showMonto = getPredioFraccion(dep, pi, curCnDep, curAnioDep) > 0 ? depMonto : 0;
+              return `<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);border-left:1px solid var(--border)">${showMonto?fmt(showMonto):'—'}</td>`;
             }).join('');
 
             return `<tr style="border-bottom:1px solid var(--border)${!vigente?';opacity:0.4':''}">
