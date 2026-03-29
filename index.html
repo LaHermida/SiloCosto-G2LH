@@ -678,11 +678,17 @@ function getPesoCn(dep, cn, ciclos) {
 
 function getPredioFraccion(dep, pi, cn, anio) {
   // Fracción del activo que le toca a este predio en este ciclo
-  // Basado en ha TOTALES FIJAS del predio vs otros predios asignados
+  const predio = S.predios[pi];
+  const ciclos = predio.ciclos || 3;
   const asig = (dep.asignaciones||[]).find(a => a.anio === anio);
   if(!asig) {
-    // Sin asignación explícita: 100% al predio dueño
-    return 1;
+    // Sin asignación explícita: solo aplica al predio dueño (originPi)
+    // originPi se determina buscando en qué predio está guardado este dep
+    let originPi = -1;
+    S.predios.forEach((_,idx) => {
+      if((S.depreciaciones[idx]||[]).find(d => d.id === dep.id)) originPi = idx;
+    });
+    return pi === originPi ? 1 : 0;
   }
   const isAssigned = (asig.prediosCosechas||[]).some(pc => pc.pi === pi && (pc.cosechas||[]).includes(cn));
   if(!isAssigned) return 0;
@@ -690,7 +696,6 @@ function getPredioFraccion(dep, pi, cn, anio) {
     .filter(pc => (pc.cosechas||[]).includes(cn))
     .map(pc => pc.pi);
   if(prediosAsig.length <= 1) return 1;
-  // Proporcional a ha totales fijas
   const haTotal = prediosAsig.reduce((s,pIdx) =>
     s + S.predios[pIdx].tablas.reduce((sh,t) => sh + (t.ha||0), 0), 0);
   const miHa = S.predios[pi].tablas.reduce((s,t) => s + (t.ha||0), 0);
