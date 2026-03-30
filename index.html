@@ -273,13 +273,8 @@ tr:hover td { background:var(--cream); }
         </div>
         <div class="field">
           <label>Categoría</label>
-          <select id="art-cat">
+          <select id="art-cat" onchange="document.getElementById('art-subcat-wrap').style.display=this.value==='Material de cultivo'?'':'none'">
             <option>Material de cultivo</option>
-            <option>Semillas</option>
-            <option>Fertilizantes</option>
-            <option>Herbicidas</option>
-            <option>Fungicidas</option>
-            <option>Insecticidas</option>
             <option>Maquinaria</option>
             <option>Reparaciones Riego</option>
             <option>Luz</option>
@@ -290,6 +285,16 @@ tr:hover td { background:var(--cream); }
             <option>Sirre y Desmonte</option>
             <option>Otro</option>
           </select>
+          <div id="art-subcat-wrap" style="margin-top:6px">
+            <label style="font-size:11px;color:var(--muted)">Subcategoría</label>
+            <select id="art-subcat" style="display:block;width:100%;padding:6px;margin-top:2px">
+              <option value="Semillas">🌱 Semillas</option>
+              <option value="Fertilizantes">🧪 Fertilizantes</option>
+              <option value="Herbicidas">🌿 Herbicidas</option>
+              <option value="Fungicidas">🍄 Fungicidas</option>
+              <option value="Insecticidas">🐛 Insecticidas</option>
+            </select>
+          </div>
         </div>
         <div class="field">
           <label>Precio actual</label>
@@ -1130,7 +1135,10 @@ function importarArticulosExcel(input) {
 
 function addArticulo() {
   const nombre = document.getElementById('art-nombre').value.trim();
-  const cat = document.getElementById('art-cat').value;
+  const catBase = document.getElementById('art-cat').value;
+  const cat = catBase==='Material de cultivo'
+    ? (document.getElementById('art-subcat')?.value || 'Material de cultivo')
+    : catBase;
   const precio = parseFloat(document.getElementById('art-precio').value);
   const unidad = document.getElementById('art-unidad').value.trim();
   const anio = parseInt(document.getElementById('art-anio')?.value) || new Date().getFullYear();
