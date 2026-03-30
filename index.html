@@ -305,14 +305,8 @@ tr:hover td { background:var(--cream); }
           <input type="text" id="art-unidad" placeholder="kg, L, hr..."/>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
-        <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</span>
-        <select id="art-anio" style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid var(--border)">
-          ${Array.from({length:13},(_,i)=>2020+i).map(y=>`<option value="${y}" ${y===new Date().getFullYear()?'selected':''}>${y}</option>`).join('')}
-        </select>
-        ${[1,2,3].map(c=>`<button type="button" id="art-ciclo-btn-${c}" class="ctab ${c===1?'active':''}" style="padding:3px 10px;font-size:12px" onclick="setArtCiclo(${c})">C${c}</button>`).join('')}
-        <input type="hidden" id="art-ciclo" value="1"/>
-      </div>
+      <div id="art-anio-ciclo-bar" style="display:flex;align-items:center;gap:8px;margin:8px 0"></div>
+      <input type="hidden" id="art-ciclo" value="1"/>
       <div class="btn-row">
         <button class="btn btn-p" onclick="addArticulo()">Guardar artículo</button>
       </div>
@@ -1167,6 +1161,15 @@ function addArticulo() {
 }
 
 function renderArticulos() {
+  // Render año/ciclo bar
+  const bar = document.getElementById('art-anio-ciclo-bar');
+  if(bar) {
+    const curAnio = parseInt(document.getElementById('art-anio')?.value) || new Date().getFullYear();
+    const curCn = parseInt(document.getElementById('art-ciclo')?.value) || 1;
+    const anioOpts = Array.from({length:13},(_,i)=>2020+i).map(y=>`<option value="${y}"${y===curAnio?' selected':''}>${y}</option>`).join('');
+    const cnBtns = [1,2,3].map(c=>`<button type="button" id="art-ciclo-btn-${c}" class="ctab${c===curCn?' active':''}" style="padding:3px 10px;font-size:12px" onclick="setArtCiclo(${c})">C${c}</button>`).join('');
+    bar.innerHTML = `<span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</span><select id="art-anio" style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid var(--border)" onchange="renderArticulos()">${anioOpts}</select>${cnBtns}`;
+  }
   const el = document.getElementById('art-list');
   if(!S.articulos.length) {
     el.innerHTML='<div class="empty"><div class="empty-icon">📦</div><div>Sin artículos aún</div></div>'; return;
