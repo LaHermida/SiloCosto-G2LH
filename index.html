@@ -257,8 +257,13 @@ tr:hover td { background:var(--cream); }
 
   <!-- ARTÍCULOS -->
   <section id="sec-articulos" class="page">
-    <div class="pg-title">Catálogo de Artículos</div>
-    <div class="pg-sub">// Precios con historial — se fotografía al registrar consumo</div>
+    <div class="pg-title">Artículos e Inventario</div>
+    <div class="pg-sub">// Catálogo de precios · Inventario por predio · Entradas y salidas</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="ctab active" id="art-tab-catalogo" onclick="setArtTab('catalogo')">📦 Catálogo</button>
+      <button class="ctab" id="art-tab-inventario" onclick="setArtTab('inventario')">🏭 Inventario</button>
+    </div>
+    <div id="art-content-catalogo">
     <div class="card">
       <div class="card-head">➕ Nuevo artículo / Actualizar precio</div>
       <div class="fg4">
@@ -326,6 +331,10 @@ tr:hover td { background:var(--cream); }
     <div class="card">
       <div class="card-head">📦 Artículos registrados</div>
       <div id="art-list"></div>
+    </div>
+    </div><!-- end art-content-catalogo -->
+    <div id="art-content-inventario" style="display:none">
+      <div id="inv-content"></div>
     </div>
   </section>
 
@@ -4979,6 +4988,198 @@ function capturarGastos() {
 function delGasto(i) {
   S.gastosGenerales.splice(i,1);
   save(); renderGastos(); toast('✓ Eliminado');
+}
+
+
+// ══════════════════════════════════════════════
+// INVENTARIO
+// ══════════════════════════════════════════════
+let curArtTab = 'catalogo';
+let curInvPredi = 0;
+
+function setArtTab(tab) {
+  curArtTab = tab;
+  document.getElementById('art-content-catalogo').style.display = tab==='catalogo' ? '' : 'none';
+  document.getElementById('art-content-inventario').style.display = tab==='inventario' ? '' : 'none';
+  document.getElementById('art-tab-catalogo').className = 'ctab' + (tab==='catalogo'?' active':'');
+  document.getElementById('art-tab-inventario').className = 'ctab' + (tab==='inventario'?' active':'');
+  if(tab==='inventario') renderInv();
+}
+
+function renderInv() {
+  if(!S.inventario) S.inventario = [];
+  const CATS_INV = ['Semillas','Fertilizantes','Herbicidas','Fungicidas','Insecticidas','Material de cultivo'];
+  const artsInv = (S.articulos||[]).filter(a=>CATS_INV.includes(a.categoria));
+  const artOpts = artsInv.map(a=>`<option value="${a.id}">${a.nombre} (${a.categoria})</option>`).join('');
+  const predioTabs = S.predios.map((p,pi)=>
+    `<button class="ptab ${pi===curInvPredi?'active':''}" onclick="curInvPredi=${pi};renderInv()">${p.emoji} ${p.nombre}</button>`
+  ).join('');
+
+  // Stock calculation per article for this predio
+  const stockPorArt = {};
+  artsInv.forEach(a=>{ stockPorArt[a.id]={entradas:0,salidasAuto:0,salidasMan:0,art:a}; });
+
+  // Entradas
+  (S.inventario||[]).filter(m=>m.tipo==='entrada'&&m.predioIdx===curInvPredi).forEach(m=>{
+    if(stockPorArt[m.articuloId]) stockPorArt[m.articuloId].entradas += parseFloat(m.cantidad)||0;
+  });
+
+  // Salidas automáticas (consumos registrados en tablas)
+  S.predios[curInvPredi].tablas.forEach((_,ti)=>{
+    [1,2,3].forEach(cn=>{
+      const td = getTablaData(curInvPredi,cn,ti);
+      (td.consumos||[]).forEach(c=>{
+        if(stockPorArt[c.articuloId]) stockPorArt[c.articuloId].salidasAuto += parseFloat(c.cantidad)||0;
+      });
+    });
+  });
+
+  // Salidas manuales
+  (S.inventario||[]).filter(m=>m.tipo==='salida'&&m.predioIdx===curInvPredi).forEach(m=>{
+    if(stockPorArt[m.articuloId]) stockPorArt[m.articuloId].salidasMan += parseFloat(m.cantidad)||0;
+  });
+
+  // Stock table
+  const stockRows = artsInv.map(a=>{
+    const s = stockPorArt[a.id];
+    const stock = s.entradas - s.salidasAuto - s.salidasMan;
+    const stockColor = stock<0?'#c0392b':stock===0?'var(--muted)':'#2a7a3c';
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:7px 12px;font-weight:600">${a.nombre}</td>
+      <td style="padding:7px 10px;font-size:11px"><span style="background:#e8f5e8;color:#1a3d22;padding:2px 6px;border-radius:3px">${a.categoria}</span></td>
+      <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace">${fmtN(s.entradas,2)} ${a.unidad||''}</td>
+      <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--muted)">${fmtN(s.salidasAuto,2)} ${a.unidad||''}</td>
+      <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--muted)">${fmtN(s.salidasMan,2)} ${a.unidad||''}</td>
+      <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:${stockColor}">${fmtN(stock,2)} ${a.unidad||''}</td>
+    </tr>`;
+  }).join('');
+
+  // Movimientos
+  const movs = (S.inventario||[]).filter(m=>m.predioIdx===curInvPredi).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const movRows = movs.map((m,i)=>{
+    const a = artsInv.find(x=>x.id===m.articuloId);
+    const color = m.tipo==='entrada'?'#2a7a3c':'#c0392b';
+    const icon = m.tipo==='entrada'?'📥':'📤';
+    return `<tr style="border-bottom:1px solid var(--border);font-size:12px">
+      <td style="padding:5px 10px">${m.fecha}</td>
+      <td style="padding:5px 10px"><span style="color:${color};font-weight:600">${icon} ${m.tipo==='entrada'?'Entrada':'Salida manual'}</span></td>
+      <td style="padding:5px 10px;font-weight:600">${a?.nombre||'—'}</td>
+      <td style="padding:5px 10px;font-family:'DM Mono',monospace;color:${color}">${m.tipo==='entrada'?'+':'-'}${fmtN(parseFloat(m.cantidad),2)} ${a?.unidad||''}</td>
+      <td style="padding:5px 10px;color:var(--muted)">${m.tipo==='entrada'?(m.proveedor||''):(m.motivo||'')}</td>
+      <td style="padding:5px 10px;color:var(--muted);font-size:11px">${m.factura||''}</td>
+      <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delMovInv(${i})">✕</button>`:''}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('inv-content').innerHTML = `
+    <div style="display:flex;gap:4px;margin-bottom:16px">${predioTabs}</div>
+
+    <!-- ENTRADA -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head">📥 Registrar Entrada</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:4px 0">
+        <div class="field" style="margin:0"><label>Fecha</label>
+          <input type="date" id="inv-fecha" value="${new Date().toISOString().slice(0,10)}" style="padding:6px;border:1px solid var(--border);font-size:13px"/></div>
+        <div class="field" style="margin:0"><label>Artículo</label>
+          <select id="inv-art" style="padding:6px;font-size:13px;min-width:200px"><option value="">— selecciona —</option>${artOpts}</select></div>
+        <div class="field" style="margin:0"><label>Cantidad</label>
+          <input type="number" id="inv-cant" min="0" step="0.01" placeholder="0" style="width:100px;padding:6px;border:1px solid var(--border);font-size:13px;text-align:right"/></div>
+        <div class="field" style="margin:0"><label>Proveedor</label>
+          <input type="text" id="inv-prov" placeholder="Proveedor..." style="width:160px;padding:6px;border:1px solid var(--border);font-size:13px"/></div>
+        <div class="field" style="margin:0"><label># Factura</label>
+          <input type="text" id="inv-factura" placeholder="Factura..." style="width:130px;padding:6px;border:1px solid var(--border);font-size:13px"/></div>
+        <button class="btn btn-p" onclick="addMovInv('entrada')">✅ Registrar entrada</button>
+      </div>
+    </div>
+
+    <!-- SALIDA MANUAL -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head">📤 Registrar Salida Manual</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:4px 0">
+        <div class="field" style="margin:0"><label>Fecha</label>
+          <input type="date" id="inv-sal-fecha" value="${new Date().toISOString().slice(0,10)}" style="padding:6px;border:1px solid var(--border);font-size:13px"/></div>
+        <div class="field" style="margin:0"><label>Artículo</label>
+          <select id="inv-sal-art" style="padding:6px;font-size:13px;min-width:200px"><option value="">— selecciona —</option>${artOpts}</select></div>
+        <div class="field" style="margin:0"><label>Cantidad</label>
+          <input type="number" id="inv-sal-cant" min="0" step="0.01" placeholder="0" style="width:100px;padding:6px;border:1px solid var(--border);font-size:13px;text-align:right"/></div>
+        <div class="field" style="margin:0"><label>Motivo</label>
+          <select id="inv-sal-motivo" style="padding:6px;font-size:13px">
+            <option value="Devolución">Devolución</option>
+            <option value="Merma">Merma</option>
+            <option value="Ajuste">Ajuste</option>
+            <option value="Otro">Otro</option>
+          </select></div>
+        <div class="field" style="margin:0"><label># Referencia</label>
+          <input type="text" id="inv-sal-ref" placeholder="Referencia..." style="width:130px;padding:6px;border:1px solid var(--border);font-size:13px"/></div>
+        <button class="btn btn-d" onclick="addMovInv('salida')">📤 Registrar salida</button>
+      </div>
+    </div>
+
+    <!-- STOCK -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head">📊 Stock Actual — ${S.predios[curInvPredi].emoji} ${S.predios[curInvPredi].nombre}</div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:var(--earth);color:#fff">
+          <th style="padding:7px 12px;text-align:left">Artículo</th>
+          <th style="padding:7px 10px;text-align:left">Categoría</th>
+          <th style="padding:7px 10px;text-align:right">Entradas</th>
+          <th style="padding:7px 10px;text-align:right">Salidas auto</th>
+          <th style="padding:7px 10px;text-align:right">Salidas manual</th>
+          <th style="padding:7px 10px;text-align:right;font-weight:700">Stock</th>
+        </tr></thead>
+        <tbody>${stockRows||'<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--muted)">Sin artículos de material de cultivo registrados</td></tr>'}</tbody>
+      </table></div>
+    </div>
+
+    <!-- HISTORIAL -->
+    ${movs.length?`<div class="card">
+      <div class="card-head">📋 Historial de movimientos — ${S.predios[curInvPredi].emoji} ${S.predios[curInvPredi].nombre}</div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:var(--earth);color:#fff">
+          <th style="padding:6px 10px">Fecha</th><th style="padding:6px 10px">Tipo</th>
+          <th style="padding:6px 10px">Artículo</th><th style="padding:6px 10px;text-align:right">Cantidad</th>
+          <th style="padding:6px 10px">Proveedor / Motivo</th><th style="padding:6px 10px">Factura / Ref</th><th></th>
+        </tr></thead>
+        <tbody>${movRows}</tbody>
+      </table></div>
+    </div>`:''}`;
+}
+
+function addMovInv(tipo) {
+  if(!S.inventario) S.inventario = [];
+  if(tipo==='entrada') {
+    const artId = document.getElementById('inv-art').value;
+    const cant = parseFloat(document.getElementById('inv-cant').value);
+    const fecha = document.getElementById('inv-fecha').value;
+    const prov = document.getElementById('inv-prov').value.trim();
+    const factura = document.getElementById('inv-factura').value.trim();
+    if(!artId||!cant||cant<=0) { toast('⚠️ Selecciona artículo y cantidad',true); return; }
+    S.inventario.push({id:uid(),tipo:'entrada',predioIdx:curInvPredi,articuloId:artId,cantidad:cant,fecha,proveedor:prov,factura});
+    document.getElementById('inv-cant').value='';
+    document.getElementById('inv-prov').value='';
+    document.getElementById('inv-factura').value='';
+  } else {
+    const artId = document.getElementById('inv-sal-art').value;
+    const cant = parseFloat(document.getElementById('inv-sal-cant').value);
+    const fecha = document.getElementById('inv-sal-fecha').value;
+    const motivo = document.getElementById('inv-sal-motivo').value;
+    const ref = document.getElementById('inv-sal-ref').value.trim();
+    if(!artId||!cant||cant<=0) { toast('⚠️ Selecciona artículo y cantidad',true); return; }
+    S.inventario.push({id:uid(),tipo:'salida',predioIdx:curInvPredi,articuloId:artId,cantidad:cant,fecha,motivo,factura:ref});
+    document.getElementById('inv-sal-cant').value='';
+    document.getElementById('inv-sal-ref').value='';
+  }
+  save(); renderInv(); toast('✓ Movimiento registrado');
+}
+
+function delMovInv(idx) {
+  const movs = (S.inventario||[]).filter(m=>m.predioIdx===curInvPredi).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const mov = movs[idx];
+  if(!mov) return;
+  if(!confirm('¿Eliminar este movimiento?')) return;
+  const globalIdx = S.inventario.indexOf(mov);
+  if(globalIdx>=0) S.inventario.splice(globalIdx,1);
+  save(); renderInv(); toast('✓ Eliminado');
 }
 
 // ══════════════════════════════════════════════
