@@ -1958,40 +1958,69 @@ function renderRegContent() {
     });
   }
 
-  // ── Tabla de consumos del período (independiente) ──
+  // ── Grid Excel de consumos ──
   const allConsumos = [];
   for(let ti2=0;ti2<p.tablas.length;ti2++) {
     const td2 = getTablaData(pi,cn,ti2);
-    (td2.consumos||[]).forEach((c,ci)=>{
+    (td2.consumos||[]).filter(c=>!c.anio||c.anio===curAnioReg).forEach((c,ci)=>{
       allConsumos.push({...c, ti2, ci, tablaNombre:p.tablas[ti2].nombre});
     });
   }
   if(allConsumos.length) {
     const histEl = document.createElement('div');
     histEl.className = 'card';
-    const histRows = allConsumos.map((c,idx)=>`<tr>
-      <td style="font-size:11px;color:var(--muted)">${c.fecha||''}</td>
-      <td style="font-size:11px;color:var(--muted)">${c.tablaNombre}</td>
-      <td><strong>${c.nombre}</strong></td>
-      <td style="font-size:12px;color:var(--muted)">${c.categoria}</td>
-      <td class="mono tr">${fmtN(c.cantidad,2)} ${c.unidad}</td>
-      <td class="mono tr">${fmt(c.precioSnapshot)}/${c.unidad}</td>
-      <td class="mono tr amber">${fmt(c.cantidad*c.precioSnapshot)}</td>
-      <td>${!isClosed?`<button class="btn btn-d" onclick="delConsumoGlobal(${c.ti2},${c.ci})">✕</button>`:''}</td>
-    </tr>`).join('');
-    const totConsumos = allConsumos.reduce((s,c)=>s+c.cantidad*c.precioSnapshot,0);
+
+    // Build unique articles that have consumos
+    const artsConGrid = artsCultivo.filter(art=>
+      allConsumos.some(c=>c.articuloId===art.id)
+    );
+
+    // Build grid rows: articulo x tabla => cantidad + monto
+    const gridRows = artsConGrid.map(art=>{
+      let artTotal = 0;
+      const cells = p.tablas.map((t,ti)=>{
+        const cons = allConsumos.filter(c=>c.articuloId===art.id && c.ti2===ti);
+        const cant = cons.reduce((s,c)=>s+parseFloat(c.cantidad||0),0);
+        const monto = cons.reduce((s,c)=>s+(parseFloat(c.cantidad||0)*parseFloat(c.precioSnapshot||0)),0);
+        artTotal += monto;
+        if(!cant) return `<td style="padding:5px 8px;text-align:right;color:var(--muted)">—</td>`;
+        return `<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px">
+          <div>${fmtN(cant,1)} ${art.unidad||''}</div>
+          <div style="font-size:10px;color:var(--amber)">${fmt(monto)}</div>
+        </td>`;
+      }).join('');
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:5px 10px;white-space:nowrap">
+          <div style="font-weight:600">${art.nombre}</div>
+          <div style="font-size:10px;color:var(--muted)">${fmt(getCurrentPrice(art.id))}/${art.unidad}</div>
+        </td>
+        ${cells}
+        <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:var(--amber);border-left:2px solid var(--border)">${fmt(artTotal)}</td>
+      </tr>`;
+    }).join('');
+
+    // Footer totals per tabla
+    const footCells = p.tablas.map((_,ti)=>{
+      const tot = allConsumos.filter(c=>c.ti2===ti).reduce((s,c)=>s+(parseFloat(c.cantidad||0)*parseFloat(c.precioSnapshot||0)),0);
+      return `<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:11px;color:var(--amber)">${tot?fmt(tot):'—'}</td>`;
+    }).join('');
+    const grandTotal = allConsumos.reduce((s,c)=>s+(parseFloat(c.cantidad||0)*parseFloat(c.precioSnapshot||0)),0);
+
+    const tabHdrs = p.tablas.map(t=>`<th style="padding:5px 8px;text-align:right;white-space:nowrap;min-width:100px">${t.nombre}<br><span style="font-weight:400;font-size:9px">${t.ha}ha</span></th>`).join('');
+
     histEl.innerHTML = `
-      <div class="card-head">📋 Consumos registrados — ${p.nombre} · Cosecha ${cn}</div>
-      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr>
-          <th>Fecha</th><th>Tabla</th><th>Artículo</th><th>Categoría</th>
-          <th class="tr">Cantidad</th><th class="tr">Precio</th><th class="tr">Total</th><th></th>
+      <div class="card-head">📋 Consumos registrados — ${p.nombre} · C${cn} ${curAnioReg}</div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:var(--earth);color:#fff">
+          <th style="padding:5px 10px;text-align:left">Artículo</th>
+          ${tabHdrs}
+          <th style="padding:5px 10px;text-align:right;border-left:2px solid rgba(255,255,255,0.3)">Total $</th>
         </tr></thead>
-        <tbody>${histRows}</tbody>
-        <tfoot><tr style="background:var(--earth);color:#ffffff">
-          <td colspan="6" style="padding:8px 14px;font-weight:700">TOTAL MATERIAL DE CULTIVO</td>
-          <td class="mono tr" style="padding:8px 14px;font-weight:700">${fmt(totConsumos)}</td>
-          <td></td>
+        <tbody>${gridRows}</tbody>
+        <tfoot><tr style="background:var(--cream);font-weight:700">
+          <td style="padding:5px 10px">TOTAL</td>
+          ${footCells}
+          <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber);border-left:2px solid var(--border)">${fmt(grandTotal)}</td>
         </tr></tfoot>
       </table></div>`;
     document.getElementById('reg-content').appendChild(histEl);
