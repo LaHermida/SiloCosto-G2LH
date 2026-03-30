@@ -2171,7 +2171,8 @@ function renderRepContent() {
         kgMS+=(parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100);
         ha+=parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
         (td.consumos||[]).filter(c=>!c.anio||c.anio===curAnioRep).forEach(c=>{
-          if(catT[c.categoria]!==undefined) catT[c.categoria]+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
+          const catKey = ['Semillas','Fertilizantes','Herbicidas','Fungicidas','Insecticidas'].includes(c.categoria)?'Material de cultivo':c.categoria;
+          if(catT[catKey]!==undefined) catT[catKey]+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
           else catT['Otro']+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
         });
       }
@@ -2373,7 +2374,8 @@ function renderRepContent() {
     let catTotals={};
     cats.forEach(c=>catTotals[c]=0);
     (td.consumos||[]).filter(c=>!c.anio||c.anio===curAnioRep).forEach(c=>{
-      if(catTotals[c.categoria]!==undefined) catTotals[c.categoria]+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
+      const catKey = ['Semillas','Fertilizantes','Herbicidas','Fungicidas','Insecticidas'].includes(c.categoria)?'Material de cultivo':c.categoria;
+      if(catTotals[catKey]!==undefined) catTotals[catKey]+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
       else catTotals['Otro']+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
     });
     // Add gastos generales per category for this tabla
@@ -5246,8 +5248,8 @@ function renderInv() {
   const stockPorArt = {};
   artsInv.forEach(a=>{ stockPorArt[a.id]={entradas:0,salidasAuto:0,salidasMan:0,art:a}; });
 
-  // Entradas — filtrar por ciclo
-  (S.inventario||[]).filter(m=>m.tipo==='entrada'&&m.predioIdx===curInvPredi&&m.cn===curInvCn&&m.anio===curInvAnio).forEach(m=>{
+  // Entradas — filtrar por ciclo (entradas sin cn/anio se muestran en todos)
+  (S.inventario||[]).filter(m=>m.tipo==='entrada'&&m.predioIdx===curInvPredi&&(!m.cn||m.cn===curInvCn)&&(!m.anio||m.anio===curInvAnio)).forEach(m=>{
     if(stockPorArt[m.articuloId]) stockPorArt[m.articuloId].entradas += parseFloat(m.cantidad)||0;
   });
 
@@ -5259,8 +5261,8 @@ function renderInv() {
     });
   });
 
-  // Salidas manuales — filtrar por ciclo
-  (S.inventario||[]).filter(m=>m.tipo==='salida'&&m.predioIdx===curInvPredi&&m.cn===curInvCn&&m.anio===curInvAnio).forEach(m=>{
+  // Salidas manuales — filtrar por ciclo (sin cn/anio se muestran en todos)
+  (S.inventario||[]).filter(m=>m.tipo==='salida'&&m.predioIdx===curInvPredi&&(!m.cn||m.cn===curInvCn)&&(!m.anio||m.anio===curInvAnio)).forEach(m=>{
     if(stockPorArt[m.articuloId]) stockPorArt[m.articuloId].salidasMan += parseFloat(m.cantidad)||0;
   });
 
@@ -5280,7 +5282,7 @@ function renderInv() {
   }).join('');
 
   // Movimientos
-  const movs = (S.inventario||[]).filter(m=>m.predioIdx===curInvPredi).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const movs = (S.inventario||[]).filter(m=>m.predioIdx===curInvPredi&&(!m.cn||m.cn===curInvCn)&&(!m.anio||m.anio===curInvAnio)).sort((a,b)=>b.fecha.localeCompare(a.fecha));
   const movRows = movs.map((m,i)=>{
     const a = artsInv.find(x=>x.id===m.articuloId);
     const color = m.tipo==='entrada'?'#2a7a3c':'#c0392b';
@@ -5399,7 +5401,7 @@ function addMovInv(tipo) {
 }
 
 function delMovInv(idx) {
-  const movs = (S.inventario||[]).filter(m=>m.predioIdx===curInvPredi).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const movs = (S.inventario||[]).filter(m=>m.predioIdx===curInvPredi&&(!m.cn||m.cn===curInvCn)&&(!m.anio||m.anio===curInvAnio)).sort((a,b)=>b.fecha.localeCompare(a.fecha));
   const mov = movs[idx];
   if(!mov) return;
   if(!confirm('¿Eliminar este movimiento?')) return;
