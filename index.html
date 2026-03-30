@@ -5194,6 +5194,7 @@ function setArtTab(tab) {
 }
 
 function renderInv() {
+  const isAdmin = currentUser?.rol === 'admin';
   if(!S.inventario) S.inventario = [];
   const CATS_INV = ['Semillas','Fertilizantes','Herbicidas','Fungicidas','Insecticidas','Material de cultivo'];
   const artsInv = (S.articulos||[]).filter(a=>CATS_INV.includes(a.categoria));
