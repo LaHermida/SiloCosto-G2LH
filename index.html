@@ -4400,8 +4400,13 @@ function addSistemaRiego() {
   if(!nombre) { toast('⚠️ Ingresa el nombre',true); return; }
   if(!S.sistemasRiego) S.sistemasRiego = [];
   if(S.sistemasRiego.find(t=>t.nombre===nombre)) { toast('⚠️ Ya existe',true); return; }
-  S.sistemasRiego.push({id:uid(), nombre});
-  if(document.getElementById('rep-eq-nombre')) document.getElementById('rep-eq-nombre').value='';
+  const tablasIdx = [];
+  S.predios.forEach((p,pi)=>p.tablas.forEach((_,ti)=>{
+    const cb = document.getElementById('new-riego-t-'+pi+'_'+ti);
+    if(cb && cb.checked) tablasIdx.push(pi+'_'+ti);
+  }));
+  S.sistemasRiego.push({id:uid(), nombre, tablasIdx});
+  if(document.getElementById('rep-riego-nombre')) document.getElementById('rep-riego-nombre').value='';
   save(); renderGastos(); toast('✓ Sistema agregado');
 }
 
@@ -4603,22 +4608,6 @@ function delNoriaRep(nombre) {
     S.equipos[pi] = (S.equipos[pi]||[]).filter(e=>!(e.tipo==='luz'&&e.nombre===nombre));
   });
   save(); renderGastos(); toast('✓ Noria eliminada');
-}
-
-function addSistemaRiego() {
-  const nombre = document.getElementById('sr-nombre')?.value.trim();
-  if(!nombre) { toast('⚠️ Ingresa el nombre',true); return; }
-  const sel = document.getElementById('sr-tablas');
-  const tablas = [];
-  if(sel) Array.from(sel.selectedOptions).forEach(opt=>{
-    const [pi,ti] = opt.value.split('_').map(Number);
-    tablas.push({pi,ti});
-  });
-  if(!tablas.length) { toast('⚠️ Selecciona al menos una tabla',true); return; }
-  if(!S.sistemasRiego) S.sistemasRiego = [];
-  S.sistemasRiego.push({id:uid(), nombre, tablas});
-  if(document.getElementById('sr-nombre')) document.getElementById('sr-nombre').value = '';
-  save(); renderGastos(); toast('✓ Sistema de riego agregado');
 }
 
 function delSistemaRiego(idx) {
