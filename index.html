@@ -3960,11 +3960,20 @@ function renderGastos() {
       </div>` : '';
 
     // ── Config sistemas de riego ──
+    const tablaChecksRiego = S.predios.map((p,pi)=>
+      p.tablas.map((t,ti)=>`<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer">
+        <input type="checkbox" id="new-riego-t-${pi}_${ti}" style="accent-color:#2a7a3c"/> ${p.emoji}${t.nombre}
+      </label>`).join('')
+    ).join('<span style="margin:0 6px;color:#ccc">|</span>');
     const configRiego = isAdmin ? `
-      <div style="padding:8px 12px;background:var(--cream);border:1px solid var(--border);margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">💧 Agregar sistema de riego:</span>
-        <input type="text" id="rep-riego-nombre" placeholder="Ej: Sistema Goteo T1-T3..." style="padding:5px;width:220px;font-size:13px"/>
-        <button class="btn btn-s" onclick="addSistemaRiego()">+ Agregar</button>
+      <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">💧 Agregar sistema de riego:</span>
+          <input type="text" id="rep-riego-nombre" placeholder="Ej: Sistema Goteo T1-T3..." style="padding:5px;width:220px;font-size:13px"/>
+          <button class="btn btn-s" onclick="addSistemaRiego()">+ Agregar</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Tablas que abarca:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${tablaChecksRiego}</div>
       </div>` : '';
 
     // ── Norias rows ──
@@ -4012,13 +4021,9 @@ function renderGastos() {
       const tablasLabel = tablasAsig.length
         ? S.predios.flatMap((p,pi)=>p.tablas.map((t,ti)=>tablasAsig.includes(`${pi}_${ti}`)?p.emoji+t.nombre:null).filter(Boolean)).join(', ')
         : '<span style="color:#aaa">Sin tablas</span>';
-      const tablasSelectorDiv = isAdmin ? buildTablasRiegoSelector(eq.id, tablasAsig) : '';
       return `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
-        <td style="padding:6px 10px;font-size:11px">
-          <div>${tablasLabel}</div>
-          ${tablasSelectorDiv}
-        </td>
+        <td style="padding:6px 10px;font-size:11px;color:var(--muted)">${tablasLabel}</td>
         <td style="padding:6px 8px;text-align:right">
           <input type="number" min="0" step="1" placeholder="$" value="${val}"
             style="width:120px;padding:5px;text-align:right;border:1px solid var(--border);font-size:13px;font-family:'DM Mono',monospace"
@@ -4358,6 +4363,11 @@ function addEquipoAplic() {
   S.equiposAplic.push({id:uid(), nombre, tipo});
   if(document.getElementById('aplic-eq-nombre')) document.getElementById('aplic-eq-nombre').value='';
   save(); renderGastos(); toast('✓ Equipo agregado');
+}
+
+function showTablasRiego(eqId) {
+  const div = document.getElementById('tablas-riego-'+eqId);
+  if(div) div.style.display = div.style.display==='none' ? 'block' : 'none';
 }
 
 function buildTablasRiegoSelector(eqId, asig) {
