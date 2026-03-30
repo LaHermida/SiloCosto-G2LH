@@ -777,8 +777,9 @@ function calcConsumosTabla(pi, cn, ti) {
   return (td.consumos||[]).reduce((s,c)=>s+(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0),0);
 }
 
-function calcTotalTabla(pi, cn, ti) {
-  return calcDepTabla(pi,cn,ti,curAnioRep) + calcConsumosTabla(pi,cn,ti) + calcGastosGeneralesTabla(pi,cn,ti);
+function calcTotalTabla(pi, cn, ti, anio) {
+  const yr = anio || curAnioRep || curAnioReg || new Date().getFullYear();
+  return calcDepTabla(pi,cn,ti,yr) + calcConsumosTabla(pi,cn,ti) + calcGastosGeneralesTabla(pi,cn,ti,yr);
 }
 
 function calcCPK(pi, cn, ti) {
@@ -2122,7 +2123,7 @@ function renderRepContent() {
       // Gastos generales proportional to ha
       const totHaAll = p.tablas.reduce((s,t,ti)=>{ const td=getTablaData(pi,cn,ti); return td.sinSiembra?s:s+(parseFloat(td.haSembradas)||t.ha||0); },0);
       const pctHa = totHaAll ? ha/totHaAll : 0;
-      (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===cn&&(g.prediosIdx||[]).includes(pi)).forEach(g=>{
+      (S.gastosGenerales||[]).filter(g=>((getGastoCosecha(g)===cn&&(g.anio===curAnioRep||g.anio===gastosGridAnio||g.anio===curAnioReg))&&(g.anio===curAnioRep||g.anio===curAnioReg)&&(g.prediosIdx||[]).includes(pi))).forEach(g=>{
         const monto = (parseFloat(g.monto)||0)*pctHa;
         if(catT[g.categoria]!==undefined) catT[g.categoria]+=monto;
         else catT['Otro']+=monto;
@@ -2430,7 +2431,7 @@ function printReportePredio(pi, cn) {
     });
   }
   // Sum gastos generales for this predio+cosecha
-  (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===cn&&(g.prediosIdx||[]).includes(pi)).forEach(g=>{
+  (S.gastosGenerales||[]).filter(g=>((getGastoCosecha(g)===cn&&(g.anio===curAnioRep||g.anio===gastosGridAnio||g.anio===curAnioReg))&&(g.anio===curAnioRep||g.anio===curAnioReg)&&(g.prediosIdx||[]).includes(pi))).forEach(g=>{
     const cat = g.categoria||'Otro';
     if(catTotals[cat]!==undefined) catTotals[cat]+=parseFloat(g.monto)||0;
     else catTotals['Otro']+=parseFloat(g.monto)||0;
@@ -2556,6 +2557,11 @@ function getHaSembradasPredio(pi, cn) {
 }
 
 // Get cosecha from gasto (supports both new cosecha field and legacy mes field)
+function gastosDelCiclo(cn, anio) {
+  // Retorna gastos filtrados por ciclo Y año — siempre usar esto, nunca solo por ciclo
+  return (S.gastosGenerales||[]).filter(g => getGastoCosecha(g)===cn && (g.anio===anio||(!g.anio&&anio===new Date().getFullYear())));
+}
+
 function getGastoCosecha(gasto) {
   if(gasto.cosecha) return parseInt(gasto.cosecha);
   if(gasto.mes) return getCosechaFromMes(gasto.mes);
@@ -2587,12 +2593,13 @@ function getGastoParaTabla(gasto, pi, ti) {
 }
 
 // Sum all gastos generales for a predio+cosecha+tabla
-function calcGastosGeneralesTabla(pi, cn, ti) {
+function calcGastosGeneralesTabla(pi, cn, ti, anio) {
   const tdCheck = getTablaData(pi,cn,ti);
   if(tdCheck.sinSiembra) return 0;
   if(!S.gastosGenerales) return 0;
+  const yr = anio || curAnioRep || curAnioReg || new Date().getFullYear();
   return S.gastosGenerales
-    .filter(g => getGastoCosecha(g) === cn)
+    .filter(g => getGastoCosecha(g) === cn && g.anio === yr)
     .reduce((s,g) => s + getGastoParaTabla(g, pi, ti), 0);
 }
 
@@ -2727,7 +2734,7 @@ function renderGastos() {
 
   // Summary by cosecha
   const resumen = {1:0, 2:0, 3:0};
-  S.gastosGenerales.forEach(g => { resumen[getGastoCosecha(g)] += parseFloat(g.monto)||0; });
+  S.gastosGenerales.filter(g=>g.anio===gastosGridAnio).forEach(g => { resumen[getGastoCosecha(g)] += parseFloat(g.monto)||0; });
 
   // Filter tabs by role
   const visibleTabs = GASTOS_TABS.filter(t => isAdmin || t.rol === 'colaborador');
@@ -2823,7 +2830,7 @@ function renderGastos() {
       if(tab==='ensilada') return cats.includes(g.categoria) && (g.actividad==='Ensilada'||g.categoria==='Ensilada'||g.categoria==='Materiales de ensilada'||g.categoria==='Camiones'||(['Nómina y gastos admin'].includes(g.categoria)&&g.actividad==='Ensilada'));
       if(tab==='nomina') return g.categoria==='Nómina y gastos admin' && g.actividad!=='Ensilada';
       return cats.includes(g.categoria);
-    }).filter(g=>getGastoCosecha(g)===selectedCn);
+    }).filter(g=>(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio));
   }
 
   if(gastosTab === 'tractores') {
@@ -2889,7 +2896,7 @@ function renderGastos() {
         }).join('');
         const lts = gastosGridDraft[`d_${eq.id}_${mesActual}`]||'';
         const montoCalc = lts && precioDieselGlobal ? fmt(parseFloat(lts)*precioDieselGlobal*(pct1Global/100)) : '—';
-        const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&getGastoMes(g)===mesActual&&getGastoCosecha(g)===selectedCn);
+        const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&getGastoMes(g)===mesActual&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio));
         const acumLts=histMes.reduce((s,g)=>s+(parseFloat(g.litros||0)),0);
         const acumMonto=histMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
         return `<tr style="border-bottom:1px solid var(--border)">
@@ -2917,7 +2924,7 @@ function renderGastos() {
         }).join('');
         const val = gastosGridDraft[`r_${eq.id}_${mesActual}`]||'';
         const desc = gastosGridDraft[`r_desc_${eq.id}_${mesActual}`]||'';
-        const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&getGastoMes(g)===mesActual&&getGastoCosecha(g)===selectedCn);
+        const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&getGastoMes(g)===mesActual&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio));
         const acum=histMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
         return `<tr style="border-bottom:1px solid var(--border)">
           <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
@@ -2940,26 +2947,26 @@ function renderGastos() {
       const mesesHistHdr = mesesHist.map(m=>`<th style="padding:6px 10px;text-align:right;min-width:90px">${MESES_G[m-1].slice(0,3)}</th>`).join('');
       const dieselHistRows = tractoresSolo.map(eq=>{
         const celdas = mesesHist.map(m=>{
-          const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&getGastoMes(g)===m&&getGastoCosecha(g)===selectedCn);
+          const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&getGastoMes(g)===m&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio));
           const lts=hist.reduce((s,g)=>s+(parseFloat(g.litros||0)),0);
           const monto=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
           const delBtn=isAdmin&&lts?`<button class="del-gasto-mes" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Diesel" data-mes="${m}" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:9px;padding:0;margin-left:4px">✕</button>`:'';
           return `<td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:11px">${lts?`<div style="color:var(--muted)">${lts}L</div><div style="color:var(--amber)">${fmt(monto)}</div>${delBtn}`:'<span style="color:var(--muted)">—</span>'}</td>`;
         }).join('');
-        const totLts=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&getGastoCosecha(g)===selectedCn).reduce((s,g)=>s+(parseFloat(g.litros||0)),0);
-        const totMonto=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&getGastoCosecha(g)===selectedCn).reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        const totLts=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio)).reduce((s,g)=>s+(parseFloat(g.litros||0)),0);
+        const totMonto=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Diesel'&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio)).reduce((s,g)=>s+parseFloat(g.monto||0),0);
         const delCiclo=isAdmin&&totLts?`<button class="del-gasto-ciclo" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Diesel" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:10px;padding:0;margin-left:4px">✕ C${selectedCn}</button>`:'';
         return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>${celdas}<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);font-weight:600">${totLts?totLts+'L':'—'}</td><td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);font-weight:600;white-space:nowrap">${totMonto?fmt(totMonto):'—'} ${delCiclo}</td></tr>`;
       }).join('');
       const repHistRows = todos.map(eq=>{
         const celdas = mesesHist.map(m=>{
-          const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&getGastoMes(g)===m&&getGastoCosecha(g)===selectedCn);
+          const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&getGastoMes(g)===m&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio));
           const monto=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
           const descs=hist.map(g=>g.descripcion).filter(Boolean).join(', ');
           const delBtn=isAdmin&&monto?`<button class="del-gasto-mes" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Maquinaria" data-mes="${m}" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:9px;padding:0;margin-left:4px">✕</button>`:'';
           return `<td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:11px">${monto?`<div style="color:var(--amber)">${fmt(monto)}</div>${descs?`<div style="font-size:9px;color:var(--muted)">${descs}</div>`:''} ${delBtn}`:'<span style="color:var(--muted)">—</span>'}</td>`;
         }).join('');
-        const tot=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&getGastoCosecha(g)===selectedCn).reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        const tot=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Maquinaria'&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio)).reduce((s,g)=>s+parseFloat(g.monto||0),0);
         const delCiclo=isAdmin&&tot?`<button class="del-gasto-ciclo" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Maquinaria" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:10px;padding:0;margin-left:4px">✕ C${selectedCn}</button>`:'';
         return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>${celdas}<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);font-weight:600;white-space:nowrap">${tot?fmt(tot):'—'} ${delCiclo}</td></tr>`;
       }).join('');
@@ -3040,7 +3047,7 @@ function renderGastos() {
           </label>`;
         }).join('');
         const val = gastosGridDraft[`luz_${eq.id}_${mesActual}`]||'';
-        const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Luz'&&getGastoMes(g)===mesActual&&getGastoCosecha(g)===selectedCn);
+        const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Luz'&&getGastoMes(g)===mesActual&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio));
         const acum=histMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
         return `<tr style="border-bottom:1px solid var(--border)">
           <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
@@ -3058,12 +3065,12 @@ function renderGastos() {
       const mesesHdr = mesesHist.map(m=>`<th style="padding:6px 10px;text-align:right;min-width:90px">${MESES_G[m-1].slice(0,3)}</th>`).join('');
       const histRows = S.sistemasLuz.map(eq=>{
         const celdas = mesesHist.map(m=>{
-          const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Luz'&&getGastoMes(g)===m&&getGastoCosecha(g)===selectedCn);
+          const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Luz'&&getGastoMes(g)===m&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio));
           const monto=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
           const delBtn=isAdmin&&monto?`<button class="del-gasto-mes" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Luz" data-mes="${m}" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:9px;padding:0;margin-left:4px">✕</button>`:'';
           return `<td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:11px">${monto?`<div style="color:var(--amber)">${fmt(monto)}</div>${delBtn}`:'<span style="color:var(--muted)">—</span>'}</td>`;
         }).join('');
-        const tot=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Luz'&&getGastoCosecha(g)===selectedCn).reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        const tot=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Luz'&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio)).reduce((s,g)=>s+parseFloat(g.monto||0),0);
         const delCiclo=isAdmin&&tot?`<button class="del-gasto-ciclo" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Luz" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:10px;padding:0;margin-left:4px">✕ C${selectedCn}</button>`:'';
         return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>${celdas}<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);font-weight:600;white-space:nowrap">${tot?fmt(tot):'—'} ${delCiclo}</td></tr>`;
       }).join('');
@@ -3145,7 +3152,7 @@ function renderGastos() {
       const dDiesel = gastosGridDraft[`aplcd_${eq.id}`] || '';
       const dServ   = gastosGridDraft[`aplcs_${eq.id}`] || '';
       const dRep    = gastosGridDraft[`aplcr_${eq.id}`] || '';
-      const hist = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.equipo===eq.nombre&&['Diesel Aplicaciones','Maquinaria Aplicaciones'].includes(g.categoria)&&g.anio===(gastosGridAnio));
+      const hist = (S.gastosGenerales||[]).filter(g=>(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio)&&g.equipo===eq.nombre&&['Diesel Aplicaciones','Maquinaria Aplicaciones'].includes(g.categoria)&&g.anio===(gastosGridAnio));
       const totEq = hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
       return `<tr>
         <td style="padding:7px 12px;font-weight:600">${eq.nombre}</td>
@@ -3215,7 +3222,7 @@ function renderGastos() {
     }).join('');
 
     // ── Historial ──
-    const aplicHist = (S.gastosGenerales||[]).filter(g=>['Diesel Aplicaciones','Maquinaria Aplicaciones','Nómina Aplicaciones','Maquila Aplicaciones'].includes(g.categoria)&&getGastoCosecha(g)===selectedCn);
+    const aplicHist = (S.gastosGenerales||[]).filter(g=>['Diesel Aplicaciones','Maquinaria Aplicaciones','Nómina Aplicaciones','Maquila Aplicaciones'].includes(g.categoria)&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio));
     const totAplic = aplicHist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
     const histAplicRows = aplicHist.map(g=>{
       const gi = S.gastosGenerales.indexOf(g);
@@ -3388,7 +3395,7 @@ function renderGastos() {
     }).join('');
 
     // Totales acumulados ensilada
-    const histEnsilada = S.gastosGenerales.filter(g=>getGastoCosecha(g)===selectedCn&&
+    const histEnsilada = S.gastosGenerales.filter(g=>(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio)&&
       (g.categoria==='Ensilada'||g.categoria==='Materiales de ensilada'||g.categoria==='Camiones'||(g.categoria==='Nómina y gastos admin'&&g.actividad==='Ensilada')));
     const totalAcum = histEnsilada.reduce((s,g)=>s+parseFloat(g.monto||0),0);
     const histRows = histEnsilada.map((g,_i)=>{
@@ -3429,7 +3436,7 @@ function renderGastos() {
       const dDiesel = gastosGridDraft[`ens_d_${eq.id}`] || '';
       const dServ   = gastosGridDraft[`ens_s_${eq.id}`] || '';
       const dRep    = gastosGridDraft[`ens_r_${eq.id}`] || '';
-      const histEq  = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.equipo===eq.nombre&&['Diesel Ensilada','Maquinaria Ensilada'].includes(g.categoria));
+      const histEq  = (S.gastosGenerales||[]).filter(g=>(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio)&&g.equipo===eq.nombre&&['Diesel Ensilada','Maquinaria Ensilada'].includes(g.categoria));
       const totEq   = histEq.reduce((s,g)=>s+parseFloat(g.monto||0),0);
       return `<tr>
         <td style="padding:7px 12px;font-weight:600">${eq.nombre}</td>
@@ -3573,7 +3580,7 @@ function renderGastos() {
       const dDiesel = gastosGridDraft[`empdiesel_${eq.id}`] || '';
       const dServ   = gastosGridDraft[`empserv_${eq.id}`] || '';
       const dRep    = gastosGridDraft[`emprep_${eq.id}`] || '';
-      const hist = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.equipo===eq.nombre&&['Diesel Empaque','Maquinaria Empaque'].includes(g.categoria));
+      const hist = (S.gastosGenerales||[]).filter(g=>(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio)&&g.equipo===eq.nombre&&['Diesel Empaque','Maquinaria Empaque'].includes(g.categoria));
       const totEq = hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
       return `<tr>
         <td style="padding:7px 12px;font-weight:600">${eq.nombre}</td>
@@ -3632,7 +3639,7 @@ function renderGastos() {
       ${camEmpSection}
 
       ${ (()=>{
-        const histEmp = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&['Diesel Empaque','Maquinaria Empaque','Empacado','Camiones Empaque','Nómina Empaque'].includes(g.categoria));
+        const histEmp = (S.gastosGenerales||[]).filter(g=>(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio)&&['Diesel Empaque','Maquinaria Empaque','Empacado','Camiones Empaque','Nómina Empaque'].includes(g.categoria));
         if(!histEmp.length) return '';
         return gridHistorial(
           'Historial Empaque C'+selectedCn+' — Concepto × Predio',
@@ -3704,7 +3711,7 @@ function renderGastos() {
       const dDiesel = gastosGridDraft[`cortd_${eq.id}`] || '';
       const dServ   = gastosGridDraft[`corts_${eq.id}`] || '';
       const dRep    = gastosGridDraft[`cortr_${eq.id}`] || '';
-      const hist = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&g.equipo===eq.nombre&&['Diesel Corte','Maquinaria Corte'].includes(g.categoria));
+      const hist = (S.gastosGenerales||[]).filter(g=>(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio)&&g.equipo===eq.nombre&&['Diesel Corte','Maquinaria Corte'].includes(g.categoria));
       const totEq = hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
       return `<tr>
         <td style="padding:7px 12px;font-weight:600">${eq.nombre}</td>
@@ -3755,7 +3762,7 @@ function renderGastos() {
       ${maquilaCorteSection}
 
       ${(()=>{
-        const histCorte = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&
+        const histCorte = (S.gastosGenerales||[]).filter(g=>(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio)&&
           ['Diesel Corte','Maquinaria Corte','Maquila Corte','Nómina Corte'].includes(g.categoria));
         const totCorte = histCorte.reduce((s,g)=>s+parseFloat(g.monto||0),0);
         if(!totCorte) return '';
@@ -3814,7 +3821,7 @@ function renderGastos() {
       const col = pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
       const labor = gastosGridDraft[`nom_labor_${pi}_${mesActual}`]||'';
       const admin = gastosGridDraft[`nom_admin_${pi}_${mesActual}`]||'';
-      const histMes=(S.gastosGenerales||[]).filter(g=>g.prediosIdx&&g.prediosIdx.includes(pi)&&g.categoria==='Nómina'&&getGastoMes(g)===mesActual&&getGastoCosecha(g)===selectedCn);
+      const histMes=(S.gastosGenerales||[]).filter(g=>g.prediosIdx&&g.prediosIdx.includes(pi)&&g.categoria==='Nómina'&&getGastoMes(g)===mesActual&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio));
       const acum=histMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
       return `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:8px 12px;font-weight:600;color:${col}">${p.emoji} ${p.nombre}</td>
@@ -3836,12 +3843,12 @@ function renderGastos() {
     const histRows = S.predios.map((p,pi)=>{
       const col = pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
       const celdas = mesesHist.map(m=>{
-        const hist=(S.gastosGenerales||[]).filter(g=>g.prediosIdx&&g.prediosIdx.includes(pi)&&g.categoria==='Nómina'&&getGastoMes(g)===m&&getGastoCosecha(g)===selectedCn);
+        const hist=(S.gastosGenerales||[]).filter(g=>g.prediosIdx&&g.prediosIdx.includes(pi)&&g.categoria==='Nómina'&&getGastoMes(g)===m&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio));
         const monto=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
         const delBtn=isAdmin&&monto?`<button class="del-gasto-mes-pi" data-pi="${pi}" data-mes="${m}" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:9px;padding:0;margin-left:4px">✕</button>`:'';
         return `<td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:11px">${monto?`<div style="color:var(--amber)">${fmt(monto)}</div>${delBtn}`:'<span style="color:var(--muted)">—</span>'}</td>`;
       }).join('');
-      const tot=(S.gastosGenerales||[]).filter(g=>g.prediosIdx&&g.prediosIdx.includes(pi)&&g.categoria==='Nómina'&&getGastoCosecha(g)===selectedCn).reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      const tot=(S.gastosGenerales||[]).filter(g=>g.prediosIdx&&g.prediosIdx.includes(pi)&&g.categoria==='Nómina'&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio)).reduce((s,g)=>s+parseFloat(g.monto||0),0);
       const delCiclo=isAdmin&&tot?`<button class="del-gasto-ciclo-pi" data-pi="${pi}" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:10px;padding:0;margin-left:4px">✕ C${selectedCn}</button>`:'';
       return `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:6px 12px;font-weight:600;color:${col};white-space:nowrap">${p.emoji} ${p.nombre}</td>
@@ -3912,7 +3919,7 @@ function renderGastos() {
         }).join('');
         const val = gastosGridDraft[`rep_${eq.id}_${mesActual}`]||'';
         const desc = gastosGridDraft[`rep_desc_${eq.id}_${mesActual}`]||'';
-        const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Noria'&&getGastoMes(g)===mesActual&&getGastoCosecha(g)===selectedCn);
+        const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Noria'&&getGastoMes(g)===mesActual&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio));
         const acum=histMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
         return `<tr style="border-bottom:1px solid var(--border)">
           <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
@@ -3934,13 +3941,13 @@ function renderGastos() {
       const mesesHdr = mesesHist.map(m=>`<th style="padding:6px 10px;text-align:right;min-width:90px">${MESES_G[m-1].slice(0,3)}</th>`).join('');
       const histRows = S.sistemasLuz.map(eq=>{
         const celdas = mesesHist.map(m=>{
-          const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Noria'&&getGastoMes(g)===m&&getGastoCosecha(g)===selectedCn);
+          const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Noria'&&getGastoMes(g)===m&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio));
           const monto=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
           const descs=hist.map(g=>g.descripcion).filter(Boolean).join(', ');
           const delBtn=isAdmin&&monto?`<button class="del-gasto-mes" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Reparaciones Noria" data-mes="${m}" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:9px;padding:0;margin-left:4px">✕</button>`:'';
           return `<td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:11px">${monto?`<div style="color:var(--amber)">${fmt(monto)}</div>${descs?`<div style="font-size:9px;color:var(--muted)">${descs}</div>`:''} ${delBtn}`:'<span style="color:var(--muted)">—</span>'}</td>`;
         }).join('');
-        const tot=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Noria'&&getGastoCosecha(g)===selectedCn).reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        const tot=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Noria'&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio)).reduce((s,g)=>s+parseFloat(g.monto||0),0);
         const delCiclo=isAdmin&&tot?`<button class="del-gasto-ciclo" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Reparaciones Noria" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:10px;padding:0;margin-left:4px">✕ C${selectedCn}</button>`:'';
         return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>${celdas}<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);font-weight:600;white-space:nowrap">${tot?fmt(tot):'—'} ${delCiclo}</td></tr>`;
       }).join('');
@@ -4106,7 +4113,7 @@ function renderGastos() {
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:130px;padding:5px 8px;text-align:right;border:1px solid #7ec89a;font-size:13px" onchange="gastosGridDraft['otro_${ci}']=this.value"/></td>
       </tr>`;
     }).join('');
-    const histOtro = (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===selectedCn&&['Sirre y Desmonte','Otro'].includes(g.categoria));
+    const histOtro = (S.gastosGenerales||[]).filter(g=>(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio)&&['Sirre y Desmonte','Otro'].includes(g.categoria));
     const totOtro = histOtro.reduce((s,g)=>s+parseFloat(g.monto||0),0);
     const acumRowsOtro = histOtro.map(g=>`<tr style="font-size:12px">
       <td style="padding:5px 10px">${g.categoria}${g.descripcion?' — '+g.descripcion:''}</td>
