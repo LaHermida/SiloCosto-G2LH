@@ -304,19 +304,14 @@ tr:hover td { background:var(--cream); }
           <label>Unidad</label>
           <input type="text" id="art-unidad" placeholder="kg, L, hr..."/>
         </div>
-        <div class="field">
-          <label>Año precio</label>
-          <input type="number" id="art-anio" placeholder="2025" min="2020" max="2035" value="2025"/>
-        </div>
-        <div class="field">
-          <label>Ciclo</label>
-          <select id="art-ciclo">
-            <option value="todos">Todos</option>
-            <option value="1">C1 (Dic-Feb)</option>
-            <option value="2">C2 (Mar-Jul)</option>
-            <option value="3">C3 (Ago-Nov)</option>
-          </select>
-        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+        <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</span>
+        <select id="art-anio" style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid var(--border)">
+          ${Array.from({length:13},(_,i)=>2020+i).map(y=>`<option value="${y}" ${y===new Date().getFullYear()?'selected':''}>${y}</option>`).join('')}
+        </select>
+        ${[1,2,3].map(c=>`<button type="button" id="art-ciclo-btn-${c}" class="ctab ${c===1?'active':''}" style="padding:3px 10px;font-size:12px" onclick="setArtCiclo(${c})">C${c}</button>`).join('')}
+        <input type="hidden" id="art-ciclo" value="1"/>
       </div>
       <div class="btn-row">
         <button class="btn btn-p" onclick="addArticulo()">Guardar artículo</button>
@@ -1133,6 +1128,14 @@ function importarArticulosExcel(input) {
   reader.readAsArrayBuffer(file);
 }
 
+function setArtCiclo(cn) {
+  document.getElementById('art-ciclo').value = cn;
+  [1,2,3].forEach(c=>{
+    const btn = document.getElementById('art-ciclo-btn-'+c);
+    if(btn) btn.className = 'ctab'+(c===cn?' active':'');
+  });
+}
+
 function addArticulo() {
   const nombre = document.getElementById('art-nombre').value.trim();
   const catBase = document.getElementById('art-cat').value;
@@ -1142,7 +1145,7 @@ function addArticulo() {
   const precio = parseFloat(document.getElementById('art-precio').value);
   const unidad = document.getElementById('art-unidad').value.trim();
   const anio = parseInt(document.getElementById('art-anio')?.value) || new Date().getFullYear();
-  const ciclo = document.getElementById('art-ciclo')?.value || 'todos';
+  const ciclo = document.getElementById('art-ciclo')?.value || '1';
   if(!nombre||!precio||!unidad) { toast('⚠️ Completa todos los campos',true); return; }
   const ex = S.articulos.find(a=>a.nombre.toLowerCase()===nombre.toLowerCase());
   if(ex) {
