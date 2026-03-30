@@ -5183,6 +5183,8 @@ function delGasto(i) {
 // ══════════════════════════════════════════════
 let curArtTab = 'catalogo';
 let curInvPredi = 0;
+let curInvAnio = new Date().getFullYear();
+let curInvCn = 1;
 
 function setArtTab(tab) {
   curArtTab = tab;
@@ -5202,28 +5204,34 @@ function renderInv() {
   const predioTabs = S.predios.map((p,pi)=>
     `<button class="ptab ${pi===curInvPredi?'active':''}" onclick="curInvPredi=${pi};renderInv()">${p.emoji} ${p.nombre}</button>`
   ).join('');
+  const anioOpts = Array.from({length:13},(_,i)=>2020+i).map(y=>`<option value="${y}"${y===curInvAnio?' selected':''}>${y}</option>`).join('');
+  const cnBtns = [1,2,3].map(c=>`<button class="ctab${c===curInvCn?' active':''}" style="padding:3px 10px;font-size:12px" onclick="curInvCn=${c};renderInv()">C${c}</button>`).join('');
+  const selectorBar = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</span>
+    <select style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid var(--border)" onchange="curInvAnio=parseInt(this.value);renderInv()">${anioOpts}</select>
+    ${cnBtns}
+    <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--green);font-weight:700;margin-left:8px">${curInvAnio} · C${curInvCn}</span>
+  </div>`;
 
   // Stock calculation per article for this predio
   const stockPorArt = {};
   artsInv.forEach(a=>{ stockPorArt[a.id]={entradas:0,salidasAuto:0,salidasMan:0,art:a}; });
 
-  // Entradas
-  (S.inventario||[]).filter(m=>m.tipo==='entrada'&&m.predioIdx===curInvPredi).forEach(m=>{
+  // Entradas — filtrar por ciclo
+  (S.inventario||[]).filter(m=>m.tipo==='entrada'&&m.predioIdx===curInvPredi&&m.cn===curInvCn&&m.anio===curInvAnio).forEach(m=>{
     if(stockPorArt[m.articuloId]) stockPorArt[m.articuloId].entradas += parseFloat(m.cantidad)||0;
   });
 
-  // Salidas automáticas (consumos registrados en tablas)
+  // Salidas automáticas — solo del ciclo seleccionado
   S.predios[curInvPredi].tablas.forEach((_,ti)=>{
-    [1,2,3].forEach(cn=>{
-      const td = getTablaData(curInvPredi,cn,ti);
-      (td.consumos||[]).forEach(c=>{
+    const td = getTablaData(curInvPredi,curInvCn,ti);
+      (td.consumos||[]).filter(c=>!c.anio||c.anio===curInvAnio).forEach(c=>{
         if(stockPorArt[c.articuloId]) stockPorArt[c.articuloId].salidasAuto += parseFloat(c.cantidad)||0;
-      });
     });
   });
 
-  // Salidas manuales
-  (S.inventario||[]).filter(m=>m.tipo==='salida'&&m.predioIdx===curInvPredi).forEach(m=>{
+  // Salidas manuales — filtrar por ciclo
+  (S.inventario||[]).filter(m=>m.tipo==='salida'&&m.predioIdx===curInvPredi&&m.cn===curInvCn&&m.anio===curInvAnio).forEach(m=>{
     if(stockPorArt[m.articuloId]) stockPorArt[m.articuloId].salidasMan += parseFloat(m.cantidad)||0;
   });
 
@@ -5260,7 +5268,8 @@ function renderInv() {
   }).join('');
 
   document.getElementById('inv-content').innerHTML = `
-    <div style="display:flex;gap:4px;margin-bottom:16px">${predioTabs}</div>
+    <div style="display:flex;gap:4px;margin-bottom:12px">${predioTabs}</div>
+    ${selectorBar}
 
     <!-- ENTRADA -->
     <div class="card" style="margin-bottom:16px">
@@ -5342,7 +5351,7 @@ function addMovInv(tipo) {
     const prov = document.getElementById('inv-prov').value.trim();
     const factura = document.getElementById('inv-factura').value.trim();
     if(!artId||!cant||cant<=0) { toast('⚠️ Selecciona artículo y cantidad',true); return; }
-    S.inventario.push({id:uid(),tipo:'entrada',predioIdx:curInvPredi,articuloId:artId,cantidad:cant,fecha,proveedor:prov,factura});
+    S.inventario.push({id:uid(),tipo:'entrada',predioIdx:curInvPredi,articuloId:artId,cantidad:cant,fecha,proveedor:prov,factura,anio:curInvAnio,cn:curInvCn});
     document.getElementById('inv-cant').value='';
     document.getElementById('inv-prov').value='';
     document.getElementById('inv-factura').value='';
@@ -5353,7 +5362,7 @@ function addMovInv(tipo) {
     const motivo = document.getElementById('inv-sal-motivo').value;
     const ref = document.getElementById('inv-sal-ref').value.trim();
     if(!artId||!cant||cant<=0) { toast('⚠️ Selecciona artículo y cantidad',true); return; }
-    S.inventario.push({id:uid(),tipo:'salida',predioIdx:curInvPredi,articuloId:artId,cantidad:cant,fecha,motivo,factura:ref});
+    S.inventario.push({id:uid(),tipo:'salida',predioIdx:curInvPredi,articuloId:artId,cantidad:cant,fecha,motivo,factura:ref,anio:curInvAnio,cn:curInvCn});
     document.getElementById('inv-sal-cant').value='';
     document.getElementById('inv-sal-ref').value='';
   }
@@ -5457,7 +5466,7 @@ function renderGridContent() {
         const cells = p.tablas.map((t,ti)=>{
           const td = getTablaData(pi,cn,ti);
           const totMonto = (td.consumos||[]).filter(c=>c.articuloId===art.id).reduce((s,c)=>s+parseFloat(c.cantidad||0)*parseFloat(c.precioSnapshot||0),0);
-          const totCant  = (td.consumos||[]).filter(c=>c.articuloId===art.id).reduce((s,c)=>s+parseFloat(c.cantidad||0),0);
+          const totCant  = (td.consumos||[]).filter(c=>c.articuloId===art.id&&(!c.anio||c.anio===curAnioReg)).reduce((s,c)=>s+parseFloat(c.cantidad||0),0);
           artTotal += totMonto;
           return `<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px">${totMonto?fmt(totMonto):'—'}<br><span style="font-size:10px;color:var(--muted)">${totCant?fmtN(totCant,2)+' '+art.unidad:''}</span></td>`;
         }).join('');
@@ -5469,7 +5478,7 @@ function renderGridContent() {
       const footCells = p.tablas.map((t,ti)=>{
         const tot = artsCultivo.reduce((s,art)=>{
           const td = getTablaData(pi,cn,ti);
-          return s+(td.consumos||[]).filter(c=>c.articuloId===art.id).reduce((ss,c)=>ss+parseFloat(c.cantidad||0)*parseFloat(c.precioSnapshot||0),0);
+          return s+(td.consumos||[]).filter(c=>c.articuloId===art.id&&(!c.anio||c.anio===curAnioReg)).reduce((ss,c)=>ss+parseFloat(c.cantidad||0)*parseFloat(c.precioSnapshot||0),0);
         },0);
         return `<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;font-weight:700">${tot?fmt(tot):'—'}</td>`;
       }).join('');
