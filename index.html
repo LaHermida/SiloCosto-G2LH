@@ -3918,12 +3918,12 @@ function renderGastos() {
           <th style="padding:6px 10px;text-align:right">Total $</th>
         </tr></thead><tbody>${histRows}</tbody></table></div>`
   } else if(gastosTab === 'reparaciones') {
-    if(!S.sistemasLuz) S.sistemasLuz = [];
+    if(!S.sistemasRiego) S.sistemasRiego = [];
     const configEq = isAdmin ? `
       <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar noria/sistema:</span>
-        <input type="text" id="luz-nombre" placeholder="Ej: Noria 212, Sistema LG..." style="padding:5px;width:200px;font-size:13px"/>
-        <button class="btn btn-s" onclick="addSistemaLuz()">+ Agregar</button>
+        <input type="text" id="rep-eq-nombre" placeholder="Ej: Noria 212, Sistema LG..." style="padding:5px;width:200px;font-size:13px"/>
+        <button class="btn btn-s" onclick="addSistemaRiego()">+ Agregar</button>
       </div>` : '';
     const mesActual = parseInt(gastosGridDraft['rep_mes'] || getMesesCn(selectedCn)[0]);
     const mesOpts = [1,2,3,4,5,6,7,8,9,10,11,12].map(m=>
@@ -3955,10 +3955,10 @@ function renderGastos() {
         </div>
         <span style="font-size:11px;color:var(--muted);margin-left:auto">C${selectedCn} · ${gastosGridAnio}</span>
       </div>`;
-    if(!S.sistemasLuz.length) {
+    if(!S.sistemasRiego.length) {
       tabContent = `${configEq}${sharedBar}<div class="empty"><div class="empty-icon">🔧</div><div>Sin norias/sistemas. Agrégalos arriba.</div></div>`;
     } else {
-      const repRows = S.sistemasLuz.map(eq=>{
+      const repRows = S.sistemasRiego.map(eq=>{
         const predioChecks = S.predios.map((p,pi)=>{
           const col=pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
           const chk = gastosGridDraft[`rep_pi_${eq.id}_${pi}`]!==undefined
@@ -3991,7 +3991,7 @@ function renderGastos() {
       }).join('');
       const mesesHist = selectedCn===1?[10,11,12,1,2,3]:selectedCn===2?[2,3,4,5,6,7]:[6,7,8,9,10,11,12];
       const mesesHdr = mesesHist.map(m=>`<th style="padding:6px 10px;text-align:right;min-width:90px">${MESES_G[m-1].slice(0,3)}</th>`).join('');
-      const histRows = S.sistemasLuz.map(eq=>{
+      const histRows = S.sistemasRiego.map(eq=>{
         const celdas = mesesHist.map(m=>{
           const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Noria'&&getGastoMes(g)===m&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio));
           const monto=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
@@ -4278,6 +4278,22 @@ function addEquipoAplic() {
   S.equiposAplic.push({id:uid(), nombre, tipo});
   if(document.getElementById('aplic-eq-nombre')) document.getElementById('aplic-eq-nombre').value='';
   save(); renderGastos(); toast('✓ Equipo agregado');
+}
+
+function addSistemaRiego() {
+  const nombre = document.getElementById('rep-eq-nombre')?.value.trim();
+  if(!nombre) { toast('⚠️ Ingresa el nombre',true); return; }
+  if(!S.sistemasRiego) S.sistemasRiego = [];
+  if(S.sistemasRiego.find(t=>t.nombre===nombre)) { toast('⚠️ Ya existe',true); return; }
+  S.sistemasRiego.push({id:uid(), nombre});
+  if(document.getElementById('rep-eq-nombre')) document.getElementById('rep-eq-nombre').value='';
+  save(); renderGastos(); toast('✓ Sistema agregado');
+}
+
+function delSistemaRiego(id) {
+  if(!confirm('¿Eliminar este sistema?')) return;
+  S.sistemasRiego = (S.sistemasRiego||[]).filter(t=>t.id!==id);
+  save(); renderGastos(); toast('✓ Eliminado');
 }
 
 function addSistemaLuz() {
@@ -4846,7 +4862,7 @@ function capturarGastos() {
     const pct1R = parseFloat(gastosGridDraft['rep_pct1'] ?? 100)/100;
     const pct2R = parseFloat(gastosGridDraft['rep_pct2'] || 0)/100;
     const cn2R  = parseInt(gastosGridDraft['rep_cn2'] || 0);
-    (S.sistemasLuz||[]).forEach(eq=>{
+    (S.sistemasRiego||[]).forEach(eq=>{
       const val = parseFloat(gastosGridDraft[`rep_${eq.id}_${mesRep}`]);
       if(!val||val<=0) return;
       const desc = gastosGridDraft[`rep_desc_${eq.id}_${mesRep}`]||'';
