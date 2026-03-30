@@ -2120,11 +2120,9 @@ function renderRepContent() {
           else catT['Otro']+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
         });
       }
-      // Gastos generales proportional to ha
-      const totHaAll = p.tablas.reduce((s,t,ti)=>{ const td=getTablaData(pi,cn,ti); return td.sinSiembra?s:s+(parseFloat(td.haSembradas)||t.ha||0); },0);
-      const pctHa = totHaAll ? ha/totHaAll : 0;
-      (S.gastosGenerales||[]).filter(g=>((getGastoCosecha(g)===cn&&(g.anio===curAnioRep||g.anio===gastosGridAnio||g.anio===curAnioReg))&&(g.anio===curAnioRep||g.anio===curAnioReg)&&(g.prediosIdx||[]).includes(pi))).forEach(g=>{
-        const monto = (parseFloat(g.monto)||0)*pctHa;
+      // Gastos generales — filtrar por año correcto y prorratear por predio
+      (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===cn && g.anio===curAnioRep && (g.prediosIdx||[]).includes(pi)).forEach(g=>{
+        const monto = getGastoParaPredio(g, pi) * (ha / Math.max(1, p.tablas.reduce((s,t,ti2)=>{ const td2=getTablaData(pi,cn,ti2); return td2.sinSiembra?s:s+(parseFloat(td2.haSembradas)||t.ha||0); },0)));
         if(catT[g.categoria]!==undefined) catT[g.categoria]+=monto;
         else catT['Otro']+=monto;
       });
@@ -2431,10 +2429,11 @@ function printReportePredio(pi, cn) {
     });
   }
   // Sum gastos generales for this predio+cosecha
-  (S.gastosGenerales||[]).filter(g=>((getGastoCosecha(g)===cn&&(g.anio===curAnioRep||g.anio===gastosGridAnio||g.anio===curAnioReg))&&(g.anio===curAnioRep||g.anio===curAnioReg)&&(g.prediosIdx||[]).includes(pi))).forEach(g=>{
+  (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===cn && g.anio===curAnioRep && (g.prediosIdx||[]).includes(pi)).forEach(g=>{
+    const monto = getGastoParaPredio(g, pi);
     const cat = g.categoria||'Otro';
-    if(catTotals[cat]!==undefined) catTotals[cat]+=parseFloat(g.monto)||0;
-    else catTotals['Otro']+=parseFloat(g.monto)||0;
+    if(catTotals[cat]!==undefined) catTotals[cat]+=monto;
+    else catTotals['Otro']+=monto;
   });
   const totCost=Object.values(catTotals).reduce((s,v)=>s+v,0)+totalDep;
   const cpk=totKilos?totCost/totKilos:null;
