@@ -3918,13 +3918,8 @@ function renderGastos() {
           <th style="padding:6px 10px;text-align:right">Total $</th>
         </tr></thead><tbody>${histRows}</tbody></table></div>`
   } else if(gastosTab === 'reparaciones') {
+    if(!S.sistemasLuz) S.sistemasLuz = [];
     if(!S.sistemasRiego) S.sistemasRiego = [];
-    const configEq = isAdmin ? `
-      <div style="padding:10px 14px;background:var(--cream);border:1px solid var(--border);margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">⚙️ Agregar noria/sistema:</span>
-        <input type="text" id="rep-eq-nombre" placeholder="Ej: Noria 212, Sistema LG..." style="padding:5px;width:200px;font-size:13px"/>
-        <button class="btn btn-s" onclick="addSistemaRiego()">+ Agregar</button>
-      </div>` : '';
     const mesActual = parseInt(gastosGridDraft['rep_mes'] || getMesesCn(selectedCn)[0]);
     const mesOpts = [1,2,3,4,5,6,7,8,9,10,11,12].map(m=>
       `<option value="${m}" ${m===mesActual?'selected':''}>${MESES_G[m-1]}</option>`).join('');
@@ -3955,69 +3950,150 @@ function renderGastos() {
         </div>
         <span style="font-size:11px;color:var(--muted);margin-left:auto">C${selectedCn} · ${gastosGridAnio}</span>
       </div>`;
-    if(!S.sistemasRiego.length) {
-      tabContent = `${configEq}${sharedBar}<div class="empty"><div class="empty-icon">🔧</div><div>Sin norias/sistemas. Agrégalos arriba.</div></div>`;
-    } else {
-      const repRows = S.sistemasRiego.map(eq=>{
-        const predioChecks = S.predios.map((p,pi)=>{
-          const col=pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
-          const chk = gastosGridDraft[`rep_pi_${eq.id}_${pi}`]!==undefined
-            ? gastosGridDraft[`rep_pi_${eq.id}_${pi}`]==='1' : true;
-          return `<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;margin-right:6px">
-            <input type="checkbox" ${chk?'checked':''} style="accent-color:${col}"
-              onchange="gastosGridDraft['rep_pi_${eq.id}_${pi}']=this.checked?'1':'0'"/>
-            <span style="color:${col}">${p.emoji} ${p.nombre}</span>
-          </label>`;
-        }).join('');
-        const val = gastosGridDraft[`rep_${eq.id}_${mesActual}`]||'';
-        const desc = gastosGridDraft[`rep_desc_${eq.id}_${mesActual}`]||'';
-        const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Noria'&&getGastoMes(g)===mesActual&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio));
-        const acum=histMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-        return `<tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
-          <td style="padding:6px 10px"><div style="display:flex;flex-wrap:wrap">${predioChecks}</div></td>
-          <td style="padding:6px 8px;text-align:right">
-            <input type="number" min="0" step="1" placeholder="$" value="${val}"
-              style="width:120px;padding:5px;text-align:right;border:1px solid var(--border);font-size:13px;font-family:'DM Mono',monospace;display:block;margin-bottom:3px"
-              onchange="gastosGridDraft['rep_${eq.id}_${mesActual}']=this.value"/>
-          </td>
-          <td style="padding:6px 8px">
-            <input type="text" placeholder="Descripción..." value="${desc}"
-              style="width:200px;padding:5px 6px;border:1px solid var(--border);font-size:12px"
-              onchange="gastosGridDraft['rep_desc_${eq.id}_${mesActual}']=this.value"/>
-          </td>
-          <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:right">${acum?fmt(acum)+' acum':'—'}</td>
-        </tr>`;
+
+    // ── Config norias (shared with Luz) ──
+    const configNoria = isAdmin ? `
+      <div style="padding:8px 12px;background:var(--cream);border:1px solid var(--border);margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">💡 Agregar noria:</span>
+        <input type="text" id="luz-nombre" placeholder="Ej: Noria 212..." style="padding:5px;width:180px;font-size:13px"/>
+        <button class="btn btn-s" onclick="addSistemaLuz()">+ Agregar</button>
+      </div>` : '';
+
+    // ── Config sistemas de riego ──
+    const configRiego = isAdmin ? `
+      <div style="padding:8px 12px;background:var(--cream);border:1px solid var(--border);margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">💧 Agregar sistema de riego:</span>
+        <input type="text" id="rep-riego-nombre" placeholder="Ej: Sistema Goteo T1-T3..." style="padding:5px;width:220px;font-size:13px"/>
+        <button class="btn btn-s" onclick="addSistemaRiego()">+ Agregar</button>
+      </div>` : '';
+
+    // ── Norias rows ──
+    const noriaRows = S.sistemasLuz.map(eq=>{
+      const predioChecks = S.predios.map((p,pi)=>{
+        const col=pi===0?'#1a3d22':pi===1?'#2a7a3c':'#8b4513';
+        const chk = gastosGridDraft[`rep_pi_${eq.id}_${pi}`]!==undefined
+          ? gastosGridDraft[`rep_pi_${eq.id}_${pi}`]==='1' : true;
+        return `<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;margin-right:6px">
+          <input type="checkbox" ${chk?'checked':''} style="accent-color:${col}"
+            onchange="gastosGridDraft['rep_pi_${eq.id}_${pi}']=this.checked?'1':'0'"/>
+          <span style="color:${col}">${p.emoji} ${p.nombre}</span>
+        </label>`;
       }).join('');
-      const mesesHist = selectedCn===1?[10,11,12,1,2,3]:selectedCn===2?[2,3,4,5,6,7]:[6,7,8,9,10,11,12];
-      const mesesHdr = mesesHist.map(m=>`<th style="padding:6px 10px;text-align:right;min-width:90px">${MESES_G[m-1].slice(0,3)}</th>`).join('');
-      const histRows = S.sistemasRiego.map(eq=>{
-        const celdas = mesesHist.map(m=>{
-          const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Noria'&&getGastoMes(g)===m&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio));
-          const monto=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-          const descs=hist.map(g=>g.descripcion).filter(Boolean).join(', ');
-          const delBtn=isAdmin&&monto?`<button class="del-gasto-mes" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Reparaciones Noria" data-mes="${m}" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:9px;padding:0;margin-left:4px">✕</button>`:'';
-          return `<td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:11px">${monto?`<div style="color:var(--amber)">${fmt(monto)}</div>${descs?`<div style="font-size:9px;color:var(--muted)">${descs}</div>`:''} ${delBtn}`:'<span style="color:var(--muted)">—</span>'}</td>`;
-        }).join('');
-        const tot=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Noria'&&(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio)).reduce((s,g)=>s+parseFloat(g.monto||0),0);
-        const delCiclo=isAdmin&&tot?`<button class="del-gasto-ciclo" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Reparaciones Noria" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:10px;padding:0;margin-left:4px">✕ C${selectedCn}</button>`:'';
-        return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>${celdas}<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);font-weight:600;white-space:nowrap">${tot?fmt(tot):'—'} ${delCiclo}</td></tr>`;
+      const val = gastosGridDraft[`rep_${eq.id}_${mesActual}`]||'';
+      const desc = gastosGridDraft[`rep_desc_${eq.id}_${mesActual}`]||'';
+      const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Noria'&&getGastoMes(g)===mesActual&&(getGastoCosecha(g)===selectedCn)&&g.anio===gastosGridAnio);
+      const acum=histMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
+        <td style="padding:6px 10px"><div style="display:flex;flex-wrap:wrap">${predioChecks}</div></td>
+        <td style="padding:6px 8px;text-align:right">
+          <input type="number" min="0" step="1" placeholder="$" value="${val}"
+            style="width:120px;padding:5px;text-align:right;border:1px solid var(--border);font-size:13px;font-family:'DM Mono',monospace;display:block;margin-bottom:3px"
+            onchange="gastosGridDraft['rep_${eq.id}_${mesActual}']=this.value"/>
+        </td>
+        <td style="padding:6px 8px">
+          <input type="text" placeholder="Descripción..." value="${desc}"
+            style="width:200px;padding:5px 6px;border:1px solid var(--border);font-size:12px"
+            onchange="gastosGridDraft['rep_desc_${eq.id}_${mesActual}']=this.value"/>
+        </td>
+        <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:right">${acum?fmt(acum)+' acum':'—'}</td>
+        ${isAdmin?`<td><button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delSistemaLuz('${eq.id}')">✕</button></td>`:'<td></td>'}
+      </tr>`;
+    }).join('');
+
+    // ── Sistemas de riego rows ──
+    const riegoRows = S.sistemasRiego.map(eq=>{
+      const val = gastosGridDraft[`riego_${eq.id}_${mesActual}`]||'';
+      const desc = gastosGridDraft[`riego_desc_${eq.id}_${mesActual}`]||'';
+      const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Riego'&&getGastoMes(g)===mesActual&&(getGastoCosecha(g)===selectedCn)&&g.anio===gastosGridAnio);
+      const acum=histMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      // Tablas asignadas
+      const tablasAsig = eq.tablasIdx || [];
+      const tablasLabel = tablasAsig.length
+        ? S.predios.flatMap((p,pi)=>p.tablas.map((t,ti)=>tablasAsig.includes(`${pi}_${ti}`)?t.nombre:null).filter(Boolean)).join(', ')
+        : 'Sin tablas';
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
+        <td style="padding:6px 10px;font-size:11px;color:var(--muted)">${tablasLabel}</td>
+        <td style="padding:6px 8px;text-align:right">
+          <input type="number" min="0" step="1" placeholder="$" value="${val}"
+            style="width:120px;padding:5px;text-align:right;border:1px solid var(--border);font-size:13px;font-family:'DM Mono',monospace"
+            onchange="gastosGridDraft['riego_${eq.id}_${mesActual}']=this.value"/>
+        </td>
+        <td style="padding:6px 8px">
+          <input type="text" placeholder="Descripción..." value="${desc}"
+            style="width:200px;padding:5px 6px;border:1px solid var(--border);font-size:12px"
+            onchange="gastosGridDraft['riego_desc_${eq.id}_${mesActual}']=this.value"/>
+        </td>
+        <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:right">${acum?fmt(acum)+' acum':'—'}</td>
+        ${isAdmin?`<td><button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delSistemaRiego('${eq.id}')">✕</button></td>`:'<td></td>'}
+      </tr>`;
+    }).join('');
+
+    // ── Historial norias ──
+    const mesesHist = selectedCn===1?[10,11,12,1,2,3]:selectedCn===2?[2,3,4,5,6,7]:[6,7,8,9,10,11,12];
+    const mesesHdr = mesesHist.map(m=>`<th style="padding:6px 10px;text-align:right;min-width:90px">${MESES_G[m-1].slice(0,3)}</th>`).join('');
+    const noriaHistRows = S.sistemasLuz.map(eq=>{
+      const celdas = mesesHist.map(m=>{
+        const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Noria'&&getGastoMes(g)===m&&(getGastoCosecha(g)===selectedCn)&&g.anio===gastosGridAnio);
+        const monto=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        const descs=hist.map(g=>g.descripcion).filter(Boolean).join(', ');
+        const delBtn=isAdmin&&monto?`<button class="del-gasto-mes" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Reparaciones Noria" data-mes="${m}" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:9px;padding:0;margin-left:4px">✕</button>`:'';
+        return `<td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:11px">${monto?`<div style="color:var(--amber)">${fmt(monto)}</div>${descs?`<div style="font-size:9px;color:var(--muted)">${descs}</div>`:''} ${delBtn}`:'<span style="color:var(--muted)">—</span>'}</td>`;
       }).join('');
-      tabContent = `${configEq}${sharedBar}
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🔧 Reparaciones — ${MESES_G[mesActual-1]}</div>
-        <div style="overflow-x:auto;margin-bottom:24px"><table style="border-collapse:collapse;font-size:13px;width:100%">
-          <thead><tr style="background:var(--earth);color:#fff">
-            <th style="padding:7px 12px;text-align:left">Noria / Sistema</th>
-            <th style="padding:7px 10px;text-align:left">Predios (prorrateo)</th>
-            <th style="padding:7px 10px;text-align:right">Monto</th>
-            <th style="padding:7px 10px;text-align:left">Descripción</th>
-            <th style="padding:7px 10px;text-align:right">Acum este mes</th>
-          </tr></thead><tbody>${repRows}</tbody></table></div>
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Historial Reparaciones — C${selectedCn} ${gastosGridAnio}</div>
-        <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
-          <thead><tr style="background:#2d5a1b;color:#fff"><th style="padding:6px 12px;text-align:left">Noria / Sistema</th>${mesesHdr}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
-          <tbody>${histRows}</tbody></table></div>`;
-    }
+      const tot=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Noria'&&(getGastoCosecha(g)===selectedCn)&&g.anio===gastosGridAnio).reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      const delCiclo=isAdmin&&tot?`<button class="del-gasto-ciclo" data-nombre="${eq.nombre.replace(/"/g,'&quot;')}" data-cat="Reparaciones Noria" data-cn="${selectedCn}" style="border:none;background:none;cursor:pointer;color:#aaa;font-size:10px;padding:0;margin-left:4px">✕ C${selectedCn}</button>`:'';
+      return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>${celdas}<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);font-weight:600;white-space:nowrap">${tot?fmt(tot):'—'} ${delCiclo}</td></tr>`;
+    }).join('');
+
+    const riegoHistRows = S.sistemasRiego.map(eq=>{
+      const celdas = mesesHist.map(m=>{
+        const hist=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Riego'&&getGastoMes(g)===m&&(getGastoCosecha(g)===selectedCn)&&g.anio===gastosGridAnio);
+        const monto=hist.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        return `<td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:11px">${monto?`<div style="color:var(--amber)">${fmt(monto)}</div>`:'<span style="color:var(--muted)">—</span>'}</td>`;
+      }).join('');
+      const tot=(S.gastosGenerales||[]).filter(g=>g.equipo===eq.nombre&&g.categoria==='Reparaciones Riego'&&(getGastoCosecha(g)===selectedCn)&&g.anio===gastosGridAnio).reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>${celdas}<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);font-weight:600">${tot?fmt(tot):'—'}</td></tr>`;
+    }).join('');
+
+    tabContent = `${sharedBar}
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">💡 Reparaciones Norias — ${MESES_G[mesActual-1]}</div>
+      ${configNoria}
+      ${S.sistemasLuz.length ? `<div style="overflow-x:auto;margin-bottom:24px"><table style="border-collapse:collapse;font-size:13px;width:100%">
+        <thead><tr style="background:var(--earth);color:#fff">
+          <th style="padding:7px 12px;text-align:left">Noria</th>
+          <th style="padding:7px 10px;text-align:left">Predios</th>
+          <th style="padding:7px 10px;text-align:right">Monto</th>
+          <th style="padding:7px 10px;text-align:left">Descripción</th>
+          <th style="padding:7px 10px;text-align:right">Acum mes</th>
+          <th></th>
+        </tr></thead><tbody>${noriaRows}</tbody>
+      </table></div>` : `<div style="color:var(--muted);font-size:12px;margin-bottom:16px">Sin norias configuradas</div>`}
+
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">💧 Reparaciones Sistemas de Riego — ${MESES_G[mesActual-1]}</div>
+      ${configRiego}
+      ${S.sistemasRiego.length ? `<div style="overflow-x:auto;margin-bottom:24px"><table style="border-collapse:collapse;font-size:13px;width:100%">
+        <thead><tr style="background:var(--earth);color:#fff">
+          <th style="padding:7px 12px;text-align:left">Sistema</th>
+          <th style="padding:7px 10px;text-align:left">Tablas</th>
+          <th style="padding:7px 10px;text-align:right">Monto</th>
+          <th style="padding:7px 10px;text-align:left">Descripción</th>
+          <th style="padding:7px 10px;text-align:right">Acum mes</th>
+          <th></th>
+        </tr></thead><tbody>${riegoRows}</tbody>
+      </table></div>` : `<div style="color:var(--muted);font-size:12px;margin-bottom:16px">Sin sistemas de riego configurados</div>`}
+
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Historial Norias — C${selectedCn} ${gastosGridAnio}</div>
+      <div style="overflow-x:auto;margin-bottom:20px"><table style="border-collapse:collapse;font-size:13px;width:100%">
+        <thead><tr style="background:#2d5a1b;color:#fff"><th style="padding:6px 12px;text-align:left">Noria</th>${mesesHdr}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
+        <tbody>${noriaHistRows||'<tr><td colspan="99" style="padding:10px;text-align:center;color:var(--muted)">Sin registros</td></tr>'}</tbody>
+      </table></div>
+
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Historial Riego — C${selectedCn} ${gastosGridAnio}</div>
+      <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
+        <thead><tr style="background:#2d5a1b;color:#fff"><th style="padding:6px 12px;text-align:left">Sistema</th>${mesesHdr}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
+        <tbody>${riegoHistRows||'<tr><td colspan="99" style="padding:10px;text-align:center;color:var(--muted)">Sin registros</td></tr>'}</tbody>
+      </table></div>`;
   } else if(gastosTab === 'empaque') {
     const mesEmp2 = parseInt(gastosGridDraft['emp2_mes'] || getMesesCn(cn)[0]);
     const pct1Emp2 = parseFloat(gastosGridDraft['emp2_pct1'] ?? 100)/100;
@@ -4281,7 +4357,7 @@ function addEquipoAplic() {
 }
 
 function addSistemaRiego() {
-  const nombre = document.getElementById('rep-eq-nombre')?.value.trim();
+  const nombre = document.getElementById('rep-riego-nombre')?.value.trim();
   if(!nombre) { toast('⚠️ Ingresa el nombre',true); return; }
   if(!S.sistemasRiego) S.sistemasRiego = [];
   if(S.sistemasRiego.find(t=>t.nombre===nombre)) { toast('⚠️ Ya existe',true); return; }
@@ -4862,10 +4938,22 @@ function capturarGastos() {
     const pct1R = parseFloat(gastosGridDraft['rep_pct1'] ?? 100)/100;
     const pct2R = parseFloat(gastosGridDraft['rep_pct2'] || 0)/100;
     const cn2R  = parseInt(gastosGridDraft['rep_cn2'] || 0);
-    (S.sistemasRiego||[]).forEach(eq=>{
+    // Norias (shared with Luz)
+    (S.sistemasLuz||[]).forEach(eq=>{
       const val = parseFloat(gastosGridDraft[`rep_${eq.id}_${mesRep}`]);
       if(!val||val<=0) return;
       const desc = gastosGridDraft[`rep_desc_${eq.id}_${mesRep}`]||'';
+    // Sistemas de riego (independent)
+    (S.sistemasRiego||[]).forEach(eq=>{
+      const val = parseFloat(gastosGridDraft[`riego_${eq.id}_${mesRep}`]);
+      if(!val||val<=0) return;
+      const desc = gastosGridDraft[`riego_desc_${eq.id}_${mesRep}`]||'';
+      const tablasIdx = eq.tablasIdx||[];
+      const prediosSet = [...new Set(tablasIdx.map(k=>parseInt(k.split('_')[0])))];
+      const pis = prediosSet.length>0 ? prediosSet : S.predios.map((_,pi)=>pi);
+      if(pct1R>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Reparaciones Riego',equipo:eq.nombre,descripcion:desc,monto:val*pct1R,prediosIdx:pis,mes:mesRep,fecha:today()}); total++; }
+      if(pct2R>0&&cn2R) { S.gastosGenerales.push({id:uid(),cosecha:cn2R,anio,categoria:'Reparaciones Riego',equipo:eq.nombre,descripcion:desc,monto:val*pct2R,prediosIdx:pis,mes:mesRep,fecha:today()}); total++; }
+    });
       const prediosChk = S.predios.map((_,pi)=>({pi, chk: gastosGridDraft[`rep_pi_${eq.id}_${pi}`]!==undefined ? gastosGridDraft[`rep_pi_${eq.id}_${pi}`]==='1' : true})).filter(x=>x.chk);
       const totalHa = prediosChk.reduce((s,{pi})=>s+S.predios[pi].tablas.reduce((sh,t)=>sh+t.ha,0),0);
       prediosChk.forEach(({pi})=>{
