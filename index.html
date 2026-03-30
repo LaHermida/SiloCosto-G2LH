@@ -4010,11 +4010,15 @@ function renderGastos() {
       // Tablas asignadas
       const tablasAsig = eq.tablasIdx || [];
       const tablasLabel = tablasAsig.length
-        ? S.predios.flatMap((p,pi)=>p.tablas.map((t,ti)=>tablasAsig.includes(`${pi}_${ti}`)?t.nombre:null).filter(Boolean)).join(', ')
-        : 'Sin tablas';
+        ? S.predios.flatMap((p,pi)=>p.tablas.map((t,ti)=>tablasAsig.includes(`${pi}_${ti}`)?p.emoji+t.nombre:null).filter(Boolean)).join(', ')
+        : '<span style="color:#aaa">Sin tablas</span>';
+      const tablasSelectorDiv = isAdmin ? buildTablasRiegoSelector(eq.id, tablasAsig) : '';
       return `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${eq.nombre}</td>
-        <td style="padding:6px 10px;font-size:11px;color:var(--muted)">${tablasLabel}</td>
+        <td style="padding:6px 10px;font-size:11px">
+          <div>${tablasLabel}</div>
+          ${tablasSelectorDiv}
+        </td>
         <td style="padding:6px 8px;text-align:right">
           <input type="number" min="0" step="1" placeholder="$" value="${val}"
             style="width:120px;padding:5px;text-align:right;border:1px solid var(--border);font-size:13px;font-family:'DM Mono',monospace"
@@ -4354,6 +4358,31 @@ function addEquipoAplic() {
   S.equiposAplic.push({id:uid(), nombre, tipo});
   if(document.getElementById('aplic-eq-nombre')) document.getElementById('aplic-eq-nombre').value='';
   save(); renderGastos(); toast('✓ Equipo agregado');
+}
+
+function buildTablasRiegoSelector(eqId, asig) {
+  var rows = [];
+  S.predios.forEach(function(p,pi) {
+    p.tablas.forEach(function(t,ti) {
+      var key = pi+'_'+ti;
+      var chk = asig.includes(key);
+      rows.push('<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer">'
+        +'<input type="checkbox"'+(chk?' checked':'')+' style="accent-color:#2a7a3c"'
+        +' onchange="toggleTablaRiego(\'' + eqId + '\',\'' + key + '\',this.checked)"/> '
+        +p.emoji+t.nombre+'</label>');
+    });
+  });
+  return '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;padding:4px 6px;background:#f0fdf4;border:1px dashed #a8d5b5;border-radius:4px">'+rows.join('')+'</div>';
+}
+
+function toggleTablaRiego(eqId, key, checked) {
+  if(!S.sistemasRiego) return;
+  const eq = S.sistemasRiego.find(e=>e.id===eqId);
+  if(!eq) return;
+  if(!eq.tablasIdx) eq.tablasIdx = [];
+  if(checked) { if(!eq.tablasIdx.includes(key)) eq.tablasIdx.push(key); }
+  else { eq.tablasIdx = eq.tablasIdx.filter(k=>k!==key); }
+  save(); renderGastos(); toast('✓ Guardado');
 }
 
 function addSistemaRiego() {
