@@ -772,9 +772,12 @@ function calcDepTabla(pi, cn, ti, anio) {
 }
 
 
-function calcConsumosTabla(pi, cn, ti) {
+function calcConsumosTabla(pi, cn, ti, anio) {
   const td = getTablaData(pi,cn,ti);
-  return (td.consumos||[]).reduce((s,c)=>s+(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0),0);
+  const yr = anio || curAnioRep || curAnioReg || new Date().getFullYear();
+  return (td.consumos||[])
+    .filter(c => !c.anio || c.anio === yr)
+    .reduce((s,c)=>s+(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0),0);
 }
 
 function calcTotalTabla(pi, cn, ti, anio) {
@@ -2115,7 +2118,7 @@ function renderRepContent() {
         kilos+=parseFloat(td.kilos)||0;
         kgMS+=(parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100);
         ha+=parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
-        (td.consumos||[]).forEach(c=>{
+        (td.consumos||[]).filter(c=>!c.anio||c.anio===curAnioRep).forEach(c=>{
           if(catT[c.categoria]!==undefined) catT[c.categoria]+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
           else catT['Otro']+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
         });
@@ -2157,7 +2160,7 @@ function renderRepContent() {
         </div>
         <div style="text-align:center;padding:14px;background:var(--soil);color:var(--cream);margin-bottom:14px">
           <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700">GASTOS TOTALES — ${p.nombre}</div>
-          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);margin-top:4px">Cosecha ${cn} · Año ${getCosechaMeta(pi,cn).year} · ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha ${getCosechaMeta(pi,cn).closed?'· 🔒 CERRADA':'· ✓ Abierta'}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);margin-top:4px">Cosecha ${cn} · Año ${curAnioRep} · ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha ${getCosechaMeta(pi,cn).closed?'· 🔒 CERRADA':'· ✓ Abierta'}</div>
         </div>
         ${(()=>{
           const tablasFechas = p.tablas.map((t,ti)=>{
@@ -2317,7 +2320,7 @@ function renderRepContent() {
       'Derechos de Agua','Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
     let catTotals={};
     cats.forEach(c=>catTotals[c]=0);
-    (td.consumos||[]).forEach(c=>{
+    (td.consumos||[]).filter(c=>!c.anio||c.anio===curAnioRep).forEach(c=>{
       if(catTotals[c.categoria]!==undefined) catTotals[c.categoria]+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
       else catTotals['Otro']+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
     });
@@ -5113,9 +5116,10 @@ function capturarGrid() {
       if(!art) continue;
       const precio = getCurrentPrice(artId);
       const td = getTablaData(pi, cn, ti);
+      const anioReg = curAnioReg || new Date().getFullYear();
       td.consumos.push({
         articuloId:artId, nombre:art.nombre, categoria:art.categoria,
-        unidad:art.unidad, cantidad:cant, precioSnapshot:precio, fecha:fechaReg
+        unidad:art.unidad, cantidad:cant, precioSnapshot:precio, fecha:fechaReg, anio:anioReg
       });
       total++;
     }
