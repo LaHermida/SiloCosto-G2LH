@@ -5274,6 +5274,7 @@ function capturarGastos() {
       p.tablas.forEach((t,ti)=>{
         const td2 = getTablaData(pi,cn,ti);
         if(td2.sinSiembra) return;
+        if(!CULTIVOS_EMPAQUE.includes(td2.cultivo||'')) return;
         const key = `emp_t_${pi}_${ti}`;
         if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false) return;
         const kilos = parseFloat(td2.kilos)||0;
@@ -5287,6 +5288,7 @@ function capturarGastos() {
       p.tablas.forEach((t,ti)=>{
         const td2 = getTablaData(pi,cn,ti);
         if(td2.sinSiembra) return;
+        if(!CULTIVOS_EMPAQUE.includes(td2.cultivo||'')) return;
         const key = `camp_t_${pi}_${ti}`;
         if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false) return;
         const kilos = parseFloat(td2.kilos)||0;
