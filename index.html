@@ -5134,9 +5134,9 @@ function capturarGastos() {
     });
     // Sistemas de riego (independent)
     (S.sistemasRiego||[]).forEach(eq=>{
-      const val = parseFloat(gastosGridDraft[`riego_${eq.id}_${mesActual}`]);
+      const val = parseFloat(gastosGridDraft[`riego_${eq.id}_${mesRep}`]);
       if(!val||val<=0) return;
-      const desc = gastosGridDraft[`riego_desc_${eq.id}_${mesActual}`]||'';
+      const desc = gastosGridDraft[`riego_desc_${eq.id}_${mesRep}`]||'';
       const tablasIdx = eq.tablasIdx||[];
       const prediosSet = [...new Set(tablasIdx.map(k=>parseInt(k.split('_')[0])))];
       const pis = prediosSet.length>0 ? prediosSet : S.predios.map((_,pi)=>pi);
