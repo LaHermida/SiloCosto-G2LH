@@ -2622,42 +2622,50 @@ function getGastoCosecha(gasto) {
 
 // Get gasto amount assigned to a specific predio+cosecha
 function normalizeCatReporte(cat) {
+  if(!cat) return 'Otro';
   const map = {
-    // Material de cultivo (subcategorias)
-    'Semillas': 'Material de cultivo',
-    'Fertilizantes': 'Material de cultivo',
-    'Herbicidas': 'Material de cultivo',
-    'Fungicidas': 'Material de cultivo',
-    'Insecticidas': 'Material de cultivo',
-    // Tractores: Diesel y Maquinaria quedan separados
-    'Maquinaria': 'Maquinaria',
-    'Diesel': 'Diesel',
-    // Ensilada — todo junto
-    'Diesel Ensilada': 'Ensilada',
-    'Maquinaria Ensilada': 'Ensilada',
-    'Materiales de ensilada': 'Ensilada',
-    'Camiones': 'Ensilada',
-    // Empaque — todo junto
-    'Diesel Empaque': 'Empaque',
-    'Maquinaria Empaque': 'Empaque',
-    'Empacado': 'Empaque',
-    'Nómina Empaque': 'Empaque',
-    // Corte — todo junto
-    'Diesel Corte': 'Corte',
-    'Maquinaria Corte': 'Corte',
-    'Maquila Corte': 'Corte',
-    'Nómina Corte': 'Corte',
-    // Aplicaciones — todo junto
-    'Diesel Aplicaciones': 'Aplicaciones',
-    'Maquinaria Aplicaciones': 'Aplicaciones',
-    'Nómina Aplicaciones': 'Aplicaciones',
-    'Maquila Aplicaciones': 'Aplicaciones',
-    // Nómina
-    'Nómina': 'Nómina y gastos admin',
-    // Reparaciones
-    'Reparaciones Noria': 'Reparaciones Riego',
+    'semillas': 'Material de cultivo',
+    'fertilizantes': 'Material de cultivo',
+    'herbicidas': 'Material de cultivo',
+    'fungicidas': 'Material de cultivo',
+    'insecticidas': 'Material de cultivo',
+    'material de cultivo': 'Material de cultivo',
+    'maquinaria': 'Maquinaria',
+    'diesel': 'Diesel',
+    'diesel ensilada': 'Ensilada',
+    'maquinaria ensilada': 'Ensilada',
+    'materiales de ensilada': 'Ensilada',
+    'camiones': 'Ensilada',
+    'ensilada': 'Ensilada',
+    'diesel empaque': 'Empaque',
+    'maquinaria empaque': 'Empaque',
+    'empacado': 'Empaque',
+    'nómina empaque': 'Empaque',
+    'nomina empaque': 'Empaque',
+    'empaque': 'Empaque',
+    'diesel corte': 'Corte',
+    'maquinaria corte': 'Corte',
+    'maquila corte': 'Corte',
+    'nómina corte': 'Corte',
+    'nomina corte': 'Corte',
+    'corte': 'Corte',
+    'diesel aplicaciones': 'Aplicaciones',
+    'maquinaria aplicaciones': 'Aplicaciones',
+    'nómina aplicaciones': 'Aplicaciones',
+    'nomina aplicaciones': 'Aplicaciones',
+    'maquila aplicaciones': 'Aplicaciones',
+    'nómina': 'Nómina y gastos admin',
+    'nomina': 'Nómina y gastos admin',
+    'nómina y gastos admin': 'Nómina y gastos admin',
+    'nomina y gastos admin': 'Nómina y gastos admin',
+    'reparaciones noria': 'Reparaciones Riego',
+    'reparaciones riego': 'Reparaciones Riego',
+    'luz': 'Luz',
+    'derechos de agua': 'Derechos de Agua',
+    'sirre y desmonte': 'Sirre y Desmonte',
+    'otro': 'Otro',
   };
-  return map[cat] || cat;
+  return map[cat.toLowerCase()] || cat;
 }
 
 function getGastoParaPredio(gasto, pi) {
