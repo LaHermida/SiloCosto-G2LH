@@ -563,28 +563,7 @@ async function loadState() {
   });
   // Ensilada stays empty — independent list
   // (don't auto-populate equiposEnsilada)
-  // Limpiar gastos de empaque con cultivos incorrectos
-  if(S.gastosGenerales) {
-    S.gastosGenerales = S.gastosGenerales.filter(g => {
-      if(g.categoria !== 'Empacado' && g.categoria !== 'Camiones Empaque') return true;
-      // Buscar la tabla por nombre y verificar que sea cultivo de empaque
-      const pi = (g.prediosIdx||[])[0];
-      if(pi === undefined) return true;
-      const p = S.predios[pi];
-      if(!p) return true;
-      const tabla = p.tablas.find(t => t.nombre === g.equipo);
-      if(!tabla) return true;
-      const ti = p.tablas.indexOf(tabla);
-      // Buscar en cualquier cosecha si esta tabla tiene cultivo de empaque
-      for(let cn=1;cn<=3;cn++) {
-        const td = S.cosechas?.[pi]?.[cn]?.[ti];
-        if(td && CULTIVOS_EMPAQUE.includes(td.cultivo||'')) return true;
-      }
-      return false;
-    });
-  }
-
-  // Migrar cultivos viejos a los nuevos nombres correctos
+  // 1. Primero migrar cultivos viejos a los nuevos nombres correctos
   const CULTIVO_MAP = {
     'trigo': 'triticale',
     'nuez': 'nogal',
@@ -604,6 +583,25 @@ async function loadState() {
       });
     });
   });
+
+  // 2. Luego limpiar gastos de empaque con tablas que no son cultivo de empaque
+  if(S.gastosGenerales) {
+    S.gastosGenerales = S.gastosGenerales.filter(g => {
+      if(g.categoria !== 'Empacado' && g.categoria !== 'Camiones Empaque') return true;
+      const pi = (g.prediosIdx||[])[0];
+      if(pi === undefined) return true;
+      const p = S.predios[pi];
+      if(!p) return true;
+      const tabla = p.tablas.find(t => t.nombre === g.equipo);
+      if(!tabla) return true;
+      const ti = p.tablas.indexOf(tabla);
+      for(let cn=1;cn<=3;cn++) {
+        const td = S.cosechas?.[pi]?.[cn]?.[ti];
+        if(td && CULTIVOS_EMPAQUE.includes(td.cultivo||'')) return true;
+      }
+      return false;
+    });
+  }
 
   _loaded = true;
   render(curSec);
