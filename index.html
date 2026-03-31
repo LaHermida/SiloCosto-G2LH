@@ -2386,9 +2386,10 @@ function renderRepContent() {
 
     const ti = curTablaRep>=0?curTablaRep:0;
     const td = getTablaData(pi,cn,ti);
-    const dep = calcDepTabla(pi,cn,ti,curAnioRep);
-    const depHaTabla = p.tablas.reduce((s,t,ti2)=>{ const td2=getTablaData(pi,cn,ti2); return s+(td2.sinSiembra?0:(parseFloat(td2.haSembradas)||t.ha||0)); },0);
     const haTabla = parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
+    const haTotalActivas = p.tablas.reduce((s,t,ti2)=>{ const td2=getTablaData(pi,cn,ti2); return s+(td2.sinSiembra?0:(parseFloat(td2.haSembradas)||t.ha||0)); },0);
+    const depPredio = calcDepPredio(pi,cn,curAnioRep);
+    const dep = haTotalActivas>0 ? depPredio*(haTabla/haTotalActivas) : 0;
     const vars = calcConsumosTabla(pi,cn,ti);
     const gastosGen = calcGastosGeneralesTabla(pi,cn,ti,curAnioRep);
     const total = dep+vars+gastosGen;
@@ -2429,7 +2430,7 @@ function renderRepContent() {
       <td class="mono tr">${catTotals[cat]?fmt(catTotals[cat]):'$ —'}</td>
     </tr>`).join('');
     catRows+=`<tr><td>Depreciación</td><td><span style="background:#fef3e2;color:var(--amber);padding:2px 6px;font-size:10px">Constante</span></td>
-      <td class="mono tr">${fmt(depHaTabla?dep/depHaTabla:0)}</td><td class="mono tr">${fmt(dep)}</td></tr>`;
+      <td class="mono tr">${fmt(haTotalActivas>0?depPredio/haTotalActivas:0)}</td><td class="mono tr">${fmt(dep)}</td></tr>`;
 
     document.getElementById('rep-content').innerHTML = `
       <div class="card">
