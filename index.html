@@ -1036,7 +1036,7 @@ function renderTablas() {
 
   document.getElementById('tab-content').innerHTML = `
     <div class="card">
-      <div class="card-head">${p.emoji} ${p.nombre} — ${p.tablas.filter((_,ti)=>!getTablaData(pi,cn,ti).sinSiembra).length} tablas activas · ${fmtN(totalHa,2)} ha totales</div>
+      <div class="card-head">${p.emoji} ${p.nombre} — ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha totales</div>
       <div class="tbl-wrap"><table>
         <thead><tr><th>Tabla</th><th>Hectáreas</th><th>% del predio</th><th></th></tr></thead>
         <tbody>${p.tablas.map((t,i)=>`<tr>
@@ -2231,7 +2231,7 @@ function renderRepContent() {
           <td class="mono tr">${fmt(tot/d.ha)}</td><td class="mono tr">${fmt(tot)}</td><td class="mono tr" style="color:var(--muted)">—</td></tr>`;
       }).join('');
       if(d.dep>0) rows += `<tr><td>Depreciación</td><td><span style="background:#fef3e2;color:var(--amber);padding:2px 6px;font-size:10px">Constante</span></td>
-        <td class="mono tr">${fmt(d.dep/d.ha)}</td><td class="mono tr">${fmt(d.dep)}</td><td class="mono tr" style="color:var(--muted)">—</td></tr>`;
+        <td class="mono tr">${fmt(d.dep/totalHa)}</td><td class="mono tr">${fmt(d.dep)}</td><td class="mono tr" style="color:var(--muted)">—</td></tr>`;
       return rows;
     }
 
