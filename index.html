@@ -1417,10 +1417,10 @@ function renderDepContent() {
                 tot += calcDepActivo(dep2, pi, curCnDep, curAnioDep);
               });
             });
-            const ha=p2.tablas.reduce((s,t)=>s+t.ha,0);
+            const haSemDep = p2.tablas.reduce((s,t,ti2)=>{ const td2=getTablaData(pi,curCnDep,ti2); return s+(td2.sinSiembra?0:(parseFloat(td2.haSembradas)||t.ha||0)); },0);
             return `<td style="padding:7px 10px;border-left:1px solid var(--border)">
               <div style="text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">${tot?fmt(tot):'—'}</div>
-              <div style="text-align:right;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${(tot&&ha)?fmt(tot/ha)+'/ha':'—'}</div>
+              <div style="text-align:right;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${(tot&&haSemDep)?fmt(tot/haSemDep)+'/ha':'—'}</div>
             </td>`;
           }).join('')}
         </tr></tfoot>
@@ -2223,6 +2223,10 @@ function renderRepContent() {
     const cpk = totKilos?totCost/totKilos:null;
     const cpkms = totKgMS?totCost/totKgMS:null;
 
+    // Dep total del predio para el $/ha (siempre fijo, no varía por cultivo)
+    const depTotalPredio = calcDepPredio(pi, cn, curAnioRep);
+    const depHaFijo = totalHa > 0 ? depTotalPredio / totalHa : 0;
+
     // Build table for a given totals object
     function buildCatRows(d) {
       let rows = cats.filter(cat=>(d.catT[cat]||0)>0).map(cat=>{
@@ -2231,7 +2235,7 @@ function renderRepContent() {
           <td class="mono tr">${fmt(tot/d.ha)}</td><td class="mono tr">${fmt(tot)}</td><td class="mono tr" style="color:var(--muted)">—</td></tr>`;
       }).join('');
       if(d.dep>0) rows += `<tr><td>Depreciación</td><td><span style="background:#fef3e2;color:var(--amber);padding:2px 6px;font-size:10px">Constante</span></td>
-        <td class="mono tr">${fmt(d.dep/totalHa)}</td><td class="mono tr">${fmt(d.dep)}</td><td class="mono tr" style="color:var(--muted)">—</td></tr>`;
+        <td class="mono tr">${fmt(depHaFijo)}</td><td class="mono tr">${fmt(d.dep)}</td><td class="mono tr" style="color:var(--muted)">—</td></tr>`;
       return rows;
     }
 
