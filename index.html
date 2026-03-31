@@ -1754,6 +1754,7 @@ function renderRegContent() {
   const pi = curPredioReg, cn = curCosechaReg, ti = curTablaReg;
   const p = S.predios[pi];
   const td = getTablaData(pi,cn,ti);
+  const isAdmin = currentUser?.rol === 'admin';
   const dep = calcDepTabla(pi,cn,ti,curAnioReg);
   const vars = calcConsumosTabla(pi,cn,ti);
   const total = dep+vars;
