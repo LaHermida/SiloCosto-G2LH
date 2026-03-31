@@ -129,7 +129,7 @@ tr:hover td { background:var(--cream); }
 .tabla-card { border:2px solid #a8d090; padding:10px 14px; cursor:pointer; transition:all 0.15s; text-align:center; background:#f0f7ea; }
 .tabla-card:hover { border-color:#5a8c3f; background:#e4f0d8; }
 .tabla-card.selected { border:3px solid #2d5a1b; background:#fff; box-shadow: 0 0 0 3px rgba(45,90,27,0.2); }
-.tabla-card.active-reg { border:3px solid #1a3d22; background:#e4f0d8; color:#0d2e16; }
+.tabla-card.active-reg { border:2px solid #5a8c3f; background:#d6ecc4; color:#0d2e16; box-shadow:inset 0 0 0 1px rgba(45,90,27,0.15); }
 .tabla-card.sin-siembra { opacity:0.55; border-style:dashed; }
 .tabla-name { font-weight:700; font-size:13px; color:#0d2e16; }
 .tabla-ha { font-family:'DM Mono',monospace; font-size:10px; color:#2a6438; margin-top:2px; }
@@ -2008,6 +2008,17 @@ function renderRegContent() {
 
     const tabHdrs = p.tablas.map(t=>`<th style="padding:5px 8px;text-align:right;white-space:nowrap;min-width:100px">${t.nombre}<br><span style="font-weight:400;font-size:9px">${t.ha}ha</span></th>`).join('');
 
+    // Lista individual de registros para poder eliminar
+    const listaRows = allConsumos.map((c,idx)=>`
+      <tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:4px 8px;font-size:12px">${c.tablaNombre}</td>
+        <td style="padding:4px 8px;font-size:12px">${c.nombre}</td>
+        <td style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:12px;text-align:right">${fmtN(c.cantidad,2)} ${c.unidad||''}</td>
+        <td style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:12px;text-align:right;color:var(--amber)">${fmt(c.cantidad*c.precioSnapshot)}</td>
+        <td style="padding:4px 8px;font-size:10px;color:var(--muted)">${c.fecha||''}</td>
+        ${isAdmin?`<td style="padding:4px 6px"><button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delConsumoGlobal(${c.ti2},${c.ci});renderRegContent()">✕</button></td>`:'<td></td>'}
+      </tr>`).join('');
+
     histEl.innerHTML = `
       <div class="card-head">📋 Consumos registrados — ${p.nombre} · C${cn} ${curAnioReg}</div>
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
@@ -2022,7 +2033,21 @@ function renderRegContent() {
           ${footCells}
           <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber);border-left:2px solid var(--border)">${fmt(grandTotal)}</td>
         </tr></tfoot>
-      </table></div>`;
+      </table></div>
+      <details style="margin-top:12px">
+        <summary style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;cursor:pointer;padding:4px 0">▶ Ver registros individuales (${allConsumos.length})</summary>
+        <div style="overflow-x:auto;margin-top:8px"><table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#e8f0e4;font-size:10px;color:var(--muted)">
+            <th style="padding:4px 8px;text-align:left">Tabla</th>
+            <th style="padding:4px 8px;text-align:left">Artículo</th>
+            <th style="padding:4px 8px;text-align:right">Cantidad</th>
+            <th style="padding:4px 8px;text-align:right">Monto</th>
+            <th style="padding:4px 8px;text-align:left">Fecha</th>
+            <th style="padding:4px 8px"></th>
+          </thead>
+          <tbody>${listaRows}</tbody>
+        </table></div>
+      </details>`;
     document.getElementById('reg-content').appendChild(histEl);
   }
 
@@ -2163,7 +2188,7 @@ function renderRepContent() {
         if(td.sinSiembra) continue;
         const cv=td.cultivo||'maiz';
         if(filterCv && cv!==filterCv) continue;
-        dep+=calcDepPredio(pi,cn,curAnioRep)*(p.tablas[ti]?.ha||0)/Math.max(1,p.tablas.reduce((s,t)=>s+t.ha,0));
+        dep+=calcDepTabla(pi,cn,ti,curAnioRep);
         kilos+=parseFloat(td.kilos)||0;
         kgMS+=(parseFloat(td.kilos)||0)*((parseFloat(td.pctMS)||0)/100);
         ha+=parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
