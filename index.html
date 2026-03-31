@@ -2144,9 +2144,9 @@ function renderRepContent() {
     const hayEmpaque  = todosCultivosRep.some(cv=>CULTIVOS_EMPAQUE.includes(cv));
     const hayPizca    = todosCultivosRep.some(cv=>CULTIVOS_PIZCA.includes(cv));
     const hayCorte    = todosCultivosRep.some(cv=>CULTIVOS_CORTE.includes(cv));
-    const cats = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz',
-      'Ensilada','Materiales de ensilada','Empacado','Pizca',
-      'Maquila Corte','Derechos de Agua','Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
+    const cats = ['Material de cultivo','Diesel','Maquinaria','Reparaciones Riego','Luz',
+      'Ensilada','Empaque','Corte','Aplicaciones','Pizca',
+      'Derechos de Agua','Nómina y gastos admin','Sirre y Desmonte','Otro'];
     const totalHa = p.tablas.reduce((s,t)=>s+t.ha,0);
 
     // Build per-cultivo data
@@ -2363,9 +2363,9 @@ function renderRepContent() {
     const hayEmpaque  = todosCultivosRep.some(cv=>CULTIVOS_EMPAQUE.includes(cv));
     const hayPizca    = todosCultivosRep.some(cv=>CULTIVOS_PIZCA.includes(cv));
     const hayCorte    = todosCultivosRep.some(cv=>CULTIVOS_CORTE.includes(cv));
-    const cats = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz',
-      'Ensilada','Materiales de ensilada','Empacado','Pizca',
-      'Maquila Corte','Derechos de Agua','Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
+    const cats = ['Material de cultivo','Diesel','Maquinaria','Reparaciones Riego','Luz',
+      'Ensilada','Empaque','Corte','Aplicaciones','Pizca',
+      'Derechos de Agua','Nómina y gastos admin','Sirre y Desmonte','Otro'];
     let catTotals={};
     cats.forEach(c=>catTotals[c]=0);
     (td.consumos||[]).filter(c=>!c.anio||c.anio===curAnioRep).forEach(c=>{
@@ -2622,26 +2622,40 @@ function getGastoCosecha(gasto) {
 
 // Get gasto amount assigned to a specific predio+cosecha
 function normalizeCatReporte(cat) {
-  // Map all gasto categories to their display category in reportes
   const map = {
-    'Diesel Ensilada': 'Ensilada',
-    'Maquinaria Ensilada': 'Ensilada',
-    'Diesel Corte': 'Maquila Corte',
-    'Maquinaria Corte': 'Maquila Corte',
-    'Nómina Corte': 'Maquila Corte',
-    'Diesel Empaque': 'Empacado',
-    'Maquinaria Empaque': 'Empacado',
-    'Diesel Aplicaciones': 'Maquinaria',
-    'Maquinaria Aplicaciones': 'Maquinaria',
-    'Nómina Aplicaciones': 'Nómina y gastos admin',
-    'Maquila Aplicaciones': 'Maquinaria',
-    'Nómina': 'Nómina y gastos admin',
-    'Reparaciones Noria': 'Reparaciones Riego',
+    // Material de cultivo (subcategorias)
     'Semillas': 'Material de cultivo',
     'Fertilizantes': 'Material de cultivo',
     'Herbicidas': 'Material de cultivo',
     'Fungicidas': 'Material de cultivo',
     'Insecticidas': 'Material de cultivo',
+    // Tractores: Diesel y Maquinaria quedan separados
+    'Maquinaria': 'Maquinaria',
+    'Diesel': 'Diesel',
+    // Ensilada — todo junto
+    'Diesel Ensilada': 'Ensilada',
+    'Maquinaria Ensilada': 'Ensilada',
+    'Materiales de ensilada': 'Ensilada',
+    'Camiones': 'Ensilada',
+    // Empaque — todo junto
+    'Diesel Empaque': 'Empaque',
+    'Maquinaria Empaque': 'Empaque',
+    'Empacado': 'Empaque',
+    'Nómina Empaque': 'Empaque',
+    // Corte — todo junto
+    'Diesel Corte': 'Corte',
+    'Maquinaria Corte': 'Corte',
+    'Maquila Corte': 'Corte',
+    'Nómina Corte': 'Corte',
+    // Aplicaciones — todo junto
+    'Diesel Aplicaciones': 'Aplicaciones',
+    'Maquinaria Aplicaciones': 'Aplicaciones',
+    'Nómina Aplicaciones': 'Aplicaciones',
+    'Maquila Aplicaciones': 'Aplicaciones',
+    // Nómina
+    'Nómina': 'Nómina y gastos admin',
+    // Reparaciones
+    'Reparaciones Noria': 'Reparaciones Riego',
   };
   return map[cat] || cat;
 }
