@@ -3918,10 +3918,10 @@ function renderGastos() {
           onchange="gastosGridDraft['emp_nom']=this.value"/>
       </div>`;
 
-    // Camiones empaque (tablas con alfalfa/triticale_heno)
-    // Pre-inicializar tablas de empaque como checadas si no se han tocado
+    // Pre-inicializar TODAS las tablas activas como checadas si no se han tocado
     S.predios.forEach((p,pi)=>{ p.tablas.forEach((t,ti)=>{ 
-      if(CULTIVOS_EMPAQUE.includes(getTablaData(pi,selectedCn,ti).cultivo||'maiz')) {
+      const td2=getTablaData(pi,selectedCn,ti);
+      if(!td2.sinSiembra) {
         if(gastosGridDraft[`emp_t_${pi}_${ti}`]===undefined) gastosGridDraft[`emp_t_${pi}_${ti}`]='1';
         if(gastosGridDraft[`camp_t_${pi}_${ti}`]===undefined) gastosGridDraft[`camp_t_${pi}_${ti}`]='1';
       }
