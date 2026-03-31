@@ -4391,17 +4391,14 @@ function renderGastos() {
       if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,fecha:today()}); total++; }
       if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,fecha:today()}); total++; }
     });
-    // Empacado por tabla — usar tablas visibles en el grid (ya filtradas por cultivo)
+    // Empacado por tabla — usar tablas que tienen precio y kilos, ignorar filtro de cultivo
     S.predios.forEach((p,pi)=>{
       const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}`]);
       if(!ppt) return;
       p.tablas.forEach((t,ti)=>{
         const td2 = getTablaData(pi,cn,ti);
         if(td2.sinSiembra) return;
-        const cv = td2.cultivo||'maiz';
-        if(!esEmpaque(cv)) return;
         const key = `emp_t_${pi}_${ti}`;
-        // Si nunca se tocó el checkbox, se considera checado (default)
         if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false) return;
         const kilos = parseFloat(td2.kilos)||0;
         if(!kilos) return;
@@ -5298,17 +5295,14 @@ function capturarGastos() {
       if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,fecha:today()}); total++; }
       if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,fecha:today()}); total++; }
     });
-    // Empacado por tabla — usar tablas visibles en el grid (ya filtradas por cultivo)
+    // Empacado por tabla — usar tablas que tienen precio y kilos, ignorar filtro de cultivo
     S.predios.forEach((p,pi)=>{
       const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}`]);
       if(!ppt) return;
       p.tablas.forEach((t,ti)=>{
         const td2 = getTablaData(pi,cn,ti);
         if(td2.sinSiembra) return;
-        const cv = td2.cultivo||'maiz';
-        if(!esEmpaque(cv)) return;
         const key = `emp_t_${pi}_${ti}`;
-        // Si nunca se tocó el checkbox, se considera checado (default)
         if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false) return;
         const kilos = parseFloat(td2.kilos)||0;
         if(!kilos) return;
