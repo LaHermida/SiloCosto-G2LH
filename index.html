@@ -129,13 +129,11 @@ tr:hover td { background:var(--cream); }
 .tabla-card { border:2px solid #a8d090; padding:10px 14px; cursor:pointer; transition:all 0.15s; text-align:center; background:#f0f7ea; }
 .tabla-card:hover { border-color:#5a8c3f; background:#e4f0d8; }
 .tabla-card.selected { border:3px solid #2d5a1b; background:#fff; box-shadow: 0 0 0 3px rgba(45,90,27,0.2); }
-.tabla-card.active-reg { border:2px solid #5a8c3f; background:#d6ecc4; color:#0d2e16; box-shadow:inset 0 0 0 1px rgba(45,90,27,0.15); }
+.tabla-card.active-reg { border:2px solid #1a3d22; }
 .tabla-card.sin-siembra { opacity:0.55; border-style:dashed; }
 .tabla-name { font-weight:700; font-size:13px; color:#0d2e16; }
 .tabla-ha { font-family:'DM Mono',monospace; font-size:10px; color:#2a6438; margin-top:2px; }
-.tabla-card.active-reg .tabla-name { color:#0d2e16 !important; }
-.tabla-card.active-reg .tabla-ha { color:#2a6438 !important; }
-.tabla-card.active-reg span { color:#0d2e16 !important; }
+
 .tabla-cultivo { font-size:10px; margin-top:4px; padding:2px 6px; display:inline-block; }
 .cultivo-maiz { background:#e8f5e8; color:#1a3d22; }
 .cultivo-trigo { background:#fef3e2; color:var(--amber); }
@@ -1789,14 +1787,14 @@ function renderRegContent() {
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Ha</div>
           <input type="number" value="${d.haSembradas||''}" placeholder="${t.ha}"
             step="0.01" min="0" max="${t.ha}"
-            style="width:100%;padding:2px 4px;font-size:11px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#7ec89a'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'};text-align:center"
+            style="width:100%;padding:2px 4px;font-size:11px;border:1px solid #7ec89a;background:white;text-align:center"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'haSembradas',this.value)"/>
         </div>
         <div>
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Kilos</div>
           <input type="number" value="${d.kilos||''}" placeholder="0"
-            style="width:100%;padding:2px 4px;font-size:12px;font-weight:600;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#7ec89a'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--gold)':'var(--amber)'};text-align:center"
+            style="width:100%;padding:2px 4px;font-size:12px;font-weight:600;border:1px solid #7ec89a;background:white;color:var(--amber);text-align:center"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'kilos',this.value)"/>
         ${d.kilos ? `<div style="font-size:9px;text-align:center;opacity:0.7;margin-top:1px">${fmtN(parseFloat(d.kilos),0)} kg</div>` : ''}
@@ -1805,13 +1803,13 @@ function renderRegContent() {
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">% MS</div>
           <input type="number" value="${d.pctMS||''}" placeholder="40"
             step="0.01"
-            style="width:100%;padding:2px 4px;font-size:11px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#7ec89a'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'};text-align:center"
+            style="width:100%;padding:2px 4px;font-size:11px;border:1px solid #7ec89a;background:white;text-align:center"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'pctMS',this.value)"/>
         </div>
         <div>
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Cultivo</div>
-          <select style="width:100%;padding:2px 2px;font-size:10px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#7ec89a'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'}"
+          <select style="width:100%;padding:2px 2px;font-size:10px;border:1px solid #7ec89a;background:white;color:inherit"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'cultivo',this.value)">
             ${Object.entries(CULTIVOS).map(([k,v])=>`<option value="${k}" ${(d.cultivo||'maiz')===k?'selected':''}>${v.icon} ${v.label}</option>`).join('')}
@@ -1820,14 +1818,14 @@ function renderRegContent() {
         <div style="grid-column:span 2">
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Siembra</div>
           <input type="date" value="${d.fechaSiembra||''}"
-            style="width:100%;padding:2px 4px;font-size:10px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#7ec89a'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'}"
+            style="width:100%;padding:2px 4px;font-size:10px;border:1px solid #7ec89a;background:white;color:inherit"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'fechaSiembra',this.value)"/>
         </div>
         <div style="grid-column:span 2">
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Corte</div>
           <input type="date" value="${d.fechaCorte||''}"
-            style="width:100%;padding:2px 4px;font-size:10px;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'#7ec89a'};background:${isActive?'rgba(255,255,255,0.1)':'white'};color:${isActive?'var(--straw)':'inherit'}"
+            style="width:100%;padding:2px 4px;font-size:10px;border:1px solid #7ec89a;background:white;color:inherit"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'fechaCorte',this.value)"/>
         </div>
@@ -4390,7 +4388,7 @@ function renderGastos() {
         if(!CULTIVOS_EMPAQUE.includes(getTablaData(pi,cn,ti).cultivo||'maiz')) return;
         const key = `emp_t_${pi}_${ti}`;
         const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}`]);
-        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined||!ppt) return;
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||!ppt) return;
         const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
         if(!kilos) return;
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Empacado',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
@@ -4402,7 +4400,7 @@ function renderGastos() {
         if(!CULTIVOS_EMPAQUE.includes(getTablaData(pi,cn,ti).cultivo||'maiz')) return;
         const key = `camp_t_${pi}_${ti}`;
         const ppt = parseFloat(gastosGridDraft[`camp_ppt_${pi}`]);
-        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined||!ppt) return;
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||!ppt) return;
         const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
         if(!kilos) return;
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Camiones Empaque',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
@@ -5291,7 +5289,7 @@ function capturarGastos() {
         if(!CULTIVOS_EMPAQUE.includes(getTablaData(pi,cn,ti).cultivo||'maiz')) return;
         const key = `emp_t_${pi}_${ti}`;
         const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}`]);
-        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined||!ppt) return;
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||!ppt) return;
         const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
         if(!kilos) return;
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Empacado',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
@@ -5303,7 +5301,7 @@ function capturarGastos() {
         if(!CULTIVOS_EMPAQUE.includes(getTablaData(pi,cn,ti).cultivo||'maiz')) return;
         const key = `camp_t_${pi}_${ti}`;
         const ppt = parseFloat(gastosGridDraft[`camp_ppt_${pi}`]);
-        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined||!ppt) return;
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||!ppt) return;
         const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
         if(!kilos) return;
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Camiones Empaque',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
