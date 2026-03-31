@@ -606,6 +606,7 @@ const CULTIVOS = {
 // Cultivos que van a ensilada vs empaque
 const CULTIVOS_ENSILADA = ['maiz','sorgo','trigo','otro'];
 const CULTIVOS_EMPAQUE  = ['alfalfa_heno','triticale_heno'];
+function esEmpaque(cv) { return CULTIVOS_EMPAQUE.includes(cv) || cv==='alfalfa heno' || cv==='triticale heno' || cv==='Alfalfa Heno' || cv==='Triticale Heno' || (CULTIVOS[cv]?.empaque===true); }
 const CULTIVOS_PIZCA    = ['higo'];
 const CULTIVOS_CORTE    = ['alfalfa','alfalfa_heno','trigo','triticale_heno'];
 
@@ -4390,16 +4391,19 @@ function renderGastos() {
       if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,fecha:today()}); total++; }
       if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,fecha:today()}); total++; }
     });
-    // Empacado por tabla
+    // Empacado por tabla — usar tablas visibles en el grid (ya filtradas por cultivo)
     S.predios.forEach((p,pi)=>{
+      const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}`]);
+      if(!ppt) return;
       p.tablas.forEach((t,ti)=>{
-        const cv = getTablaData(pi,cn,ti).cultivo||'maiz';
+        const td2 = getTablaData(pi,cn,ti);
+        if(td2.sinSiembra) return;
+        const cv = td2.cultivo||'maiz';
+        if(!esEmpaque(cv)) return;
         const key = `emp_t_${pi}_${ti}`;
-        const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}`]);
-        const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
-        console.log('EMPAQUE',t.nombre,'cv:',cv,'key:',gastosGridDraft[key],'ppt:',ppt,'kilos:',kilos,'enEmpaque:',CULTIVOS_EMPAQUE.includes(cv));
-        if(!CULTIVOS_EMPAQUE.includes(cv)) return;
-        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||!ppt) return;
+        // Si nunca se tocó el checkbox, se considera checado (default)
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false) return;
+        const kilos = parseFloat(td2.kilos)||0;
         if(!kilos) return;
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Empacado',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
       });
@@ -5294,16 +5298,19 @@ function capturarGastos() {
       if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,fecha:today()}); total++; }
       if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,fecha:today()}); total++; }
     });
-    // Empacado por tabla
+    // Empacado por tabla — usar tablas visibles en el grid (ya filtradas por cultivo)
     S.predios.forEach((p,pi)=>{
+      const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}`]);
+      if(!ppt) return;
       p.tablas.forEach((t,ti)=>{
-        const cv = getTablaData(pi,cn,ti).cultivo||'maiz';
+        const td2 = getTablaData(pi,cn,ti);
+        if(td2.sinSiembra) return;
+        const cv = td2.cultivo||'maiz';
+        if(!esEmpaque(cv)) return;
         const key = `emp_t_${pi}_${ti}`;
-        const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}`]);
-        const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
-        console.log('EMPAQUE',t.nombre,'cv:',cv,'key:',gastosGridDraft[key],'ppt:',ppt,'kilos:',kilos,'enEmpaque:',CULTIVOS_EMPAQUE.includes(cv));
-        if(!CULTIVOS_EMPAQUE.includes(cv)) return;
-        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||!ppt) return;
+        // Si nunca se tocó el checkbox, se considera checado (default)
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false) return;
+        const kilos = parseFloat(td2.kilos)||0;
         if(!kilos) return;
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Empacado',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
       });
