@@ -1226,6 +1226,7 @@ function toggleCierreDep(anio, cn) {
 function renderDepContent() {
   const pi = curPredioDep;
   const p = S.predios[pi];
+  const isAdmin = currentUser?.rol === 'admin';
 
   const tablaCheckboxes = p.tablas.map((t,i)=>
     `<label class="check-row">
@@ -2911,6 +2912,7 @@ const MESES_G = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agost
 
 function renderGastos() {
   if(!S.gastosGenerales) S.gastosGenerales = [];
+  const isAdmin = currentUser?.rol === 'admin';
   if(!S.equipos) S.equipos = {}; // {pi: [{id, nombre, tipo}]} tipo: tractor|noria|luz
   const curYear = new Date().getFullYear();
   const isAdmin = currentUser?.rol === 'admin';
@@ -4946,6 +4948,7 @@ function updateGastosDraft(ci, cn, val) {
 
 
 function capturarGastos() {
+  const isAdmin = currentUser?.rol === 'admin';
   const anio = gastosGridAnio || new Date().getFullYear();
   const prediosIdx = [];
   document.querySelectorAll('.gasto-predio-check:checked').forEach(cb=>prediosIdx.push(parseInt(cb.value)));
