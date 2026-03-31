@@ -593,21 +593,20 @@ function fmtN(n,d=2) {
 
 const CULTIVOS = {
   maiz:           { label:'Maíz',           icon:'🌽', css:'cultivo-maiz',    pct:40 },
-  trigo:          { label:'Triticale',      icon:'🌾', css:'cultivo-trigo',   pct:20 },
+  triticale:      { label:'Triticale',      icon:'🌾', css:'cultivo-trigo',   pct:20 },
   sorgo:          { label:'Sorgo',          icon:'🌿', css:'cultivo-sorgo',   pct:40 },
-  higo:           { label:'Higo',           icon:'🍃', css:'cultivo-otro',    pct:40, pizca:true },
   alfalfa:        { label:'Alfalfa',        icon:'🟢', css:'cultivo-alfalfa', pct:33, anual:true },
-  alfalfa_heno:   { label:'Alfalfa Heno',   icon:'🟡', css:'cultivo-alfalfa', pct:33, anual:true, empaque:true },
-  triticale_heno: { label:'Triticale Heno', icon:'🌾', css:'cultivo-trigo',   pct:20, empaque:true },
-  nuez:           { label:'Nuez',           icon:'🥜', css:'cultivo-otro',    pct:100, anual:true, pizca:true },
-  otro:           { label:'Otro',           icon:'🌱', css:'cultivo-otro',    pct:40 }
+  alfalfa_heno:   { label:'Heno Alfalfa',   icon:'🟡', css:'cultivo-alfalfa', pct:33, anual:true, empaque:true },
+  triticale_heno: { label:'Heno Triticale', icon:'🌾', css:'cultivo-trigo',   pct:20, empaque:true },
+  higo:           { label:'Higo',           icon:'🍃', css:'cultivo-otro',    pct:40, pizca:true },
+  nogal:          { label:'Nogal',          icon:'🥜', css:'cultivo-otro',    pct:100, pizca:true },
 };
 
 // Cultivos que van a ensilada vs empaque
-const CULTIVOS_ENSILADA = ['maiz','sorgo','trigo','otro'];
+const CULTIVOS_ENSILADA = ['maiz','sorgo','triticale','alfalfa'];
 const CULTIVOS_EMPAQUE  = ['alfalfa_heno','triticale_heno'];
-const CULTIVOS_PIZCA    = ['higo'];
-const CULTIVOS_CORTE    = ['alfalfa','alfalfa_heno','trigo','triticale_heno'];
+const CULTIVOS_PIZCA    = ['higo','nogal'];
+const CULTIVOS_CORTE    = ['alfalfa','alfalfa_heno','triticale','triticale_heno'];
 
 function cultivoBadge(c) {
   const cv = CULTIVOS[c] || CULTIVOS.otro;
@@ -5062,7 +5061,7 @@ function capturarGastos() {
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquila Aplicaciones',equipo:'Maquila',monto,prediosIdx:[pi],tablaIdx:ti,haAplicadas:haVal,fecha:today()}); total++;
       });
     });
-  } else if(gastosTab === 'aplicaciones') {
+    // Registro individual de aplicación
     const mesAplic = parseInt(gastosGridDraft['aplic_mes'] || getMesesCn(cn)[0]);
     const pct1A = parseFloat(gastosGridDraft['aplic_pct1'] ?? 100)/100;
     const pct2A = parseFloat(gastosGridDraft['aplic_pct2'] || 0)/100;
@@ -5073,14 +5072,10 @@ function capturarGastos() {
     const haA   = parseFloat(gastosGridDraft['aplic_ha']);
     const montoA = parseFloat(gastosGridDraft['aplic_monto']);
     const tipoA = gastosGridDraft['aplic_tipo'] || 'Nómina';
-    const eq = (S.equiposAplic||[]).find(e=>e.id===eqId);
-    if(eq && montoA>0) {
-      const push = (cosecha, monto) => {
-        S.gastosGenerales.push({id:uid(),cosecha,anio,categoria:'Aplicaciones',equipo:eq.nombre,actividad:tipoA,monto,prediosIdx:[piA],tablaIdx:tiA,haAplicadas:haA||null,mes:mesAplic,fecha:today()});
-        total++;
-      };
-      if(pct1A>0) push(cn, montoA*pct1A);
-      if(pct2A>0&&cn2A) push(cn2A, montoA*pct2A);
+    const eqAplic = (S.equiposAplic||[]).find(e=>e.id===eqId);
+    if(eqAplic && montoA>0) {
+      if(pct1A>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Aplicaciones',equipo:eqAplic.nombre,actividad:tipoA,monto:montoA*pct1A,prediosIdx:[piA],tablaIdx:tiA,haAplicadas:haA||null,mes:mesAplic,fecha:today()}); total++; }
+      if(pct2A>0&&cn2A) { S.gastosGenerales.push({id:uid(),cosecha:cn2A,anio,categoria:'Aplicaciones',equipo:eqAplic.nombre,actividad:tipoA,monto:montoA*pct2A,prediosIdx:[piA],tablaIdx:tiA,haAplicadas:haA||null,mes:mesAplic,fecha:today()}); total++; }
     }
   } else if(gastosTab === 'ensilada') {
     const nomEnsilada = parseFloat(gastosGridDraft['nom_ensilada']);
