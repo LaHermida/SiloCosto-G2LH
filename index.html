@@ -1036,7 +1036,7 @@ function renderTablas() {
 
   document.getElementById('tab-content').innerHTML = `
     <div class="card">
-      <div class="card-head">${p.emoji} ${p.nombre} — ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha totales</div>
+      <div class="card-head">${p.emoji} ${p.nombre} — ${p.tablas.filter((_,ti)=>!getTablaData(pi,cn,ti).sinSiembra).length} tablas activas · ${fmtN(totalHa,2)} ha totales</div>
       <div class="tbl-wrap"><table>
         <thead><tr><th>Tabla</th><th>Hectáreas</th><th>% del predio</th><th></th></tr></thead>
         <tbody>${p.tablas.map((t,i)=>`<tr>
@@ -2147,7 +2147,7 @@ function renderRepContent() {
     const cats = ['Material de cultivo','Diesel','Maquinaria','Reparaciones Riego','Luz',
       'Ensilada','Empaque','Corte','Aplicaciones','Pizca',
       'Derechos de Agua','Nómina y gastos admin','Sirre y Desmonte','Otro'];
-    const totalHa = p.tablas.reduce((s,t)=>s+t.ha,0);
+    const totalHa = p.tablas.reduce((s,t,ti)=>{ const td=getTablaData(pi,cn,ti); return td.sinSiembra?s:s+(parseFloat(td.haSembradas)||t.ha||0); },0);
 
     // Build per-cultivo data
     const cvSet = new Set();
@@ -2211,7 +2211,7 @@ function renderRepContent() {
         </div>
         <div style="text-align:center;padding:14px;background:var(--soil);color:var(--cream);margin-bottom:14px">
           <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700">GASTOS TOTALES — ${p.nombre}</div>
-          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);margin-top:4px">Cosecha ${cn} · Año ${curAnioRep} · ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha ${getCosechaMeta(pi,cn).closed?'· 🔒 CERRADA':'· ✓ Abierta'}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);margin-top:4px">Cosecha ${cn} · Año ${curAnioRep} · ${p.tablas.filter((_,ti)=>!getTablaData(pi,cn,ti).sinSiembra).length} tablas activas · ${fmtN(totalHa,2)} ha ${getCosechaMeta(pi,cn).closed?'· 🔒 CERRADA':'· ✓ Abierta'}</div>
         </div>
         ${(()=>{
           const tablasFechas = p.tablas.map((t,ti)=>{
@@ -2451,7 +2451,7 @@ function renderRepContent() {
 
 function printReportePredio(pi, cn) {
   const p = S.predios[pi];
-  const totalHa = p.tablas.reduce((s,t)=>s+t.ha,0);
+  const totalHa = p.tablas.reduce((s,t,ti)=>{ const td=getTablaData(pi,cn,ti); return td.sinSiembra?s:s+(parseFloat(td.haSembradas)||t.ha||0); },0);
   const todosCvPDF = p.tablas.map((_,ti)=>getTablaData(pi,cn,ti).cultivo||'maiz');
   const hayEnsiladaPDF = todosCvPDF.some(cv=>CULTIVOS_ENSILADA.includes(cv));
   const hayEmpaquePDF  = todosCvPDF.some(cv=>CULTIVOS_EMPAQUE.includes(cv));
@@ -5073,6 +5073,16 @@ function capturarGastos() {
       });
     });
 
+  } else if(gastosTab === 'mat_ensilada') {
+    const mesMe = parseInt(gastosGridDraft['me_mes'] || getMesesCn(cn)[0]);
+    (S.matEnsilada||[]).forEach(art=>{
+      const cant = parseFloat(gastosGridDraft['me_cant_'+art.id+'_'+mesMe]);
+      const precio = parseFloat(gastosGridDraft['me_'+art.id+'_'+mesMe]);
+      if(!cant||!precio) return;
+      const monto = cant * precio;
+      S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Materiales de ensilada',equipo:art.nombre,monto,litros:cant,prediosIdx:S.predios.map((_,pi)=>pi),mes:mesMe,fecha:today()});
+      total++;
+    });
   } else if(gastosTab === 'corte') {
     const mesCort = parseInt(gastosGridDraft['cort2_mes'] || getMesesCn(cn)[0]);
     const pct1Cort = parseFloat(gastosGridDraft['cort2_pct1'] ?? 100)/100;
