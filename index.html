@@ -2795,8 +2795,8 @@ function buildGridTableFiltered(prediosList, prefix, headerColor, cultivoFilter,
       const key = `${prefix}_t_${pi}_${ti}`;
       const isChecked = gastosGridDraft[key]!=='0'&&gastosGridDraft[key]!==false&&gastosGridDraft[key]!==undefined;
       const ppt = parseFloat(gastosGridDraft[`${prefix}_ppt_${pi}`])||0;
-      const kilos = parseFloat(getTablaData(pi,gastosGridCn||1,ti).kilos)||0;
-      const total = isChecked && ppt ? (kilos/1000)*ppt : 0;
+      const td2 = getTablaData(pi,gastosGridCn||1,ti); const kilos = parseFloat(td2.kilos)||0; const ha = parseFloat(td2.haSembradas)||S.predios[pi].tablas[ti].ha||0;
+      const total = isChecked && ppt ? (priceLabel==="$/ha" ? ha*ppt : (kilos/1000)*ppt) : 0;
       return `<td style="padding:5px 10px;border-left:2px solid var(--border);${!isChecked?'opacity:0.45':''}">
           <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#1a1208;font-weight:500">
             <input type="checkbox" ${isChecked?'checked':''} style="width:14px;height:14px"
