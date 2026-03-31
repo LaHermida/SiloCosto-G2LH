@@ -2685,12 +2685,27 @@ const CATS_POR_TABLA = ['Ensilada','Maquila Corte','Maquila Aplicaciones','Empac
 function getGastoParaTabla(gasto, pi, ti) {
   const prediosIdx = gasto.prediosIdx || [];
   if(!prediosIdx.includes(pi)) return 0;
-  // Gastos con tabla específica: solo aplica si el equipo coincide con el nombre de esta tabla
+  // Gastos con tabla específica (maquila): solo aplica si el equipo coincide con el nombre de esta tabla
   if(CATS_POR_TABLA.includes(gasto.categoria)) {
     const tablaNombre = S.predios[pi].tablas[ti]?.nombre;
     return gasto.equipo === tablaNombre ? (parseFloat(gasto.monto)||0) : 0;
   }
-  // Gastos generales del predio: prorratear por ha entre todas las tablas
+  // Gastos con tablasIdx (diesel/maquinaria de ensilada/corte): prorratear solo entre tablas seleccionadas
+  if(gasto.tablasIdx && gasto.tablasIdx.length) {
+    const enEstePreTabla = gasto.tablasIdx.find(x => x.pi === pi && x.ti === ti);
+    if(!enEstePreTabla) return 0;
+    const cn = getGastoCosecha(gasto);
+    const totalHaSel = gasto.tablasIdx.reduce((s,x) => {
+      const tdx = getTablaData(x.pi, cn, x.ti);
+      return s + (parseFloat(tdx.haSembradas) || S.predios[x.pi]?.tablas[x.ti]?.ha || 0);
+    }, 0);
+    const td = getTablaData(pi, cn, ti);
+    const tablaHa = parseFloat(td.haSembradas) || S.predios[pi].tablas[ti]?.ha || 0;
+    const montoPredio = getGastoParaPredio(gasto, pi);
+    if(!totalHaSel) return 0;
+    return (parseFloat(gasto.monto)||0) * (tablaHa / totalHaSel);
+  }
+  // Gastos generales del predio: prorratear por ha entre todas las tablas activas
   const montoPredio = getGastoParaPredio(gasto, pi);
   if(!montoPredio) return 0;
   const cn = getGastoCosecha(gasto);
@@ -4977,17 +4992,20 @@ function capturarGastos() {
     const cn2Ens  = parseInt(gastosGridDraft['ens_cn2'] || 0);
     const precioDieselCn = parseFloat(gastosGridDraft['ens_diesel'] || S.precioDiesel?.[cn] || 0);
     // Maquinaria propia ensilada — lista independiente S.equiposEnsilada
+    // Calcular tablasIdx: tablas checadas en el grid de maquila ensilada
+    const tablasIdxEns = [];
+    S.predios.forEach((p,pi)=>{ p.tablas.forEach((t,ti)=>{ const key=`maq_t_${pi}_${ti}`; if(gastosGridDraft[key]!=='0'&&gastosGridDraft[key]!==false&&gastosGridDraft[key]!==undefined) tablasIdxEns.push({pi,ti}); }); });
     (S.equiposEnsilada||[]).forEach(eq=>{
       const litros = parseFloat(gastosGridDraft[`ens_d_${eq.id}`]);
       const serv   = parseFloat(gastosGridDraft[`ens_s_${eq.id}`]);
       const rep    = parseFloat(gastosGridDraft[`ens_r_${eq.id}`]);
       if(litros>0) {
         const montoDiesel = precioDieselCn ? litros*precioDieselCn : litros;
-        if(pct1Ens>0){S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel Ensilada',equipo:eq.nombre,litros:litros*pct1Ens,precioPorLitro:precioDieselCn,monto:montoDiesel*pct1Ens,prediosIdx,mes:mesEns,fecha:today()});total++;}
-        if(pct2Ens>0&&cn2Ens){S.gastosGenerales.push({id:uid(),cosecha:cn2Ens,anio,categoria:'Diesel Ensilada',equipo:eq.nombre,litros:litros*pct2Ens,precioPorLitro:precioDieselCn,monto:montoDiesel*pct2Ens,prediosIdx,mes:mesEns,fecha:today()});total++;}
+        if(pct1Ens>0){S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel Ensilada',equipo:eq.nombre,litros:litros*pct1Ens,precioPorLitro:precioDieselCn,monto:montoDiesel*pct1Ens,prediosIdx,tablasIdx:tablasIdxEns,mes:mesEns,fecha:today()});total++;}
+        if(pct2Ens>0&&cn2Ens){S.gastosGenerales.push({id:uid(),cosecha:cn2Ens,anio,categoria:'Diesel Ensilada',equipo:eq.nombre,litros:litros*pct2Ens,precioPorLitro:precioDieselCn,monto:montoDiesel*pct2Ens,prediosIdx,tablasIdx:tablasIdxEns,mes:mesEns,fecha:today()});total++;}
       }
-      if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Ensilada',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,fecha:today()}); total++; }
-      if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Ensilada',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,fecha:today()}); total++; }
+      if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Ensilada',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,tablasIdx:tablasIdxEns,fecha:today()}); total++; }
+      if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Ensilada',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,tablasIdx:tablasIdxEns,fecha:today()}); total++; }
     });
     // Maquila por tonelada — precio por predio, selección por tabla
     S.predios.forEach((p,pi)=>{
@@ -5086,6 +5104,9 @@ function capturarGastos() {
     const pct2Cort = parseFloat(gastosGridDraft['cort2_pct2'] || 0)/100;
     const cn2Cort  = parseInt(gastosGridDraft['cort2_cn2'] || 0);
     const precioDieselCnCort = parseFloat(gastosGridDraft['cort2_diesel'] || S.precioDiesel?.[cn] || 0);
+    // Calcular tablasIdx: tablas checadas en el grid de maquila corte
+    const tablasIdxCort = [];
+    S.predios.forEach((p,pi)=>{ p.tablas.forEach((t,ti)=>{ const key=`cortmaq_t_${pi}_${ti}`; if(gastosGridDraft[key]!=='0'&&gastosGridDraft[key]!==false&&gastosGridDraft[key]!==undefined) tablasIdxCort.push({pi,ti}); }); });
     // Maquinaria corte
     (S.equiposCorte||[]).forEach(eq=>{
       const litros = parseFloat(gastosGridDraft[`cortd_${eq.id}`]);
@@ -5093,11 +5114,11 @@ function capturarGastos() {
       const rep    = parseFloat(gastosGridDraft[`cortr_${eq.id}`]);
       if(litros>0) {
         const monto = precioDieselCnCort ? litros*precioDieselCnCort : litros;
-        if(pct1Cort>0){S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel Corte',equipo:eq.nombre,litros:litros*pct1Cort,precioPorLitro:precioDieselCnCort,monto:monto*pct1Cort,prediosIdx,mes:mesCort,fecha:today()});total++;}
-        if(pct2Cort>0&&cn2Cort){S.gastosGenerales.push({id:uid(),cosecha:cn2Cort,anio,categoria:'Diesel Corte',equipo:eq.nombre,litros:litros*pct2Cort,precioPorLitro:precioDieselCnCort,monto:monto*pct2Cort,prediosIdx,mes:mesCort,fecha:today()});total++;} total++;
+        if(pct1Cort>0){S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel Corte',equipo:eq.nombre,litros:litros*pct1Cort,precioPorLitro:precioDieselCnCort,monto:monto*pct1Cort,prediosIdx,tablasIdx:tablasIdxCort,mes:mesCort,fecha:today()});total++;}
+        if(pct2Cort>0&&cn2Cort){S.gastosGenerales.push({id:uid(),cosecha:cn2Cort,anio,categoria:'Diesel Corte',equipo:eq.nombre,litros:litros*pct2Cort,precioPorLitro:precioDieselCnCort,monto:monto*pct2Cort,prediosIdx,tablasIdx:tablasIdxCort,mes:mesCort,fecha:today()});total++;} total++;
       }
-      if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Corte',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,fecha:today()}); total++; }
-      if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Corte',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,fecha:today()}); total++; }
+      if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Corte',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,tablasIdx:tablasIdxCort,fecha:today()}); total++; }
+      if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Corte',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,tablasIdx:tablasIdxCort,fecha:today()}); total++; }
     });
     // Maquila corte: $/ha × ha de cada tabla seleccionada
     S.predios.forEach((p,pi)=>{
