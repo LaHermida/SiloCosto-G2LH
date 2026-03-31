@@ -2386,6 +2386,19 @@ function renderRepContent() {
 
     const ti = curTablaRep>=0?curTablaRep:0;
     const td = getTablaData(pi,cn,ti);
+    if(td.sinSiembra) {
+      document.getElementById('rep-content').innerHTML = `
+        <div class="card">
+          <div class="card-head">Selecciona tabla</div>
+          <div class="tabla-grid">${tablaGrid}</div>
+        </div>
+        <div class="card" style="text-align:center;padding:40px;color:var(--muted)">
+          <div style="font-size:32px;margin-bottom:12px">🌿</div>
+          <div style="font-size:16px;font-weight:600">Tabla vacante</div>
+          <div style="font-size:13px;margin-top:6px">Esta tabla no tiene siembra en Cosecha ${cn}</div>
+        </div>`;
+      return;
+    }
     const haTabla = parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
     const haTotalActivas = p.tablas.reduce((s,t,ti2)=>{ const td2=getTablaData(pi,cn,ti2); return s+(td2.sinSiembra?0:(parseFloat(td2.haSembradas)||t.ha||0)); },0);
     const depPredio = calcDepPredio(pi,cn,curAnioRep);
