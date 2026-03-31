@@ -2915,7 +2915,6 @@ function renderGastos() {
   const isAdmin = currentUser?.rol === 'admin';
   if(!S.equipos) S.equipos = {}; // {pi: [{id, nombre, tipo}]} tipo: tractor|noria|luz
   const curYear = new Date().getFullYear();
-  const isAdmin = currentUser?.rol === 'admin';
 
   // Summary by cosecha
   const resumen = {1:0, 2:0, 3:0};
