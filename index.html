@@ -5104,7 +5104,7 @@ function capturarGastos() {
       if(!ppt||ppt<=0) return;
       p.tablas.forEach((t,ti)=>{
         const key = `maq_t_${pi}_${ti}`;
-        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined) return;
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false) return;
         const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
         if(!kilos) return;
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Ensilada',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()});
@@ -5117,7 +5117,7 @@ function capturarGastos() {
         if(!CULTIVOS_PIZCA.includes(getTablaData(pi,cn,ti).cultivo||'maiz')) return;
         const key = `pizca_t_${pi}_${ti}`;
         const ppt = parseFloat(gastosGridDraft[`pizca_ppt_${pi}`]);
-        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined||!ppt) return;
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||!ppt) return;
         const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
         if(!kilos) return;
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Pizca',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()});
@@ -5130,7 +5130,7 @@ function capturarGastos() {
         if((getTablaData(pi,cn,ti).cultivo||'maiz')!=='alfalfa') return;
         const key = `ens_emp_t_${pi}_${ti}`;
         const ppt = parseFloat(gastosGridDraft[`ens_emp_ppt_${pi}`]);
-        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined||!ppt) return;
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||!ppt) return;
         const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
         if(!kilos) return;
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Empacado',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()});
@@ -5143,7 +5143,7 @@ function capturarGastos() {
       if(!ppt||ppt<=0) return;
       p.tablas.forEach((t,ti)=>{
         const key = `cam_t_${pi}_${ti}`;
-        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined) return;
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false) return;
         const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
         if(!kilos) return;
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Camiones',actividad:'Ensilada',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()});
@@ -5217,7 +5217,7 @@ function capturarGastos() {
       if(!pph||pph<=0) return;
       p.tablas.forEach((t,ti)=>{
         const key = `cortmaq_t_${pi}_${ti}`;
-        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined) return;
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false) return;
         const ha = parseFloat(getTablaData(pi,cn,ti).haSembradas)||p.tablas[ti].ha||0;
         if(!ha) return;
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquila Corte',equipo:t.nombre,monto:ha*pph,prediosIdx:[pi],fecha:today()}); total++;
@@ -5418,7 +5418,7 @@ function capturarGastos() {
       S.predios.forEach((p,pi)=>{
         p.tablas.forEach((t,ti)=>{
           const key = `da_t_${dcn}_${pi}_${ti}`;
-          if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined) return;
+          if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false) return;
           const ha = parseFloat(getTablaData(pi,dcn,ti).haSembradas)||p.tablas[ti].ha||0;
           tablasMarcadas.push({pi,ti,t,p,ha});
         });
