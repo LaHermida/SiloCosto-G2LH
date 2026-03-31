@@ -192,7 +192,7 @@ tr:hover td { background:var(--cream); }
     <button class="hnav" onclick="goSec('registro')">Registro</button>
     <button class="hnav" onclick="goSec('gastos')">Gastos</button>
     <button class="hnav" onclick="goSec('tablas')">Tablas</button>
-    <button class="hnav" onclick="goSec('articulos')">Artículos</button>
+    <button class="hnav" onclick="goSec('articulos')">Inventario</button>
     <button class="hnav" onclick="goSec('depreciaciones')">Depreciaciones</button>
     <button class="hnav" onclick="goSec('reportes')">Reportes</button>
   </nav>
@@ -212,7 +212,7 @@ tr:hover td { background:var(--cream); }
   </div>
   <div class="sb-div"></div>
   <span class="sb-label">Accesos</span>
-  <div class="sb-item" onclick="goSec('articulos')"><span class="sb-icon">📦</span>Artículos</div>
+  <div class="sb-item" onclick="goSec('articulos')"><span class="sb-icon">📦</span>Inventario</div>
   <div class="sb-item" onclick="goSec('depreciaciones')"><span class="sb-icon">⚙️</span>Depreciaciones</div>
   <div class="sb-item" onclick="goSec('gastos')"><span class="sb-icon">💰</span>Gastos Gral.</div>
   <div class="sb-item" onclick="goSec('registro')"><span class="sb-icon">✏️</span>Registro</div>
@@ -255,7 +255,7 @@ tr:hover td { background:var(--cream); }
 
   <!-- ARTÍCULOS -->
   <section id="sec-articulos" class="page">
-    <div class="pg-title">Artículos e Inventario</div>
+    <div class="pg-title">Inventario e Inventario</div>
     <div class="pg-sub">// Catálogo de precios · Inventario por predio · Entradas y salidas</div>
     <div style="display:flex;gap:8px;margin-bottom:16px">
       <button class="ctab active" id="art-tab-catalogo" onclick="setArtTab('catalogo')">📦 Catálogo</button>
@@ -321,7 +321,7 @@ tr:hover td { background:var(--cream); }
       </div>
     </div>
     <div class="card">
-      <div class="card-head">📦 Artículos registrados</div>
+      <div class="card-head">📦 Inventario registrados</div>
       <div id="art-list"></div>
     </div>
     </div><!-- end art-content-catalogo -->
@@ -698,6 +698,50 @@ function getCurrentPrice(artId, anio) {
   const filtered = a.precios.filter(p=>p.fecha && parseInt(p.fecha.slice(0,4))<=yr);
   if(filtered.length) return filtered[filtered.length-1].valor || 0;
   return a.precios[0].valor || 0;
+}
+
+// ── PEPS: Precio promedio ponderado basado en entradas FIFO ──
+// Retorna el precio PEPS para una cantidad dada de un artículo en un predio
+// Si no hay stock suficiente en inventario, usa getCurrentPrice como fallback
+function getPepsPrecio(artId, cantidadNecesaria, predioIdx) {
+  if(!S.inventario) return getCurrentPrice(artId);
+  // Obtener entradas ordenadas por fecha (más antigua primero = PEPS)
+  const entradas = (S.inventario||[])
+    .filter(m => m.tipo === 'entrada' && m.articuloId === artId && m.predioIdx === predioIdx)
+    .sort((a,b) => a.fecha.localeCompare(b.fecha))
+    .map(m => ({ cantidad: parseFloat(m.cantidad)||0, precio: parseFloat(m.precio)||0 }));
+  if(!entradas.length) return getCurrentPrice(artId);
+  // Calcular salidas ya consumidas para saber qué queda de cada entrada
+  const salidasYa = (S.inventario||[])
+    .filter(m => m.tipo === 'salida' && m.articuloId === artId && m.predioIdx === predioIdx)
+    .reduce((s,m) => s + (parseFloat(m.cantidad)||0), 0);
+  // También salidas automáticas de consumos
+  let salidasAuto = 0;
+  S.predios[predioIdx]?.tablas.forEach((_,ti) => {
+    [1,2,3].forEach(cn => {
+      const td = S.cosechas?.[predioIdx]?.[cn]?.[ti];
+      (td?.consumos||[]).forEach(c => {
+        if(c.articuloId === artId) salidasAuto += parseFloat(c.cantidad)||0;
+      });
+    });
+  });
+  let yaConsumido = salidasYa + salidasAuto;
+  // Aplicar PEPS: consumir entradas de más antigua a más nueva
+  let cantPendiente = cantidadNecesaria;
+  let costoTotal = 0;
+  for(const e of entradas) {
+    if(cantPendiente <= 0) break;
+    const disponible = Math.max(0, e.cantidad - yaConsumido);
+    yaConsumido = Math.max(0, yaConsumido - e.cantidad);
+    const usar = Math.min(disponible, cantPendiente);
+    costoTotal += usar * e.precio;
+    cantPendiente -= usar;
+  }
+  // Si no alcanzó el stock, usar precio del catálogo para lo restante
+  if(cantPendiente > 0) {
+    costoTotal += cantPendiente * getCurrentPrice(artId);
+  }
+  return cantidadNecesaria > 0 ? costoTotal / cantidadNecesaria : getCurrentPrice(artId);
 }
 
 // ── DEPRECIATION CALC ──
@@ -1983,7 +2027,7 @@ function renderRegContent() {
         const ti2 = parseInt(inp.getAttribute('data-ti'));
         const art = S.articulos.find(a=>a.id===artId);
         if(!art) return;
-        const precio = getCurrentPrice(artId);
+        const precio = getPepsPrecio(artId, cant, pi);
         const tdx = getTablaData(pi, cn, ti2);
         tdx.consumos.push({
           articuloId:artId, nombre:art.nombre, categoria:art.categoria,
@@ -2127,7 +2171,7 @@ function addConsumo() {
   if(!artId||!cant) { toast('⚠️ Selecciona artículo e ingresa cantidad',true); return; }
   const art = S.articulos.find(a=>a.id===artId);
   if(!art) return;
-  const precio = getCurrentPrice(artId);
+  const precio = getPepsPrecio(artId, cant, curPredioReg);
   const td = getTablaData(curPredioReg, curCosechaReg, curTablaReg);
   td.consumos.push({
     articuloId:artId, nombre:art.nombre, categoria:art.categoria,
@@ -2136,7 +2180,7 @@ function addConsumo() {
   save();
   document.getElementById('reg-cant').value='';
   renderRegContent();
-  toast(`✓ Registrado — precio: ${fmt(precio)}`);
+  toast(`✓ Registrado — precio PEPS: ${fmt(precio)}`);
 }
 
 function delConsumo(i) {
@@ -5196,8 +5240,9 @@ function capturarGastos() {
     if(nomEnsilada>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina y gastos admin',actividad:'Ensilada',monto:nomEnsilada,prediosIdx,fecha:today()}); total++; }
     // Mat ensilada — cantidad total prorrateada por superficie entre tablas marcadas
     S.articulos.filter(a=>a.categoria==='Materiales de ensilada').forEach(art=>{
-      const precio = getCurrentPrice(art.id) || 0;
       const cantTotal = parseFloat(gastosGridDraft[`me_cant_${art.id}`]);
+      const piME = prediosIdx[0] ?? 0;
+      const precio = getPepsPrecio(art.id, cantTotal||0, piME) || getCurrentPrice(art.id) || 0;
       if(!cantTotal||cantTotal<=0) return;
       // Collect checked tablas and their ha
       const tablasChecked = [];
