@@ -2647,6 +2647,7 @@ function getHaSembradasPredio(pi, cn) {
   const p = S.predios[pi];
   return p.tablas.reduce((s,t,ti)=>{
     const td = getTablaData(pi,cn,ti);
+    if(td.sinSiembra) return s;
     return s + (parseFloat(td.haSembradas) || t.ha || 0);
   }, 0);
 }
