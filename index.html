@@ -2881,7 +2881,10 @@ function renderGastos() {
         const v = matrix[rk]?.[ck]||0;
         return `<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px">${v?fmt(v):'—'}</td>`;
       }).join('');
-      return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 10px;font-weight:600;white-space:nowrap;font-size:13px">${rk}</td>${cells}<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);font-weight:700">${fmt(rowTotals[rk])}</td></tr>`;
+      // Find indices of all gastos with this key for deletion
+      const idxs = histItems.map((g,i)=>getKey(g)===rk?S.gastosGenerales.indexOf(g):-1).filter(i=>i>=0);
+      const delBtn = isAdmin ? `<td style="padding:2px 4px"><button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delGastosMulti([${idxs.join(',')}])">✕</button></td>` : '<td></td>';
+      return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:5px 10px;font-weight:600;white-space:nowrap;font-size:13px">${rk}</td>${cells}<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber);font-weight:700">${fmt(rowTotals[rk])}</td>${delBtn}</tr>`;
     }).join('');
     const footCells = colKeys.map(ck=>{
       const v = colTotals[ck]||0;
@@ -2889,9 +2892,9 @@ function renderGastos() {
     }).join('');
     return `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px">📊 ${titulo}</div>
     <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;min-width:400px">
-      <thead><tr style="background:var(--earth);color:#fff"><th style="padding:5px 10px;text-align:left">Concepto</th>${th}<th style="padding:5px 8px;text-align:right">TOTAL</th></tr></thead>
+      <thead><tr style="background:var(--earth);color:#fff"><th style="padding:5px 10px;text-align:left">Concepto</th>${th}<th style="padding:5px 8px;text-align:right">TOTAL</th><th></th></tr></thead>
       <tbody>${bodyRows}</tbody>
-      <tfoot><tr style="background:var(--cream);font-weight:700"><td style="padding:5px 10px">TOTAL</td>${footCells}<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${fmt(grandTotal)}</td></tr></tfoot>
+      <tfoot><tr style="background:var(--cream);font-weight:700"><td style="padding:5px 10px">TOTAL</td>${footCells}<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${fmt(grandTotal)}</td><td></td></tr></tfoot>
     </table></div>`;
   }
 
@@ -5307,6 +5310,13 @@ function capturarGastos() {
   save();
   renderGastos();
   toast(`✅ ${total} gasto(s) capturado(s)`);
+}
+
+function delGastosMulti(indices) {
+  if(!confirm('¿Eliminar todos los registros de esta fila?')) return;
+  // Remove in reverse order to preserve indices
+  indices.sort((a,b)=>b-a).forEach(i=>{ if(i>=0) S.gastosGenerales.splice(i,1); });
+  save(); renderGastos(); toast('✓ Eliminado');
 }
 
 function delGasto(i) {
