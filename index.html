@@ -3563,7 +3563,7 @@ function renderGastos() {
     const pizcaSection = buildGridTableFiltered(prediosPizca, 'pizca', '#3a2a0a', CULTIVOS_PIZCA);
 
     // Empacado: tablas con cultivo empaque (alfalfa, triticale_heno)
-    const empacadoSection = buildGridTableFiltered(S.predios.map((p,pi)=>({p,pi})), 'emp', '#1a3a18', CULTIVOS_EMPAQUE);
+    const empacadoSection = buildGridTableFiltered(S.predios.map((p,pi)=>({p,pi})), 'ens_emp', '#1a3a18', CULTIVOS_EMPAQUE);
 
     // Grid materiales de ensilada: Artículo | Tablas (checkboxes) | Cantidad | Total
     const selPrediosEns = gastosGridPrediosIdx.length ? gastosGridPrediosIdx : S.predios.map((_,i)=>i);
@@ -3803,7 +3803,29 @@ function renderGastos() {
         <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
           <thead><tr style="background:#2d5a1b;color:#fff"><th style="padding:6px 12px;text-align:left">Artículo</th>${mesesHdr_me}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
           <tbody>${meHistRows}</tbody>
-        </table></div>` : ''}`;
+        </table></div>
+        <details style="margin-top:8px">
+          <summary style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;text-transform:uppercase">▼ Registros individuales (${histME.length})</summary>
+          <div style="overflow-x:auto;margin-top:6px"><table style="border-collapse:collapse;font-size:12px;width:100%">
+            <thead><tr style="background:#e8f0e4;font-size:10px;color:var(--muted)">
+              <th style="padding:4px 8px;text-align:left">Artículo</th>
+              <th style="padding:4px 8px;text-align:right">Cantidad</th>
+              <th style="padding:4px 8px;text-align:right">Monto</th>
+              <th style="padding:4px 8px;text-align:left">Predio</th>
+              <th style="padding:4px 8px"></th>
+            </tr></thead>
+            <tbody>${histME.map((g,gi)=>{
+              const gi2 = S.gastosGenerales.indexOf(g);
+              return `<tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:4px 8px">${g.equipo||'—'}</td>
+                <td style="padding:4px 8px;text-align:right;font-family:'DM Mono',monospace">${g.litros?fmtN(g.litros,2)+' uds':'—'}</td>
+                <td style="padding:4px 8px;text-align:right;font-family:'DM Mono',monospace;color:var(--amber)">${fmt(g.monto)}</td>
+                <td style="padding:4px 8px;font-size:11px;color:var(--muted)">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
+                ${isAdmin?`<td style="padding:4px 6px"><button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${gi2})">✕</button></td>`:'<td></td>'}
+              </tr>`;
+            }).join('')}</tbody>
+          </table></div>
+        </details>` : ''}`;
 
   } else if(gastosTab === 'empaque') {
     // Empaque: Alfalfa + Triticale Heno
@@ -5092,12 +5114,12 @@ function capturarGastos() {
         total++;
       });
     });
-    // Empacado: tablas con alfalfa
+    // Empacado: tablas con alfalfa (desde pestaña Ensilada)
     S.predios.forEach((p,pi)=>{
       p.tablas.forEach((t,ti)=>{
         if((getTablaData(pi,cn,ti).cultivo||'maiz')!=='alfalfa') return;
-        const key = `emp_t_${pi}_${ti}`;
-        const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}`]);
+        const key = `ens_emp_t_${pi}_${ti}`;
+        const ppt = parseFloat(gastosGridDraft[`ens_emp_ppt_${pi}`]);
         if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined||!ppt) return;
         const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
         if(!kilos) return;
