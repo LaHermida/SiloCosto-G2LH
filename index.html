@@ -563,6 +563,27 @@ async function loadState() {
   });
   // Ensilada stays empty — independent list
   // (don't auto-populate equiposEnsilada)
+  // Migrar cultivos viejos a los nuevos nombres correctos
+  const CULTIVO_MAP = {
+    'trigo': 'triticale',
+    'nuez': 'nogal',
+    'alfalfa heno': 'alfalfa_heno',
+    'triticale heno': 'triticale_heno',
+    'Alfalfa Heno': 'alfalfa_heno',
+    'Triticale Heno': 'triticale_heno',
+  };
+  S.predios.forEach((p,pi)=>{
+    [1,2,3].forEach(cn=>{
+      if(!S.cosechas[pi]||!S.cosechas[pi][cn]) return;
+      p.tablas.forEach((_,ti)=>{
+        const td = S.cosechas[pi][cn][ti];
+        if(td && td.cultivo && CULTIVO_MAP[td.cultivo]) {
+          td.cultivo = CULTIVO_MAP[td.cultivo];
+        }
+      });
+    });
+  });
+
   _loaded = true;
   render(curSec);
   renderDash();
@@ -600,6 +621,7 @@ const CULTIVOS = {
   triticale_heno: { label:'Heno Triticale', icon:'🌾', css:'cultivo-trigo',   pct:20, empaque:true },
   higo:           { label:'Higo',           icon:'🍃', css:'cultivo-otro',    pct:40, pizca:true },
   nogal:          { label:'Nogal',          icon:'🥜', css:'cultivo-otro',    pct:100, pizca:true },
+  otro:           { label:'Otro',           icon:'🌱', css:'cultivo-otro',    pct:40 },
 };
 
 // Cultivos que van a ensilada vs empaque
