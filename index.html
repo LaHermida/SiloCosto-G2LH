@@ -606,7 +606,6 @@ const CULTIVOS = {
 // Cultivos que van a ensilada vs empaque
 const CULTIVOS_ENSILADA = ['maiz','sorgo','trigo','otro'];
 const CULTIVOS_EMPAQUE  = ['alfalfa_heno','triticale_heno'];
-function esEmpaque(cv) { return CULTIVOS_EMPAQUE.includes(cv) || cv==='alfalfa heno' || cv==='triticale heno' || cv==='Alfalfa Heno' || cv==='Triticale Heno' || (CULTIVOS[cv]?.empaque===true); }
 const CULTIVOS_PIZCA    = ['higo'];
 const CULTIVOS_CORTE    = ['alfalfa','alfalfa_heno','trigo','triticale_heno'];
 
@@ -3918,7 +3917,14 @@ function renderGastos() {
           onchange="gastosGridDraft['emp_nom']=this.value"/>
       </div>`;
 
-    // Pre-inicializar TODAS las tablas activas como checadas si no se han tocado
+    // Camiones empaque (tablas con alfalfa/triticale_heno)
+    // Pre-inicializar tablas de empaque como checadas si no se han tocado
+    S.predios.forEach((p,pi)=>{ p.tablas.forEach((t,ti)=>{ 
+      if(CULTIVOS_EMPAQUE.includes(getTablaData(pi,selectedCn,ti).cultivo||'maiz')) {
+        if(gastosGridDraft[`emp_t_${pi}_${ti}`]===undefined) gastosGridDraft[`emp_t_${pi}_${ti}`]='1';
+        if(gastosGridDraft[`camp_t_${pi}_${ti}`]===undefined) gastosGridDraft[`camp_t_${pi}_${ti}`]='1';
+      }
+    }); });
     S.predios.forEach((p,pi)=>{ p.tablas.forEach((t,ti)=>{ 
       const td2=getTablaData(pi,selectedCn,ti);
       if(!td2.sinSiembra) {
@@ -4391,16 +4397,16 @@ function renderGastos() {
       if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,fecha:today()}); total++; }
       if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,fecha:today()}); total++; }
     });
-    // Empacado por tabla — usar tablas que tienen precio y kilos, ignorar filtro de cultivo
+    // Empacado por tabla
     S.predios.forEach((p,pi)=>{
-      const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}`]);
-      if(!ppt) return;
       p.tablas.forEach((t,ti)=>{
-        const td2 = getTablaData(pi,cn,ti);
-        if(td2.sinSiembra) return;
+        const cv = getTablaData(pi,cn,ti).cultivo||'maiz';
         const key = `emp_t_${pi}_${ti}`;
-        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false) return;
-        const kilos = parseFloat(td2.kilos)||0;
+        const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}`]);
+        const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
+        console.log('EMPAQUE',t.nombre,'cv:',cv,'key:',gastosGridDraft[key],'ppt:',ppt,'kilos:',kilos,'enEmpaque:',CULTIVOS_EMPAQUE.includes(cv));
+        if(!CULTIVOS_EMPAQUE.includes(cv)) return;
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||!ppt) return;
         if(!kilos) return;
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Empacado',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
       });
@@ -5236,7 +5242,6 @@ function capturarGastos() {
     }
 
   } else if(gastosTab === 'empaque') {
-    // Maquinaria empaque
     const precioDieselEmpCap = parseFloat(gastosGridDraft['emp2_diesel'] || S.precioDiesel?.[cn] || 0);
     (S.equiposEmpaque||[]).forEach(eq=>{
       const litros = parseFloat(gastosGridDraft[`empdiesel_${eq.id}`]);
@@ -5246,7 +5251,6 @@ function capturarGastos() {
       if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,fecha:today()}); total++; }
       if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,fecha:today()}); total++; }
     });
-    // Empacado por tabla
     S.predios.forEach((p,pi)=>{
       const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}`]);
       if(!ppt) return;
@@ -5260,7 +5264,6 @@ function capturarGastos() {
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Empacado',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
       });
     });
-    // Camiones empaque
     S.predios.forEach((p,pi)=>{
       const ppt = parseFloat(gastosGridDraft[`camp_ppt_${pi}`]);
       if(!ppt) return;
@@ -5274,7 +5277,6 @@ function capturarGastos() {
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Camiones Empaque',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
       });
     });
-    // Nómina empaque
     const montoNomEmpCap = parseFloat(gastosGridDraft['emp_nom_monto']);
     if(montoNomEmpCap>0) {
       const nomPiEmp = parseInt(gastosGridDraft['emp_nom_pi']||0);
@@ -5342,16 +5344,16 @@ function capturarGastos() {
       if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,fecha:today()}); total++; }
       if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,fecha:today()}); total++; }
     });
-    // Empacado por tabla — usar tablas que tienen precio y kilos, ignorar filtro de cultivo
+    // Empacado por tabla
     S.predios.forEach((p,pi)=>{
-      const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}`]);
-      if(!ppt) return;
       p.tablas.forEach((t,ti)=>{
-        const td2 = getTablaData(pi,cn,ti);
-        if(td2.sinSiembra) return;
+        const cv = getTablaData(pi,cn,ti).cultivo||'maiz';
         const key = `emp_t_${pi}_${ti}`;
-        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false) return;
-        const kilos = parseFloat(td2.kilos)||0;
+        const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}`]);
+        const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
+        console.log('EMPAQUE',t.nombre,'cv:',cv,'key:',gastosGridDraft[key],'ppt:',ppt,'kilos:',kilos,'enEmpaque:',CULTIVOS_EMPAQUE.includes(cv));
+        if(!CULTIVOS_EMPAQUE.includes(cv)) return;
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||!ppt) return;
         if(!kilos) return;
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Empacado',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
       });
