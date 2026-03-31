@@ -2145,11 +2145,8 @@ function renderRepContent() {
     const hayPizca    = todosCultivosRep.some(cv=>CULTIVOS_PIZCA.includes(cv));
     const hayCorte    = todosCultivosRep.some(cv=>CULTIVOS_CORTE.includes(cv));
     const cats = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz',
-      ...(hayEnsilada?['Ensilada','Materiales de ensilada']:[]),
-      ...(hayEmpaque?['Empacado','Maquinaria Empaque']:[]),
-      ...(hayPizca?['Pizca']:[]),
-      ...(hayCorte?['Maquila Corte','Diesel Corte','Maquinaria Corte','Nómina Corte']:[]),
-      'Derechos de Agua','Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
+      'Ensilada','Materiales de ensilada','Empacado','Pizca',
+      'Maquila Corte','Derechos de Agua','Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
     const totalHa = p.tablas.reduce((s,t)=>s+t.ha,0);
 
     // Build per-cultivo data
@@ -2367,11 +2364,8 @@ function renderRepContent() {
     const hayPizca    = todosCultivosRep.some(cv=>CULTIVOS_PIZCA.includes(cv));
     const hayCorte    = todosCultivosRep.some(cv=>CULTIVOS_CORTE.includes(cv));
     const cats = ['Material de cultivo','Maquinaria','Reparaciones Riego','Luz',
-      ...(hayEnsilada?['Ensilada','Materiales de ensilada']:[]),
-      ...(hayEmpaque?['Empacado','Maquinaria Empaque']:[]),
-      ...(hayPizca?['Pizca']:[]),
-      ...(hayCorte?['Maquila Corte','Diesel Corte','Maquinaria Corte','Nómina Corte']:[]),
-      'Derechos de Agua','Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
+      'Ensilada','Materiales de ensilada','Empacado','Pizca',
+      'Maquila Corte','Derechos de Agua','Nómina y gastos admin','Diesel','Sirre y Desmonte','Otro'];
     let catTotals={};
     cats.forEach(c=>catTotals[c]=0);
     (td.consumos||[]).filter(c=>!c.anio||c.anio===curAnioRep).forEach(c=>{
