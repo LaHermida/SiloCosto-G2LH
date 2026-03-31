@@ -5235,6 +5235,53 @@ function capturarGastos() {
       if(pct2CortNom>0&&cn2CortNom) { S.gastosGenerales.push({id:uid(),cosecha:cn2CortNom,anio,categoria:'Nómina Corte',mes:mesCortNom,monto:montoNomCortCap*pct2CortNom,prediosIdx,fecha:today()}); total++; }
     }
 
+  } else if(gastosTab === 'empaque') {
+    // Maquinaria empaque
+    const precioDieselEmpCap = parseFloat(gastosGridDraft['emp2_diesel'] || S.precioDiesel?.[cn] || 0);
+    (S.equiposEmpaque||[]).forEach(eq=>{
+      const litros = parseFloat(gastosGridDraft[`empdiesel_${eq.id}`]);
+      const serv   = parseFloat(gastosGridDraft[`empserv_${eq.id}`]);
+      const rep    = parseFloat(gastosGridDraft[`emprep_${eq.id}`]);
+      if(litros>0) { const monto=precioDieselEmpCap?litros*precioDieselEmpCap:litros; S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Diesel Empaque',equipo:eq.nombre,litros,precioPorLitro:precioDieselEmpCap,monto,prediosIdx,fecha:today()}); total++; }
+      if(serv>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Servicio',monto:serv,prediosIdx,fecha:today()}); total++; }
+      if(rep>0)  { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Maquinaria Empaque',equipo:eq.nombre,actividad:'Reparación',monto:rep,prediosIdx,fecha:today()}); total++; }
+    });
+    // Empacado por tabla
+    S.predios.forEach((p,pi)=>{
+      const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}`]);
+      if(!ppt) return;
+      p.tablas.forEach((t,ti)=>{
+        const td2 = getTablaData(pi,cn,ti);
+        if(td2.sinSiembra) return;
+        const key = `emp_t_${pi}_${ti}`;
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false) return;
+        const kilos = parseFloat(td2.kilos)||0;
+        if(!kilos) return;
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Empacado',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
+      });
+    });
+    // Camiones empaque
+    S.predios.forEach((p,pi)=>{
+      const ppt = parseFloat(gastosGridDraft[`camp_ppt_${pi}`]);
+      if(!ppt) return;
+      p.tablas.forEach((t,ti)=>{
+        const td2 = getTablaData(pi,cn,ti);
+        if(td2.sinSiembra) return;
+        const key = `camp_t_${pi}_${ti}`;
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false) return;
+        const kilos = parseFloat(td2.kilos)||0;
+        if(!kilos) return;
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Camiones Empaque',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
+      });
+    });
+    // Nómina empaque
+    const montoNomEmpCap = parseFloat(gastosGridDraft['emp_nom_monto']);
+    if(montoNomEmpCap>0) {
+      const nomPiEmp = parseInt(gastosGridDraft['emp_nom_pi']||0);
+      const mesEmp = parseInt(gastosGridDraft['emp_nom_mes']||getMesesCn(cn)[0]);
+      S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap,prediosIdx:[nomPiEmp],fecha:today()}); total++;
+    }
+
   } else if(gastosTab === 'nomina') {
     const mesNom = parseInt(gastosGridDraft['nom_mes'] || getMesesCn(cn)[0]);
     const pct1N = parseFloat(gastosGridDraft['nom_pct1'] ?? 100)/100;
