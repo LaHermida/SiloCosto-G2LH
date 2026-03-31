@@ -4991,20 +4991,6 @@ function capturarGastos() {
         total++;
       });
     });
-    // Maquila por predio (precio uniforme por predio)
-    S.predios.forEach((p,pi)=>{
-      if(p.nombre==='Los Higos') return; // Los Higos usa Pizca
-      const ppt = parseFloat(gastosGridDraft[`maq_ppt_${pi}`]);
-      if(!ppt||ppt<=0) return;
-      p.tablas.forEach((t,ti)=>{
-        const key = `maq_t_${pi}_${ti}`;
-        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||gastosGridDraft[key]===undefined) return;
-        const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
-        if(!kilos) return;
-        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Ensilada',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()});
-        total++;
-      });
-    });
     // Pizca: tablas con cultivo pizca (higo)
     S.predios.forEach((p,pi)=>{
       p.tablas.forEach((t,ti)=>{
