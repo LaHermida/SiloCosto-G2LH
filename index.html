@@ -4393,11 +4393,13 @@ function renderGastos() {
     // Empacado por tabla
     S.predios.forEach((p,pi)=>{
       p.tablas.forEach((t,ti)=>{
-        if(!CULTIVOS_EMPAQUE.includes(getTablaData(pi,cn,ti).cultivo||'maiz')) return;
+        const cv = getTablaData(pi,cn,ti).cultivo||'maiz';
         const key = `emp_t_${pi}_${ti}`;
         const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}`]);
-        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||!ppt) return;
         const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
+        console.log('EMPAQUE',t.nombre,'cv:',cv,'key:',gastosGridDraft[key],'ppt:',ppt,'kilos:',kilos,'enEmpaque:',CULTIVOS_EMPAQUE.includes(cv));
+        if(!CULTIVOS_EMPAQUE.includes(cv)) return;
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||!ppt) return;
         if(!kilos) return;
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Empacado',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
       });
@@ -5295,11 +5297,13 @@ function capturarGastos() {
     // Empacado por tabla
     S.predios.forEach((p,pi)=>{
       p.tablas.forEach((t,ti)=>{
-        if(!CULTIVOS_EMPAQUE.includes(getTablaData(pi,cn,ti).cultivo||'maiz')) return;
+        const cv = getTablaData(pi,cn,ti).cultivo||'maiz';
         const key = `emp_t_${pi}_${ti}`;
         const ppt = parseFloat(gastosGridDraft[`emp_ppt_${pi}`]);
-        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||!ppt) return;
         const kilos = parseFloat(getTablaData(pi,cn,ti).kilos)||0;
+        console.log('EMPAQUE',t.nombre,'cv:',cv,'key:',gastosGridDraft[key],'ppt:',ppt,'kilos:',kilos,'enEmpaque:',CULTIVOS_EMPAQUE.includes(cv));
+        if(!CULTIVOS_EMPAQUE.includes(cv)) return;
+        if(gastosGridDraft[key]==='0'||gastosGridDraft[key]===false||!ppt) return;
         if(!kilos) return;
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Empacado',equipo:t.nombre,monto:(kilos/1000)*ppt,prediosIdx:[pi],fecha:today()}); total++;
       });
