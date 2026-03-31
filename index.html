@@ -2386,9 +2386,12 @@ function renderRepContent() {
 
     const ti = curTablaRep>=0?curTablaRep:0;
     const td = getTablaData(pi,cn,ti);
-    const dep = calcDepPredio(pi,cn,curAnioRep)*(p.tablas[ti]?.ha||0)/Math.max(1,p.tablas.reduce((s,t)=>s+t.ha,0));
+    const dep = calcDepTabla(pi,cn,ti,curAnioRep);
+    const depHaTabla = p.tablas.reduce((s,t,ti2)=>{ const td2=getTablaData(pi,cn,ti2); return s+(td2.sinSiembra?0:(parseFloat(td2.haSembradas)||t.ha||0)); },0);
+    const haTabla = parseFloat(td.haSembradas)||p.tablas[ti].ha||0;
     const vars = calcConsumosTabla(pi,cn,ti);
-    const total = dep+vars;
+    const gastosGen = calcGastosGeneralesTabla(pi,cn,ti,curAnioRep);
+    const total = dep+vars+gastosGen;
     const kilos = parseFloat(td.kilos)||0;
     const kgMS = kilos*((parseFloat(td.pctMS)||0)/100);
     const cpk = calcCPK(pi,cn,ti);
@@ -2411,9 +2414,11 @@ function renderRepContent() {
       else catTotals['Otro']+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
     });
     // Add gastos generales per category for this tabla
-    (S.gastosGenerales||[]).filter(g=>getCosechaFromMes(g.mes)===cn).forEach(g=>{
+    (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===cn && g.anio===curAnioRep).forEach(g=>{
       const montoTabla = getGastoParaTabla(g, pi, ti);
-      if(catTotals[g.categoria]!==undefined) catTotals[g.categoria]+=montoTabla;
+      if(!montoTabla) return;
+      const catNorm = normalizeCatReporte(g.categoria);
+      if(catTotals[catNorm]!==undefined) catTotals[catNorm]+=montoTabla;
       else catTotals['Otro']+=montoTabla;
     });
 
@@ -2424,7 +2429,7 @@ function renderRepContent() {
       <td class="mono tr">${catTotals[cat]?fmt(catTotals[cat]):'$ —'}</td>
     </tr>`).join('');
     catRows+=`<tr><td>Depreciación</td><td><span style="background:#fef3e2;color:var(--amber);padding:2px 6px;font-size:10px">Constante</span></td>
-      <td class="mono tr">${fmt(dep/p.tablas[ti].ha)}</td><td class="mono tr">${fmt(dep)}</td></tr>`;
+      <td class="mono tr">${fmt(depHaTabla?dep/depHaTabla:0)}</td><td class="mono tr">${fmt(dep)}</td></tr>`;
 
     document.getElementById('rep-content').innerHTML = `
       <div class="card">
@@ -2444,7 +2449,7 @@ function renderRepContent() {
           <tbody>${catRows}
             <tr style="background:var(--earth);color:#ffffff">
               <td colspan="2"><strong>TOTAL</strong></td>
-              <td class="mono tr"><strong>${fmt(total/p.tablas[ti].ha)}</strong></td>
+              <td class="mono tr"><strong>${fmt(haTabla?total/haTabla:0)}</strong></td>
               <td class="mono tr"><strong>${fmt(total)}</strong></td>
             </tr>
           </tbody>
