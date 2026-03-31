@@ -2678,8 +2678,19 @@ function getGastoParaPredio(gasto, pi) {
   return (parseFloat(gasto.monto)||0) * (miHa / totalHaSel);
 }
 
+// Categorías que se guardan con equipo = nombre de tabla (asignación directa, no prorrateo)
+const CATS_POR_TABLA = ['Ensilada','Maquila Corte','Maquila Aplicaciones','Empacado','Camiones Empaque','Pizca','Camiones'];
+
 // Get gasto amount assigned to a specific tabla
 function getGastoParaTabla(gasto, pi, ti) {
+  const prediosIdx = gasto.prediosIdx || [];
+  if(!prediosIdx.includes(pi)) return 0;
+  // Gastos con tabla específica: solo aplica si el equipo coincide con el nombre de esta tabla
+  if(CATS_POR_TABLA.includes(gasto.categoria)) {
+    const tablaNombre = S.predios[pi].tablas[ti]?.nombre;
+    return gasto.equipo === tablaNombre ? (parseFloat(gasto.monto)||0) : 0;
+  }
+  // Gastos generales del predio: prorratear por ha entre todas las tablas
   const montoPredio = getGastoParaPredio(gasto, pi);
   if(!montoPredio) return 0;
   const cn = getGastoCosecha(gasto);
