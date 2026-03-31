@@ -5271,10 +5271,12 @@ function capturarGastos() {
     const mesMe = parseInt(gastosGridDraft['me_mes'] || getMesesCn(cn)[0]);
     (S.matEnsilada||[]).forEach(art=>{
       const cant = parseFloat(gastosGridDraft['me_cant_'+art.id+'_'+mesMe]);
-      const precio = parseFloat(gastosGridDraft['me_'+art.id+'_'+mesMe]);
-      if(!cant||!precio) return;
+      if(!cant||cant<=0) return;
+      const piME = prediosIdx[0] ?? 0;
+      const precio = getPepsPrecio(art.id, cant, piME) || parseFloat(gastosGridDraft['me_'+art.id+'_'+mesMe]) || getCurrentPrice(art.id) || 0;
+      if(!precio) return;
       const monto = cant * precio;
-      S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Materiales de ensilada',equipo:art.nombre,monto,litros:cant,prediosIdx:S.predios.map((_,pi)=>pi),mes:mesMe,fecha:today()});
+      S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Materiales de ensilada',equipo:art.nombre,monto,litros:cant,precioPorLitro:precio,prediosIdx:S.predios.map((_,pi)=>pi),mes:mesMe,fecha:today()});
       total++;
     });
   } else if(gastosTab === 'corte') {
