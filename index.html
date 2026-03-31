@@ -2173,9 +2173,17 @@ function renderRepContent() {
           else catT['Otro']+=(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0);
         });
       }
-      // Gastos generales — filtrar por año correcto y prorratear por predio
+      // Gastos generales — sumar solo las tablas del cultivo filtrado usando getGastoParaTabla
       (S.gastosGenerales||[]).filter(g=>getGastoCosecha(g)===cn && g.anio===curAnioRep && (g.prediosIdx||[]).includes(pi)).forEach(g=>{
-        const monto = getGastoParaPredio(g, pi) * (ha / Math.max(1, p.tablas.reduce((s,t,ti2)=>{ const td2=getTablaData(pi,cn,ti2); return td2.sinSiembra?s:s+(parseFloat(td2.haSembradas)||t.ha||0); },0)));
+        let monto = 0;
+        for(let ti=0;ti<p.tablas.length;ti++) {
+          const td=getTablaData(pi,cn,ti);
+          if(td.sinSiembra) continue;
+          const cv=td.cultivo||'maiz';
+          if(filterCv && cv!==filterCv) continue;
+          monto += getGastoParaTabla(g, pi, ti);
+        }
+        if(!monto) return;
         const catNorm = normalizeCatReporte(g.categoria);
         if(catT[catNorm]!==undefined) catT[catNorm]+=monto;
         else catT['Otro']+=monto;
