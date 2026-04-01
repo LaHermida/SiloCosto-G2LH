@@ -2508,7 +2508,7 @@ function renderRepContent() {
     const dep = haTotalActivas>0 ? depPredio*(haTabla/haTotalActivas) : 0;
     const vars = calcConsumosTabla(pi,cn,ti);
     const gastosGen = calcGastosGeneralesTabla(pi,cn,ti,curAnioRep);
-    const total = dep+vars+gastosGen;
+    const total = calcTotalTabla(pi,cn,ti,curAnioRep);
     const kilos = parseFloat(td.kilos)||0;
     const kgMS = kilos*((parseFloat(td.pctMS)||0)/100);
     const cpk = calcCPK(pi,cn,ti);
@@ -2540,16 +2540,19 @@ function renderRepContent() {
     });
 
     let catRows = cats.map(cat=>`<tr>
-      <td>${cat}</td>
-      <td><span style="background:#eff6ff;color:#1a3563;padding:2px 6px;font-size:10px">Variable</span></td>
-      <td class="mono tr">${catTotals[cat]&&haTabla?fmt(catTotals[cat]/haTabla):'$ —'}</td>
-      <td class="mono tr">${catTotals[cat]&&kilos?fmt(catTotals[cat]/kilos):'$ —'}</td>
-      <td class="mono tr">${catTotals[cat]?fmt(catTotals[cat]):'$ —'}</td>
+      <td style="padding:8px 12px">${cat}</td>
+      <td style="padding:8px 10px"><span style="background:#eff6ff;color:#1a3563;padding:2px 6px;font-size:10px">Variable</span></td>
+      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace">${catTotals[cat]&&haTabla?fmt(catTotals[cat]/haTabla):'$ —'}</td>
+      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace">${catTotals[cat]&&kilos?fmt(catTotals[cat]/kilos):'$ —'}</td>
+      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace">${catTotals[cat]?fmt(catTotals[cat]):'$ —'}</td>
     </tr>`).join('');
-    catRows+=`<tr><td>Depreciación</td><td><span style="background:#fef3e2;color:#000000;padding:2px 6px;font-size:10px">Constante</span></td>
-      <td class="mono tr">${fmt(haTotalActivas>0?depPredio/haTotalActivas:0)}</td>
-      <td class="mono tr">${dep&&kilos?fmt(dep/kilos):'$ —'}</td>
-      <td class="mono tr">${fmt(dep)}</td></tr>`;
+    catRows+=`<tr>
+      <td style="padding:8px 12px">Depreciación</td>
+      <td style="padding:8px 10px"><span style="background:#fef3e2;color:#000000;padding:2px 6px;font-size:10px">Constante</span></td>
+      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(haTotalActivas>0?depPredio/haTotalActivas:0)}</td>
+      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace">${dep&&kilos?fmt(dep/kilos):'$ —'}</td>
+      <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(dep)}</td>
+    </tr>`;
 
     document.getElementById('rep-content').innerHTML = `
       <div class="card">
@@ -2565,13 +2568,19 @@ function renderRepContent() {
           ${td.fechaCorte?`<div><span style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px">✂️ Corte:</span> <strong>${td.fechaCorte}</strong></div>`:''}
         </div>`:'' }
         <div class="tbl-wrap"><table>
-          <thead><tr><th>Categoría</th><th>Tipo</th><th>$/Ha</th><th>$/Kg</th><th>Gasto Total</th></tr></thead>
+          <thead><tr>
+            <th style="text-align:left;width:35%">Categoría</th>
+            <th style="text-align:left;width:12%">Tipo</th>
+            <th style="text-align:right;width:16%">$/Ha</th>
+            <th style="text-align:right;width:13%">$/Kg</th>
+            <th style="text-align:right;width:16%">Gasto Total</th>
+          </tr></thead>
           <tbody>${catRows}
             <tr style="background:#0c4a6e;color:#ffffff">
-              <td colspan="2"><strong>TOTAL</strong></td>
-              <td class="mono tr"><strong>${fmt(haTabla?total/haTabla:0)}</strong></td>
-              <td class="mono tr"><strong>${kilos?fmt(total/kilos):'$ —'}</strong></td>
-              <td class="mono tr"><strong>${fmt(total)}</strong></td>
+              <td colspan="2" style="padding:8px 12px"><strong>TOTAL</strong></td>
+              <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace"><strong>${fmt(haTabla?total/haTabla:0)}</strong></td>
+              <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace"><strong>${kilos?fmt(total/kilos):'$ —'}</strong></td>
+              <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace"><strong>${fmt(total)}</strong></td>
             </tr>
           </tbody>
         </table></div>
