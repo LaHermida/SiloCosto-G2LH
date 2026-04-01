@@ -255,11 +255,12 @@ tr:hover td { background:var(--cream); }
 
   <!-- ARTÍCULOS -->
   <section id="sec-articulos" class="page">
-    <div class="pg-title">Inventario e Inventario</div>
-    <div class="pg-sub">// Catálogo de precios · Inventario por predio · Entradas y salidas</div>
+    <div class="pg-title">Inventario</div>
+    <div class="pg-sub">// Catálogo · Movimientos · Stock actual</div>
     <div style="display:flex;gap:8px;margin-bottom:16px">
       <button class="ctab active" id="art-tab-catalogo" onclick="setArtTab('catalogo')">📦 Catálogo</button>
-      <button class="ctab" id="art-tab-inventario" onclick="setArtTab('inventario')">🏭 Inventario</button>
+      <button class="ctab" id="art-tab-movimientos" onclick="setArtTab('movimientos')">📋 Movimientos</button>
+      <button class="ctab" id="art-tab-inventario" onclick="setArtTab('inventario')">📊 Stock</button>
     </div>
     <div id="art-content-catalogo">
     <div class="card">
@@ -325,6 +326,7 @@ tr:hover td { background:var(--cream); }
       <div id="art-list"></div>
     </div>
     </div><!-- end art-content-catalogo -->
+    <div id="art-content-movimientos" style="display:none"></div>
     <div id="art-content-inventario" style="display:none">
       <div id="inv-content"></div>
     </div>
@@ -5622,11 +5624,64 @@ let curInvCn = 1;
 
 function setArtTab(tab) {
   curArtTab = tab;
-  document.getElementById('art-content-catalogo').style.display = tab==='catalogo' ? '' : 'none';
-  document.getElementById('art-content-inventario').style.display = tab==='inventario' ? '' : 'none';
-  document.getElementById('art-tab-catalogo').className = 'ctab' + (tab==='catalogo'?' active':'');
-  document.getElementById('art-tab-inventario').className = 'ctab' + (tab==='inventario'?' active':'');
+  ['catalogo','movimientos','inventario'].forEach(t=>{
+    const content = document.getElementById('art-content-'+t);
+    const btn = document.getElementById('art-tab-'+t);
+    if(content) content.style.display = t===tab ? '' : 'none';
+    if(btn) btn.className = 'ctab' + (t===tab?' active':'');
+  });
   if(tab==='inventario') renderInv();
+  if(tab==='movimientos') renderMovimientos();
+}
+
+function renderMovimientos() {
+  const isAdmin = currentUser?.rol === 'admin';
+  if(!S.inventario) S.inventario = [];
+  const CATS_INV = ['Semillas','Fertilizantes','Herbicidas','Fungicidas','Insecticidas','Material de cultivo','Materiales de ensilada'];
+  const artsInv = (S.articulos||[]).filter(a=>CATS_INV.includes(a.categoria));
+  const predioTabs = S.predios.map((p,pi)=>
+    `<button class="ptab ${pi===curInvPredi?'active':''}" onclick="curInvPredi=${pi};renderMovimientos()">${p.emoji} ${p.nombre}</button>`
+  ).join('');
+  const anioOpts = Array.from({length:6},(_,i)=>2024+i).map(y=>`<option value="${y}"${y===curInvAnio?' selected':''}>${y}</option>`).join('');
+  const artOpts = artsInv.map(a=>`<option value="${a.id}">${a.nombre}</option>`).join('');
+
+  // Todos los movimientos del predio seleccionado
+  const movs = (S.inventario||[]).filter(m=>m.predioIdx===curInvPredi).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const movRows = movs.map((m,i)=>{
+    const art = artsInv.find(x=>x.id===m.articuloId);
+    const color = m.tipo==='entrada'?'#2a7a3c':'#c0392b';
+    const icon = m.tipo==='entrada'?'📥':'📤';
+    const precio = m.precio ? fmt(m.precio)+'/'+art?.unidad : '—';
+    return `<tr style="border-bottom:1px solid var(--border);font-size:12px">
+      <td style="padding:5px 10px;color:var(--muted)">${m.fecha}</td>
+      <td style="padding:5px 10px"><span style="color:${color};font-weight:600">${icon} ${m.tipo==='entrada'?'Entrada':'Salida'}</span></td>
+      <td style="padding:5px 10px;font-weight:600">${art?.nombre||'—'}</td>
+      <td style="padding:5px 10px;font-size:11px;color:var(--muted)">${art?.categoria||'—'}</td>
+      <td style="padding:5px 10px;font-family:'DM Mono',monospace;color:${color}">${m.tipo==='entrada'?'+':'-'}${fmtN(parseFloat(m.cantidad),2)} ${art?.unidad||''}</td>
+      <td style="padding:5px 10px;font-family:'DM Mono',monospace;font-size:11px">${precio}</td>
+      <td style="padding:5px 10px;color:var(--muted)">${m.tipo==='entrada'?(m.proveedor||''):(m.motivo||'')}</td>
+      ${isAdmin?`<td style="padding:3px 6px"><button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delMovInv(${i})">✕</button></td>`:'<td></td>'}
+    </tr>`;
+  }).join('');
+
+  document.getElementById('art-content-movimientos').innerHTML = `
+    <div style="display:flex;gap:4px;margin-bottom:12px">${predioTabs}</div>
+    <div class="card">
+      <div class="card-head">📋 Historial de movimientos — ${S.predios[curInvPredi]?.emoji} ${S.predios[curInvPredi]?.nombre}</div>
+      ${movs.length ? `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--earth);color:#fff;font-size:10px">
+          <th style="padding:5px 10px;text-align:left">Fecha</th>
+          <th style="padding:5px 10px;text-align:left">Tipo</th>
+          <th style="padding:5px 10px;text-align:left">Artículo</th>
+          <th style="padding:5px 10px;text-align:left">Categoría</th>
+          <th style="padding:5px 10px;text-align:left">Cantidad</th>
+          <th style="padding:5px 10px;text-align:left">Precio Unit.</th>
+          <th style="padding:5px 10px;text-align:left">Proveedor/Motivo</th>
+          <th style="padding:5px 10px"></th>
+        </tr></thead>
+        <tbody>${movRows}</tbody>
+      </table></div>` : `<div style="color:var(--muted);padding:20px;text-align:center">Sin movimientos</div>`}
+    </div>`;
 }
 
 function renderInv() {
