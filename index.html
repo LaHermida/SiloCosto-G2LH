@@ -2484,7 +2484,7 @@ function renderRepContent() {
     const tablaGrid = p.tablas.map((t,ti)=>`
       <div class="tabla-card ${ti===curTablaRep?'active-reg':''}" onclick="curTablaRep=${ti};renderRepContent()">
         <div class="tabla-name">${t.nombre}</div>
-        <div class="tabla-ha">${(()=>{const _td=getTablaData(curPredioReg||0,curCosechaReg||1,i);return (_td.sinSiembra?"vacante":(_td.haSembradas||t.ha)+" ha")})()}</div>
+        <div class="tabla-ha">${(()=>{const _td=getTablaData(curPredioReg||0,curCosechaReg||1,ti);return (_td.sinSiembra?"vacante":(_td.haSembradas||t.ha)+" ha")})()}</div>
       </div>`).join('');
 
     const ti = curTablaRep>=0?curTablaRep:0;
