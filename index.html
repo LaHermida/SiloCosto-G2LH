@@ -871,7 +871,7 @@ function calcConsumosTabla(pi, cn, ti, anio) {
   const td = getTablaData(pi,cn,ti);
   const yr = anio || curAnioRep || curAnioReg || new Date().getFullYear();
   return (td.consumos||[])
-    .filter(c => !c.anio || c.anio === yr)
+    .filter(c => !c.anio || c.anio === yr || c.anio === String(yr))
     .reduce((s,c)=>s+(parseFloat(c.cantidad)||0)*(parseFloat(c.precioSnapshot)||0),0);
 }
 
@@ -2821,7 +2821,10 @@ function normalizeCatReporte(cat) {
     'maquinaria ensilada': 'Ensilada',
     'materiales de ensilada': 'Ensilada',
     'camiones': 'Ensilada',
+    'camiones empaque': 'Empaque',
     'ensilada': 'Ensilada',
+    'aplicaciones': 'Aplicaciones',
+    'pizca': 'Pizca',
     'diesel empaque': 'Empaque',
     'maquinaria empaque': 'Empaque',
     'empacado': 'Empaque',
@@ -5324,7 +5327,11 @@ function capturarGastos() {
         total++;
       });
     });
-    if(nomEnsilada>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina y gastos admin',actividad:'Ensilada',monto:nomEnsilada,prediosIdx,fecha:today()}); total++; }
+    if(nomEnsilada>0) {
+      const tablasEns = [];
+      prediosIdx.forEach(pi=>{ S.predios[pi]?.tablas.forEach((_,ti)=>{ const cv=getTablaData(pi,cn,ti).cultivo||'maiz'; if(CULTIVOS_ENSILADA.includes(cv)&&!getTablaData(pi,cn,ti).sinSiembra) tablasEns.push({pi,ti}); }); });
+      S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina y gastos admin',actividad:'Ensilada',monto:nomEnsilada,prediosIdx,tablasIdx:tablasEns.length?tablasEns:undefined,fecha:today()}); total++;
+    }
     // Mat ensilada — cantidad total prorrateada por superficie entre tablas marcadas
     S.articulos.filter(a=>a.categoria==='Materiales de ensilada').forEach(art=>{
       const cantTotal = parseFloat(gastosGridDraft[`me_cant_${art.id}`]);
@@ -5432,8 +5439,10 @@ function capturarGastos() {
     const pct2CortNom = parseFloat(gastosGridDraft['cort2_pct2'] || 0)/100;
     const cn2CortNom  = parseInt(gastosGridDraft['cort2_cn2'] || 0);
     if(montoNomCortCap>0) {
-      if(pct1CortNom>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina Corte',mes:mesCortNom,monto:montoNomCortCap*pct1CortNom,prediosIdx,fecha:today()}); total++; }
-      if(pct2CortNom>0&&cn2CortNom) { S.gastosGenerales.push({id:uid(),cosecha:cn2CortNom,anio,categoria:'Nómina Corte',mes:mesCortNom,monto:montoNomCortCap*pct2CortNom,prediosIdx,fecha:today()}); total++; }
+      const tablasCorteNom = [];
+      prediosIdx.forEach(pi=>{ S.predios[pi]?.tablas.forEach((_,ti)=>{ const cv=getTablaData(pi,cn,ti).cultivo||'maiz'; if(CULTIVOS_CORTE.includes(cv)&&!getTablaData(pi,cn,ti).sinSiembra) tablasCorteNom.push({pi,ti}); }); });
+      if(pct1CortNom>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina Corte',mes:mesCortNom,monto:montoNomCortCap*pct1CortNom,prediosIdx,tablasIdx:tablasCorteNom.length?tablasCorteNom:undefined,fecha:today()}); total++; }
+      if(pct2CortNom>0&&cn2CortNom) { S.gastosGenerales.push({id:uid(),cosecha:cn2CortNom,anio,categoria:'Nómina Corte',mes:mesCortNom,monto:montoNomCortCap*pct2CortNom,prediosIdx,tablasIdx:tablasCorteNom.length?tablasCorteNom:undefined,fecha:today()}); total++; }
     }
 
   } else if(gastosTab === 'empaque') {
@@ -5574,8 +5583,10 @@ function capturarGastos() {
     const pct2EmpNom = parseFloat(gastosGridDraft['emp2_pct2'] || 0)/100;
     const cn2EmpNom  = parseInt(gastosGridDraft['emp2_cn2'] || 0);
     if(montoNomEmpCap>0) {
-      if(pct1EmpNom>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina Empaque',mes:mesEmpNom,monto:montoNomEmpCap*pct1EmpNom,prediosIdx,fecha:today()}); total++; }
-      if(pct2EmpNom>0&&cn2EmpNom) { S.gastosGenerales.push({id:uid(),cosecha:cn2EmpNom,anio,categoria:'Nómina Empaque',mes:mesEmpNom,monto:montoNomEmpCap*pct2EmpNom,prediosIdx,fecha:today()}); total++; }
+      const tablasEmpNom = [];
+      prediosIdx.forEach(pi=>{ S.predios[pi]?.tablas.forEach((_,ti)=>{ const cv=getTablaData(pi,cn,ti).cultivo||'maiz'; if(CULTIVOS_EMPAQUE.includes(cv)&&!getTablaData(pi,cn,ti).sinSiembra) tablasEmpNom.push({pi,ti}); }); });
+      if(pct1EmpNom>0) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina Empaque',mes:mesEmpNom,monto:montoNomEmpCap*pct1EmpNom,prediosIdx,tablasIdx:tablasEmpNom.length?tablasEmpNom:undefined,fecha:today()}); total++; }
+      if(pct2EmpNom>0&&cn2EmpNom) { S.gastosGenerales.push({id:uid(),cosecha:cn2EmpNom,anio,categoria:'Nómina Empaque',mes:mesEmpNom,monto:montoNomEmpCap*pct2EmpNom,prediosIdx,tablasIdx:tablasEmpNom.length?tablasEmpNom:undefined,fecha:today()}); total++; }
     }
 
   } else if(gastosTab === 'derechos') {
