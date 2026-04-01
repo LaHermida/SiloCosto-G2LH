@@ -3873,7 +3873,7 @@ function renderGastos() {
           ${cant&&val?fmt(parseFloat(cant)*parseFloat(val)):'—'}
         </td>
         <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:#000000">${acum?fmt(acum)+' acum':'—'}</td>
-        ${isAdmin?`<td><button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delMatEnsilada('${art.id}')">✕</button></td>`:'<td></td>'}
+        <td></td>
       </tr>`;
     }).join('');
 
@@ -3901,25 +3901,27 @@ function renderGastos() {
       ${configME}
       <div style="padding:8px 12px;background:#f0f9ff;border:1px solid #bae6fd;margin-bottom:14px">
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌿 Tablas de ensilaje donde aplica</div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px">
-          ${(()=>{
-            let chks='';
-            S.predios.forEach((p,pi)=>{
-              p.tablas.forEach((t,ti)=>{
-                const cv=getTablaData(pi,selectedCn,ti).cultivo||'maiz';
-                if(!CULTIVOS_ENSILADA.includes(cv)) return;
-                const td2=getTablaData(pi,selectedCn,ti);
-                if(td2.sinSiembra) return;
-                const key='me_tab_'+pi+'_'+ti;
-                const isChk=gastosGridDraft[key]!=='0'&&gastosGridDraft[key]!==false;
-                chks+='<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;background:#fff;border:1px solid #bae6fd;padding:4px 8px;border-radius:4px">'
-                  +'<input type="checkbox" '+(isChk?'checked':'')+' onchange="gastosGridDraft[\''+key+'\']= this.checked?\'1\':\'0\'" />'
-                  +' '+p.emoji+' '+t.nombre+' ('+(td2.haSembradas||t.ha)+' ha)</label>';
-              });
-            });
-            return chks||'<span style="font-size:12px;color:#374151">Sin tablas de ensilaje activas</span>';
-          })()}
-        </div>
+        ${(()=>{
+          let html='';
+          S.predios.forEach((p,pi)=>{
+            const tablasEnsilaje = p.tablas.map((t,ti)=>{
+              const cv=getTablaData(pi,selectedCn,ti).cultivo||'maiz';
+              const td2=getTablaData(pi,selectedCn,ti);
+              if(!CULTIVOS_ENSILADA.includes(cv)||td2.sinSiembra) return '';
+              const key='me_tab_'+pi+'_'+ti;
+              const isChk=gastosGridDraft[key]!=='0'&&gastosGridDraft[key]!==false;
+              return '<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;background:#fff;border:1px solid #bae6fd;padding:4px 8px;border-radius:4px">'
+                +'<input type="checkbox" '+(isChk?'checked':'')+' onchange="gastosGridDraft[\'me_tab_'+pi+'_'+ti+'\']= this.checked?\'1\':\'0\'" />'
+                +' '+t.nombre+' ('+(td2.haSembradas||t.ha)+' ha)</label>';
+            }).filter(Boolean).join('');
+            if(!tablasEnsilaje) return;
+            html+='<div style="margin-bottom:10px">'
+              +'<div style="font-size:11px;font-weight:600;color:#000000;margin-bottom:6px">'+p.emoji+' '+p.nombre+'</div>'
+              +'<div style="display:flex;flex-wrap:wrap;gap:6px">'+tablasEnsilaje+'</div>'
+              +'</div>';
+          });
+          return html||'<span style="font-size:12px;color:#374151">Sin tablas de ensilaje activas</span>';
+        })()}
       </div>
       ${artsMe.length ? `<div style="overflow-x:auto;margin-bottom:24px"><table style="border-collapse:collapse;font-size:13px;width:100%">
         <thead><tr style="background:#0c4a6e;color:#fff">
