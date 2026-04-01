@@ -3852,11 +3852,19 @@ function renderGastos() {
         <button class="btn btn-s" onclick="addMatEnsiladaArt()">+ Agregar</button>
       </div>` : '';
 
+    const mesesHist_me = getMesesCn(selectedCn);
+    const mesesHdr_me = mesesHist_me.map(m=>`<th style="padding:6px 10px;text-align:right;min-width:90px">${MESES_G[m-1].slice(0,3)}</th>`).join('');
+    const histME = (S.gastosGenerales||[]).filter(g=>g.categoria==='Materiales de ensilada'&&(getGastoCosecha(g)===selectedCn)&&g.anio===gastosGridAnio);
+
+    // Grid fusionado: Artículo | Cant. | $ Unit. | Total captura | Dic | Ene | Feb | Total $
     const meRows = artsMe.map(art=>{
       const val = gastosGridDraft['me_'+art.id+'_'+mesActual_me]||'';
       const cant = gastosGridDraft['me_cant_'+art.id+'_'+mesActual_me]||'';
-      const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===art.nombre&&g.categoria==='Materiales de ensilada'&&getGastoMes(g)===mesActual_me&&(getGastoCosecha(g)===selectedCn)&&g.anio===gastosGridAnio);
-      const acum=histMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      const celdas = mesesHist_me.map(m=>{
+        const tot=(S.gastosGenerales||[]).filter(g=>g.equipo===art.nombre&&g.categoria==='Materiales de ensilada'&&getGastoMes(g)===m&&(getGastoCosecha(g)===selectedCn)&&g.anio===gastosGridAnio).reduce((s,g)=>s+parseFloat(g.monto||0),0);
+        return `<td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px">${tot?fmt(tot):'—'}</td>`;
+      }).join('');
+      const totCiclo=(S.gastosGenerales||[]).filter(g=>g.equipo===art.nombre&&g.categoria==='Materiales de ensilada'&&(getGastoCosecha(g)===selectedCn)&&g.anio===gastosGridAnio).reduce((s,g)=>s+parseFloat(g.monto||0),0);
       return `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:8px 12px;font-weight:600">${art.nombre}</td>
         <td style="padding:6px 8px;text-align:right">
@@ -3866,29 +3874,12 @@ function renderGastos() {
         </td>
         <td style="padding:6px 8px;text-align:right">
           <input type="number" min="0" step="0.01" placeholder="$ unitario" value="${val||(getPepsPrecio(art.id,1,null)||0).toFixed(2)}"
-            style="width:120px;padding:5px;text-align:right;border:1px solid #e2e8f0;font-size:13px;font-family:'DM Mono',monospace;background:#f0f9ff"
+            style="width:110px;padding:5px;text-align:right;border:1px solid #bae6fd;font-size:13px;font-family:'DM Mono',monospace;background:#f0f9ff"
             onchange="gastosGridDraft['me_${art.id}_${mesActual_me}']=this.value"/>
         </td>
-        <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:12px;color:#000000">
-          ${cant&&val?fmt(parseFloat(cant)*parseFloat(val)):'—'}
-        </td>
-        <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:#000000">${acum?fmt(acum)+' acum':'—'}</td>
-        <td></td>
+        ${celdas}
+        <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;font-weight:700">${totCiclo?fmt(totCiclo):'—'}</td>
       </tr>`;
-    }).join('');
-
-    // Historial grid
-    const histME = (S.gastosGenerales||[]).filter(g=>g.categoria==='Materiales de ensilada'&&(getGastoCosecha(g)===selectedCn)&&g.anio===gastosGridAnio);
-    const mesesHist_me = getMesesCn(selectedCn);
-    const mesesHdr_me = mesesHist_me.map(m=>`<th style="padding:6px 10px;text-align:right;min-width:90px">${MESES_G[m-1].slice(0,3)}</th>`).join('');
-    const meHistRows = artsMe.map(art=>{
-      const celdas = mesesHist_me.map(m=>{
-        const h=(S.gastosGenerales||[]).filter(g=>g.equipo===art.nombre&&g.categoria==='Materiales de ensilada'&&getGastoMes(g)===m&&(getGastoCosecha(g)===selectedCn)&&g.anio===gastosGridAnio);
-        const tot=h.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-        return `<td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:11px">${tot?`<span style="color:#000000">${fmt(tot)}</span>`:'<span style="color:#000000">—</span>'}</td>`;
-      }).join('');
-      const tot=(S.gastosGenerales||[]).filter(g=>g.equipo===art.nombre&&g.categoria==='Materiales de ensilada'&&(getGastoCosecha(g)===selectedCn)&&g.anio===gastosGridAnio).reduce((s,g)=>s+parseFloat(g.monto||0),0);
-      return `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 12px;font-weight:600">${art.nombre}</td>${celdas}<td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:#000000;font-weight:600">${tot?fmt(tot):'—'}</td></tr>`;
     }).join('');
 
     tabContent = `
@@ -3926,19 +3917,13 @@ function renderGastos() {
       ${artsMe.length ? `<div style="overflow-x:auto;margin-bottom:24px"><table style="border-collapse:collapse;font-size:13px;width:100%">
         <thead><tr style="background:#0c4a6e;color:#fff">
           <th style="padding:7px 12px;text-align:left">Artículo</th>
-          <th style="padding:7px 10px;text-align:right">Cantidad</th>
-          <th style="padding:7px 10px;text-align:right">$ Unitario</th>
-          <th style="padding:7px 10px;text-align:right">Total</th>
-          <th style="padding:7px 10px;text-align:right">Acum mes</th>
-          <th></th>
+          <th style="padding:7px 10px;text-align:right">Cant. ${MESES_G[mesActual_me-1].slice(0,3)}</th>
+          <th style="padding:7px 10px;text-align:right">$ Unit.</th>
+          ${mesesHdr_me}
+          <th style="padding:7px 10px;text-align:right">Total C${selectedCn}</th>
         </tr></thead><tbody>${meRows}</tbody>
       </table></div>` : `<div style="color:#000000;font-size:12px;margin-bottom:16px">Sin artículos configurados. Agrégalos arriba.</div>`}
       ${histME.length ? `
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Historial Materiales — C${selectedCn} ${gastosGridAnio}</div>
-        <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
-          <thead><tr style="background:#1e3a8a;color:#fff"><th style="padding:6px 12px;text-align:left">Artículo</th>${mesesHdr_me}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
-          <tbody>${meHistRows}</tbody>
-        </table></div>
         <details style="margin-top:8px">
           <summary style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;cursor:pointer;text-transform:uppercase">▼ Registros individuales (${histME.length})</summary>
           <div style="overflow-x:auto;margin-top:6px"><table style="border-collapse:collapse;font-size:12px;width:100%">
