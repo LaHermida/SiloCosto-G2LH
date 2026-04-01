@@ -1282,13 +1282,13 @@ function renderArticulos() {
   el.innerHTML=`<div class="tbl-wrap"><table>
     <thead><tr><th>Artículo</th><th>Categoría</th><th>Unidad</th><th>Precio actual</th><th>Cambios</th><th></th></tr></thead>
     <tbody>${S.articulos.map((a,i)=>{
-      const cur=a.precios[a.precios.length-1];
+      const cur = a.precios&&a.precios.length ? a.precios[a.precios.length-1] : null;
       return `<tr>
         <td><strong>${a.nombre}</strong></td>
         <td>${a.categoria}</td>
-        <td class="mono">${a.unidad}</td>
-        <td class="mono amber">${fmt(cur.valor)}/${a.unidad}</td>
-        <td class="mono" style="font-size:11px;color:var(--muted)">${a.precios.length} registro(s)</td>
+        <td class="mono">${a.unidad||'—'}</td>
+        <td class="mono amber">${cur ? fmt(cur.valor)+'/'+a.unidad : '—'}</td>
+        <td class="mono" style="font-size:11px;color:var(--muted)">${(a.precios||[]).length} registro(s)</td>
         <td><button class="btn btn-d" onclick="delArticulo('${a.id}')">✕</button></td>
       </tr>`;
     }).join('')}</tbody>
@@ -5651,10 +5651,13 @@ function renderMovimientos() {
     `<button class="ptab ${pi===curInvPredi?'active':''}" onclick="curInvPredi=${pi};renderMovimientos()">${p.emoji} ${p.nombre}</button>`
   ).join('');
   const anioOpts = Array.from({length:6},(_,i)=>2024+i).map(y=>`<option value="${y}"${y===curInvAnio?' selected':''}>${y}</option>`).join('');
-  const artOpts = artsInv.map(a=>`<option value="${a.id}">${a.nombre}</option>`).join('');
+  const cnBtns = [1,2,3].map(c=>`<button class="ctab${c===curInvCn?' active':''}" style="padding:3px 10px;font-size:12px" onclick="curInvCn=${c};renderMovimientos()">C${c}</button>`).join('');
+  const artOpts = artsInv.map(a=>`<option value="${a.id}">${a.nombre} (${a.categoria})</option>`).join('');
 
-  // Todos los movimientos del predio seleccionado
-  const movs = (S.inventario||[]).filter(m=>m.predioIdx===curInvPredi).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  // Movimientos filtrados por predio y ciclo
+  const movs = (S.inventario||[])
+    .filter(m=>m.predioIdx===curInvPredi && (!m.cn||m.cn===curInvCn) && (!m.anio||m.anio===curInvAnio))
+    .sort((a,b)=>b.fecha.localeCompare(a.fecha));
   const movRows = movs.map((m,i)=>{
     const art = artsInv.find(x=>x.id===m.articuloId);
     const color = m.tipo==='entrada'?'#2a7a3c':'#c0392b';
@@ -5668,27 +5671,77 @@ function renderMovimientos() {
       <td style="padding:5px 10px;font-family:'DM Mono',monospace;color:${color}">${m.tipo==='entrada'?'+':'-'}${fmtN(parseFloat(m.cantidad),2)} ${art?.unidad||''}</td>
       <td style="padding:5px 10px;font-family:'DM Mono',monospace;font-size:11px">${precio}</td>
       <td style="padding:5px 10px;color:var(--muted)">${m.tipo==='entrada'?(m.proveedor||''):(m.motivo||'')}</td>
-      ${isAdmin?`<td style="padding:3px 6px"><button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delMovInv(${i})">✕</button></td>`:'<td></td>'}
+      ${isAdmin?`<td style="padding:3px 6px"><button class="btn btn-d" style="font-size:10px;padding:2px 5px" onclick="delMovInv(${i});renderMovimientos()">✕</button></td>`:'<td></td>'}
     </tr>`;
   }).join('');
 
   document.getElementById('art-content-movimientos').innerHTML = `
     <div style="display:flex;gap:4px;margin-bottom:12px">${predioTabs}</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</span>
+      <select style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid var(--border)" onchange="curInvAnio=parseInt(this.value);renderMovimientos()">${anioOpts}</select>
+      ${cnBtns}
+    </div>
+
+    <!-- ENTRADA -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head">📥 Registrar Entrada</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:4px 0">
+        <div class="field" style="margin:0"><label>Fecha</label>
+          <input type="date" id="inv-fecha" value="${new Date().toISOString().slice(0,10)}" style="padding:6px;border:1px solid var(--border);font-size:13px"/></div>
+        <div class="field" style="margin:0"><label>Artículo</label>
+          <select id="inv-art" style="padding:6px;font-size:13px;min-width:200px"><option value="">— selecciona —</option>${artOpts}</select></div>
+        <div class="field" style="margin:0"><label>Cantidad</label>
+          <input type="number" id="inv-cant" min="0" step="0.01" placeholder="0" style="width:100px;padding:6px;border:1px solid var(--border);font-size:13px;text-align:right"/></div>
+        <div class="field" style="margin:0"><label>Precio unit.</label>
+          <input type="number" id="inv-precio" min="0" step="0.01" placeholder="0.00" style="width:110px;padding:6px;border:1px solid var(--border);font-size:13px;text-align:right"/></div>
+        <div class="field" style="margin:0"><label>Proveedor</label>
+          <input type="text" id="inv-prov" placeholder="Proveedor..." style="width:160px;padding:6px;border:1px solid var(--border);font-size:13px"/></div>
+        <div class="field" style="margin:0"><label># Factura</label>
+          <input type="text" id="inv-factura" placeholder="Factura..." style="width:130px;padding:6px;border:1px solid var(--border);font-size:13px"/></div>
+        <button class="btn btn-p" onclick="addMovInv('entrada');renderMovimientos()">✅ Registrar entrada</button>
+      </div>
+    </div>
+
+    <!-- SALIDA MANUAL -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head">📤 Registrar Salida Manual</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:4px 0">
+        <div class="field" style="margin:0"><label>Fecha</label>
+          <input type="date" id="inv-sal-fecha" value="${new Date().toISOString().slice(0,10)}" style="padding:6px;border:1px solid var(--border);font-size:13px"/></div>
+        <div class="field" style="margin:0"><label>Artículo</label>
+          <select id="inv-sal-art" style="padding:6px;font-size:13px;min-width:200px"><option value="">— selecciona —</option>${artOpts}</select></div>
+        <div class="field" style="margin:0"><label>Cantidad</label>
+          <input type="number" id="inv-sal-cant" min="0" step="0.01" placeholder="0" style="width:100px;padding:6px;border:1px solid var(--border);font-size:13px;text-align:right"/></div>
+        <div class="field" style="margin:0"><label>Motivo</label>
+          <select id="inv-sal-motivo" style="padding:6px;font-size:13px">
+            <option value="Devolución">Devolución</option>
+            <option value="Merma">Merma</option>
+            <option value="Ajuste">Ajuste</option>
+            <option value="Otro">Otro</option>
+          </select></div>
+        <div class="field" style="margin:0"><label># Referencia</label>
+          <input type="text" id="inv-sal-ref" placeholder="Referencia..." style="width:130px;padding:6px;border:1px solid var(--border);font-size:13px"/></div>
+        <button class="btn btn-d" onclick="addMovInv('salida');renderMovimientos()">📤 Registrar salida</button>
+      </div>
+    </div>
+
+    <!-- HISTORIAL -->
     <div class="card">
-      <div class="card-head">📋 Historial de movimientos — ${S.predios[curInvPredi]?.emoji} ${S.predios[curInvPredi]?.nombre}</div>
+      <div class="card-head">📋 Movimientos — ${S.predios[curInvPredi]?.emoji} ${S.predios[curInvPredi]?.nombre} · ${curInvAnio} C${curInvCn}</div>
       ${movs.length ? `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="background:var(--earth);color:#fff;font-size:10px">
           <th style="padding:5px 10px;text-align:left">Fecha</th>
           <th style="padding:5px 10px;text-align:left">Tipo</th>
           <th style="padding:5px 10px;text-align:left">Artículo</th>
           <th style="padding:5px 10px;text-align:left">Categoría</th>
-          <th style="padding:5px 10px;text-align:left">Cantidad</th>
-          <th style="padding:5px 10px;text-align:left">Precio Unit.</th>
+          <th style="padding:5px 10px;text-align:right">Cantidad</th>
+          <th style="padding:5px 10px;text-align:right">Precio Unit.</th>
           <th style="padding:5px 10px;text-align:left">Proveedor/Motivo</th>
-          <th style="padding:5px 10px"></th>
+          <th></th>
         </tr></thead>
         <tbody>${movRows}</tbody>
-      </table></div>` : `<div style="color:var(--muted);padding:20px;text-align:center">Sin movimientos</div>`}
+      </table></div>` : `<div style="color:var(--muted);padding:20px;text-align:center">Sin movimientos en C${curInvCn} ${curInvAnio}</div>`}
     </div>`;
 }
 
@@ -5764,50 +5817,9 @@ function renderInv() {
     </tr>`;
   }).join('');
 
-  document.getElementById('inv-content').innerHTML = `
+  document.getElementById('art-content-inventario').innerHTML = `
     <div style="display:flex;gap:4px;margin-bottom:12px">${predioTabs}</div>
     ${selectorBar}
-
-    <!-- ENTRADA -->
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-head">📥 Registrar Entrada</div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:4px 0">
-        <div class="field" style="margin:0"><label>Fecha</label>
-          <input type="date" id="inv-fecha" value="${new Date().toISOString().slice(0,10)}" style="padding:6px;border:1px solid var(--border);font-size:13px"/></div>
-        <div class="field" style="margin:0"><label>Artículo</label>
-          <select id="inv-art" style="padding:6px;font-size:13px;min-width:200px"><option value="">— selecciona —</option>${artOpts}</select></div>
-        <div class="field" style="margin:0"><label>Cantidad</label>
-          <input type="number" id="inv-cant" min="0" step="0.01" placeholder="0" style="width:100px;padding:6px;border:1px solid var(--border);font-size:13px;text-align:right"/></div>
-        <div class="field" style="margin:0"><label>Proveedor</label>
-          <input type="text" id="inv-prov" placeholder="Proveedor..." style="width:160px;padding:6px;border:1px solid var(--border);font-size:13px"/></div>
-        <div class="field" style="margin:0"><label># Factura</label>
-          <input type="text" id="inv-factura" placeholder="Factura..." style="width:130px;padding:6px;border:1px solid var(--border);font-size:13px"/></div>
-        <button class="btn btn-p" onclick="addMovInv('entrada')">✅ Registrar entrada</button>
-      </div>
-    </div>
-
-    <!-- SALIDA MANUAL -->
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-head">📤 Registrar Salida Manual</div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:4px 0">
-        <div class="field" style="margin:0"><label>Fecha</label>
-          <input type="date" id="inv-sal-fecha" value="${new Date().toISOString().slice(0,10)}" style="padding:6px;border:1px solid var(--border);font-size:13px"/></div>
-        <div class="field" style="margin:0"><label>Artículo</label>
-          <select id="inv-sal-art" style="padding:6px;font-size:13px;min-width:200px"><option value="">— selecciona —</option>${artOpts}</select></div>
-        <div class="field" style="margin:0"><label>Cantidad</label>
-          <input type="number" id="inv-sal-cant" min="0" step="0.01" placeholder="0" style="width:100px;padding:6px;border:1px solid var(--border);font-size:13px;text-align:right"/></div>
-        <div class="field" style="margin:0"><label>Motivo</label>
-          <select id="inv-sal-motivo" style="padding:6px;font-size:13px">
-            <option value="Devolución">Devolución</option>
-            <option value="Merma">Merma</option>
-            <option value="Ajuste">Ajuste</option>
-            <option value="Otro">Otro</option>
-          </select></div>
-        <div class="field" style="margin:0"><label># Referencia</label>
-          <input type="text" id="inv-sal-ref" placeholder="Referencia..." style="width:130px;padding:6px;border:1px solid var(--border);font-size:13px"/></div>
-        <button class="btn btn-d" onclick="addMovInv('salida')">📤 Registrar salida</button>
-      </div>
-    </div>
 
     <!-- STOCK -->
     <div class="card" style="margin-bottom:16px">
@@ -5847,11 +5859,13 @@ function addMovInv(tipo) {
     const fecha = document.getElementById('inv-fecha').value;
     const prov = document.getElementById('inv-prov').value.trim();
     const factura = document.getElementById('inv-factura').value.trim();
+    const precio = parseFloat(document.getElementById('inv-precio')?.value)||0;
     if(!artId||!cant||cant<=0) { toast('⚠️ Selecciona artículo y cantidad',true); return; }
-    S.inventario.push({id:uid(),tipo:'entrada',predioIdx:curInvPredi,articuloId:artId,cantidad:cant,fecha,proveedor:prov,factura,anio:curInvAnio,cn:curInvCn});
+    S.inventario.push({id:uid(),tipo:'entrada',predioIdx:curInvPredi,articuloId:artId,cantidad:cant,precio,fecha,proveedor:prov,factura,anio:curInvAnio,cn:curInvCn});
     document.getElementById('inv-cant').value='';
     document.getElementById('inv-prov').value='';
     document.getElementById('inv-factura').value='';
+    if(document.getElementById('inv-precio')) document.getElementById('inv-precio').value='';
   } else {
     const artId = document.getElementById('inv-sal-art').value;
     const cant = parseFloat(document.getElementById('inv-sal-cant').value);
@@ -5863,7 +5877,7 @@ function addMovInv(tipo) {
     document.getElementById('inv-sal-cant').value='';
     document.getElementById('inv-sal-ref').value='';
   }
-  save(); renderInv(); toast('✓ Movimiento registrado');
+  save(); toast('✓ Movimiento registrado');
 }
 
 function delMovInv(idx) {
