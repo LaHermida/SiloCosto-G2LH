@@ -3899,6 +3899,28 @@ function renderGastos() {
         <span style="font-size:11px;color:#000000;margin-left:auto">C${selectedCn} · ${gastosGridAnio}</span>
       </div>
       ${configME}
+      <div style="padding:8px 12px;background:#f0f9ff;border:1px solid #bae6fd;margin-bottom:14px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🌿 Tablas de ensilaje donde aplica</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${(()=>{
+            let chks='';
+            S.predios.forEach((p,pi)=>{
+              p.tablas.forEach((t,ti)=>{
+                const cv=getTablaData(pi,selectedCn,ti).cultivo||'maiz';
+                if(!CULTIVOS_ENSILADA.includes(cv)) return;
+                const td2=getTablaData(pi,selectedCn,ti);
+                if(td2.sinSiembra) return;
+                const key='me_tab_'+pi+'_'+ti;
+                const isChk=gastosGridDraft[key]!=='0'&&gastosGridDraft[key]!==false;
+                chks+='<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;background:#fff;border:1px solid #bae6fd;padding:4px 8px;border-radius:4px">'
+                  +'<input type="checkbox" '+(isChk?'checked':'')+' onchange="gastosGridDraft[\''+key+'\']= this.checked?\'1\':\'0\'" />'
+                  +' '+p.emoji+' '+t.nombre+' ('+(td2.haSembradas||t.ha)+' ha)</label>';
+              });
+            });
+            return chks||'<span style="font-size:12px;color:#374151">Sin tablas de ensilaje activas</span>';
+          })()}
+        </div>
+      </div>
       ${artsMe.length ? `<div style="overflow-x:auto;margin-bottom:24px"><table style="border-collapse:collapse;font-size:13px;width:100%">
         <thead><tr style="background:#0c4a6e;color:#fff">
           <th style="padding:7px 12px;text-align:left">Artículo</th>
@@ -5297,14 +5319,41 @@ function capturarGastos() {
   } else if(gastosTab === 'mat_ensilada') {
     const mesMe = parseInt(gastosGridDraft['me_mes'] || getMesesCn(cn)[0]);
     const artsMeCap = (S.articulos||[]).filter(a=>a.categoria==='Materiales de ensilada');
+    // Recopilar tablas seleccionadas (solo ensilaje)
+    const tablasSelMe = [];
+    S.predios.forEach((p,pi)=>{
+      p.tablas.forEach((t,ti)=>{
+        const cv = getTablaData(pi,cn,ti).cultivo||'maiz';
+        if(!CULTIVOS_ENSILADA.includes(cv)) return;
+        const chkKey = `me_tab_${pi}_${ti}`;
+        if(gastosGridDraft[chkKey]==='0'||gastosGridDraft[chkKey]===false) return;
+        const ha = getHaTabla(pi,cn,ti);
+        if(ha>0) tablasSelMe.push({pi,ti,t,p,ha});
+      });
+    });
+    const totalHaSelMe = tablasSelMe.reduce((s,x)=>s+x.ha,0);
     artsMeCap.forEach(art=>{
       const cant = parseFloat(gastosGridDraft['me_cant_'+art.id+'_'+mesMe]);
       if(!cant||cant<=0) return;
       const precio = getPepsPrecio(art.id, cant, null) || parseFloat(gastosGridDraft['me_'+art.id+'_'+mesMe]) || getCurrentPrice(art.id) || 0;
       if(!precio) return;
-      const monto = cant * precio;
-      S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Materiales de ensilada',equipo:art.nombre,monto,litros:cant,precioPorLitro:precio,prediosIdx:S.predios.map((_,pi)=>pi),mes:mesMe,fecha:today()});
-      total++;
+      // Distribuir por tabla según ha
+      if(tablasSelMe.length) {
+        tablasSelMe.forEach(({pi,ti,t,ha})=>{
+          const pct = totalHaSelMe ? ha/totalHaSelMe : 1/tablasSelMe.length;
+          const cantTabla = cant * pct;
+          const montoTabla = cantTabla * precio;
+          S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Materiales de ensilada',equipo:art.nombre,monto:montoTabla,litros:cantTabla,precioPorLitro:precio,prediosIdx:[pi],tablaIdx:ti,mes:mesMe,fecha:today()});
+          total++;
+        });
+      } else {
+        S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Materiales de ensilada',equipo:art.nombre,monto:cant*precio,litros:cant,precioPorLitro:precio,prediosIdx:S.predios.map((_,pi)=>pi),mes:mesMe,fecha:today()});
+        total++;
+      }
+      // Descontar del inventario (salida automática)
+      if(!S.inventario) S.inventario = [];
+      const piInv = tablasSelMe.length ? tablasSelMe[0].pi : 0;
+      S.inventario.push({id:uid(),tipo:'salida',predioIdx:piInv,articuloId:art.id,cantidad:cant,fecha:today(),motivo:'Uso ensilada C'+cn,anio,cn});
     });
   } else if(gastosTab === 'corte') {
     const mesCort = parseInt(gastosGridDraft['cort2_mes'] || getMesesCn(cn)[0]);
@@ -5774,10 +5823,13 @@ function renderInv() {
   });
 
   // Stock table
-  const stockRows = artsInv.map(a=>{
+  const stockRows = artsInv.filter(a=>{
+    const s = stockPorArt[a.id];
+    return s.entradas > 0 || (s.entradas - s.salidasAuto - s.salidasMan) !== 0;
+  }).map(a=>{
     const s = stockPorArt[a.id];
     const stock = s.entradas - s.salidasAuto - s.salidasMan;
-    const stockColor = stock<0?'#c0392b':stock===0?'var(--muted)':'#2563eb';
+    const stockColor = stock<0?'#c0392b':'#000000';
     return `<tr style="border-bottom:1px solid var(--border)">
       <td style="padding:7px 12px;font-weight:600">${a.nombre}</td>
       <td style="padding:7px 10px;font-size:11px"><span style="background:#eff6ff;color:#1a3563;padding:2px 6px;border-radius:3px">${a.categoria}</span></td>
