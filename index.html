@@ -1976,7 +1976,7 @@ function renderRegContent() {
       const catOk = filterCat==='todos' || a.categoria===filterCat;
       return cicloOk && catOk;
     });
-    const tablaHeaders = p.tablas.map((t,ti2)=>`<th style="text-align:center;min-width:90px">${t.nombre}<br><span style="font-weight:400;font-size:9px">${t.ha} ha</span></th>`).join('');
+    const tablaHeaders = p.tablas.map((t,ti2)=>{const _td2=getTablaData(pi,cn,ti2);const _ha=_td2.sinSiembra?'vacante':(_td2.haSembradas||t.ha)+' ha';return `<th style="text-align:center;min-width:90px">${t.nombre}<br><span style="font-weight:400;font-size:9px">${_ha}</span></th>`;}).join('');
     const gridRows = artsFiltered.map(art=>{
       const pepsPrice = getPepsPrecio(art.id, 1, null);
       const cells = p.tablas.map((t,ti2)=>{
@@ -2484,7 +2484,7 @@ function renderRepContent() {
     const tablaGrid = p.tablas.map((t,ti)=>`
       <div class="tabla-card ${ti===curTablaRep?'active-reg':''}" onclick="curTablaRep=${ti};renderRepContent()">
         <div class="tabla-name">${t.nombre}</div>
-        <div class="tabla-ha">${t.ha} ha</div>
+        <div class="tabla-ha">${(()=>{const _td=getTablaData(curPredioReg||0,curCosechaReg||1,i);return (_td.sinSiembra?"vacante":(_td.haSembradas||t.ha)+" ha")})()}</div>
       </div>`).join('');
 
     const ti = curTablaRep>=0?curTablaRep:0;
@@ -2584,15 +2584,15 @@ function renderRepContent() {
             </div>
             <div style="text-align:center">
               <div style="font-family:'DM Mono',monospace;font-size:9px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">$/ha</div>
-              <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--straw)">${fmt(total/p.tablas[ti].ha)}</div>
+              <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--straw)">${fmt(haTabla?total/haTabla:0)}</div>
             </div>
             <div style="text-align:center">
               <div style="font-family:'DM Mono',monospace;font-size:9px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">kg/ha</div>
-              <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--straw)">${kilos&&p.tablas[ti].ha?fmtN(kilos/p.tablas[ti].ha,0):'—'}</div>
+              <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--straw)">${kilos&&haTabla?fmtN(kilos/haTabla,0):'—'}</div>
             </div>
             <div style="text-align:center">
               <div style="font-family:'DM Mono',monospace;font-size:9px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">kg MS/ha</div>
-              <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--straw)">${kgMS&&p.tablas[ti].ha?fmtN(kgMS/p.tablas[ti].ha,0):'—'}</div>
+              <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:700;color:var(--straw)">${kgMS&&haTabla?fmtN(kgMS/haTabla,0):'—'}</div>
             </div>
             <div style="text-align:center;border-left:1px solid rgba(255,255,255,0.15);padding-left:12px">
               <div style="font-family:'DM Mono',monospace;font-size:9px;color:#4caf50;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">$/kg silo</div>
@@ -2700,15 +2700,15 @@ function printReporteTabla(pi, cn, ti) {
   <style>body{font-family:Arial,sans-serif;font-size:12px;margin:30px}h1{font-size:18px;text-align:center}h2{font-size:12px;text-align:center;color:#000000;font-weight:normal;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#1a3563;color:#eff6ff;padding:8px;font-size:10px;text-align:left}td{padding:8px;border-bottom:1px solid #ddd}.tr{text-align:right}.tot{background:#1a3563;color:#eff6ff;font-weight:bold}.sec{background:#2563eb;color:#faf6ed;text-align:center;padding:8px;font-weight:bold;margin:14px 0 6px}@media print{button{display:none}}</style>
   </head><body>
   <h1>GASTOS TOTALES — ${t.nombre}</h1>
-  <h2>${p.nombre} · Cosecha ${cn} · ${t.ha} ha · ${today()}</h2>
+  <h2>${p.nombre} · Cosecha ${cn} · ${parseFloat(td.haSembradas)||t.ha} ha · ${today()}</h2>
   <table><thead><tr><th>Categoría</th><th>Tipo</th><th class="tr">$/Ha</th><th class="tr">Gasto Total</th></tr></thead><tbody>
-  ${cats.map(cat=>`<tr><td>${cat}</td><td>Variable</td><td class="tr">${catTotals[cat]?fmtPDF(catTotals[cat]/t.ha):'$ —'}</td><td class="tr">${catTotals[cat]?fmtPDF(catTotals[cat]):'$ —'}</td></tr>`).join('')}
-  <tr><td>Depreciación</td><td>Constante</td><td class="tr">${fmtPDF(dep/t.ha)}</td><td class="tr">${fmtPDF(dep)}</td></tr>
-  <tr class="tot"><td colspan="2">TOTAL</td><td class="tr">${fmtPDF(total/t.ha)}</td><td class="tr">${fmtPDF(total)}</td></tr>
+  ${cats.map(cat=>`<tr><td>${cat}</td><td>Variable</td><td class="tr">${catTotals[cat]?fmtPDF(catTotals[cat]/(parseFloat(td.haSembradas)||t.ha)):'$ —'}</td><td class="tr">${catTotals[cat]?fmtPDF(catTotals[cat]):'$ —'}</td></tr>`).join('')}
+  <tr><td>Depreciación</td><td>Constante</td><td class="tr">${fmtPDF(dep/(parseFloat(td.haSembradas)||t.ha))}</td><td class="tr">${fmtPDF(dep)}</td></tr>
+  <tr class="tot"><td colspan="2">TOTAL</td><td class="tr">${fmtPDF(total/(parseFloat(td.haSembradas)||t.ha))}</td><td class="tr">${fmtPDF(total)}</td></tr>
   </tbody></table>
   <div class="sec">COSTO POR KILO</div>
   <table><thead><tr><th>Kilos silo</th><th>Kg MS</th><th>% MS</th><th>Total</th><th>$/ha</th><th>$/kg silo</th><th>$/kg MS</th></tr></thead>
-  <tbody><tr><td>${kilos?fmtN(kilos,0):'—'}</td><td>${kgMS?fmtN(kgMS,0):'—'}</td><td>${td.pctMS?td.pctMS+'%':'—'}</td><td>${fmtPDF(total)}</td><td>${fmtPDF(total/t.ha)}</td><td><strong>${cpk?'$ '+cpk.toFixed(2):'—'}</strong></td><td><strong>${cpkms?'$ '+cpkms.toFixed(2):'—'}</strong></td></tr></tbody></table>
+  <tbody><tr><td>${kilos?fmtN(kilos,0):'—'}</td><td>${kgMS?fmtN(kgMS,0):'—'}</td><td>${td.pctMS?td.pctMS+'%':'—'}</td><td>${fmtPDF(total)}</td><td>${fmtPDF(total/(parseFloat(td.haSembradas)||t.ha))}</td><td><strong>${cpk?'$ '+cpk.toFixed(2):'—'}</strong></td><td><strong>${cpkms?'$ '+cpkms.toFixed(2):'—'}</strong></td></tr></tbody></table>
   <br><button onclick="window.print()" style="padding:10px 24px;background:#1a3563;color:#eff6ff;border:none;cursor:pointer">🖨 Imprimir / PDF</button>
   </body></html>`);
   win.document.close();
@@ -2761,6 +2761,12 @@ function getGastoMes(gasto) {
 }
 
 // Get total ha sembradas for a predio in a cosecha
+function getHaTabla(pi, cn, ti) {
+  const td = getTablaData(pi, cn, ti);
+  if(td.sinSiembra) return 0;
+  return parseFloat(td.haSembradas) || S.predios[pi]?.tablas[ti]?.ha || 0;
+}
+
 function getHaSembradasPredio(pi, cn) {
   const p = S.predios[pi];
   return p.tablas.reduce((s,t,ti)=>{
