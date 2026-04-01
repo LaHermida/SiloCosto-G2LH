@@ -3863,6 +3863,7 @@ function renderGastos() {
         <input type="text" id="me-nombre" placeholder="Ej: Silostop, Barrera Oxygeno..." style="padding:5px;width:220px;font-size:13px"/>
         <input type="text" id="me-unidad" placeholder="Unidad (Rollo, Lt...)" style="padding:5px;width:140px;font-size:13px"/>
         <button class="btn btn-s" onclick="addMatEnsiladaArt()">+ Agregar</button>
+        <button class="btn" onclick="mostrarLimpiezaModal()" style="margin-left:auto;padding:5px 12px;font-size:12px;border-color:#dc2626;color:#dc2626">⚠️ Limpiar mal asignados</button>
       </div>` : '';
 
     const mesesHist_me = getMesesCn(selectedCn);
@@ -3951,22 +3952,34 @@ function renderGastos() {
               <th style="padding:7px 10px;text-align:left">Tablas</th>
               <th style="padding:7px 8px"></th>
             </tr></thead>
-            <tbody>${histME.map((g,gi)=>{
-              const gi2 = S.gastosGenerales.indexOf(g);
-              const unidad = artsMe.find(a=>a.nombre===g.equipo)?.unidad||'uds';
-              const tabNom = g.tablaIdx!==undefined&&g.prediosIdx?.[0]!==undefined
-                ? (S.predios[g.prediosIdx[0]]?.emoji||'')+' '+S.predios[g.prediosIdx[0]]?.tablas[g.tablaIdx]?.nombre
-                : (g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ');
-              return `<tr style="border-bottom:1px solid #f1f5f9;font-size:12px">
-                <td style="padding:6px 12px;color:#000000">${g.fecha||'—'}</td>
-                <td style="padding:6px 10px;font-weight:600">${g.equipo||'—'}</td>
-                <td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace">${g.litros?fmtN(g.litros,2)+' '+unidad:'—'}</td>
-                <td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace">${g.precioPorLitro?fmt(g.precioPorLitro):'—'}</td>
-                <td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-weight:600">${fmt(g.monto)}</td>
-                <td style="padding:6px 10px;font-size:11px">${tabNom||'—'}</td>
-                ${isAdmin?`<td style="padding:3px 6px"><button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${gi2});renderGastos()">✕</button></td>`:'<td></td>'}
-              </tr>`;
-            }).join('')}</tbody>
+            <tbody>${(()=>{
+              // Agrupar por fecha+equipo para mostrar una fila por captura
+              const grupos = {};
+              histME.forEach((g)=>{
+                const key = (g.fecha||'')+'__'+(g.equipo||'');
+                if(!grupos[key]) grupos[key]={fecha:g.fecha,equipo:g.equipo,cantTotal:0,montoTotal:0,precio:g.precioPorLitro,tablas:[],indices:[]};
+                grupos[key].cantTotal += parseFloat(g.litros)||0;
+                grupos[key].montoTotal += parseFloat(g.monto)||0;
+                const tabNom = g.tablaIdx!==undefined&&g.prediosIdx?.[0]!==undefined
+                  ? (S.predios[g.prediosIdx[0]]?.emoji||'')+' '+(S.predios[g.prediosIdx[0]]?.tablas[g.tablaIdx]?.nombre||'')
+                  : '';
+                if(tabNom && !grupos[key].tablas.includes(tabNom)) grupos[key].tablas.push(tabNom);
+                grupos[key].indices.push(S.gastosGenerales.indexOf(g));
+              });
+              return Object.values(grupos).map(gr=>{
+                const unidad = artsMe.find(a=>a.nombre===gr.equipo)?.unidad||'uds';
+                const delFn = isAdmin ? `onclick="delGastosMulti([${gr.indices.join(',')}]);renderGastos()"` : '';
+                return `<tr style="border-bottom:1px solid #f1f5f9;font-size:12px">
+                  <td style="padding:6px 12px">${gr.fecha||'—'}</td>
+                  <td style="padding:6px 10px;font-weight:600">${gr.equipo||'—'}</td>
+                  <td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace">${fmtN(gr.cantTotal,2)} ${unidad}</td>
+                  <td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace">${gr.precio?fmt(gr.precio):'—'}</td>
+                  <td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-weight:600">${fmt(gr.montoTotal)}</td>
+                  <td style="padding:6px 10px;font-size:11px">${gr.tablas.join(' · ')||'—'}</td>
+                  ${isAdmin?`<td style="padding:3px 6px"><button class="btn btn-d" style="font-size:10px;padding:2px 6px" ${delFn}>✕</button></td>`:'<td></td>'}
+                </tr>`;
+              }).join('');
+            })()}</tbody>
           </table></div>
         </div>` : ''}`;
 
@@ -5362,10 +5375,7 @@ function capturarGastos() {
         S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Materiales de ensilada',equipo:art.nombre,monto:cant*precio,litros:cant,precioPorLitro:precio,prediosIdx:S.predios.map((_,pi)=>pi),mes:mesMe,fecha:today()});
         total++;
       }
-      // Descontar del inventario (salida automática)
-      if(!S.inventario) S.inventario = [];
-      const piInv = tablasSelMe.length ? tablasSelMe[0].pi : 0;
-      S.inventario.push({id:uid(),tipo:'salida',predioIdx:piInv,articuloId:art.id,cantidad:cant,fecha:today(),motivo:'Uso ensilada C'+cn,anio,cn});
+      // Salida de inventario se muestra automáticamente via gastosGenerales
     });
   } else if(gastosTab === 'corte') {
     const mesCort = parseInt(gastosGridDraft['cort2_mes'] || getMesesCn(cn)[0]);
@@ -5682,6 +5692,76 @@ function delGastosMulti(indices) {
 function delGasto(i) {
   S.gastosGenerales.splice(i,1);
   save(); renderGastos(); toast('✓ Eliminado');
+}
+
+function detectarGastosMalAsignados() {
+  // Detectar gastos de Mat. Ensilada en tablas con cultivo de empaque
+  const malos = [];
+  (S.gastosGenerales||[]).forEach((g,gi)=>{
+    if(g.categoria !== 'Materiales de ensilada') return;
+    if(g.tablaIdx === undefined || !g.prediosIdx?.length) return;
+    const pi = g.prediosIdx[0];
+    const ti = g.tablaIdx;
+    const cn = getGastoCosecha(g);
+    const td = getTablaData(pi, cn, ti);
+    const cvActual = td.cultivo;
+    const cv = cvActual || [1,2,3].map(c=>getTablaData(pi,c,ti).cultivo).find(Boolean) || 'maiz';
+    if(!CULTIVOS_ENSILADA.includes(cv)) {
+      malos.push({gi, g, pi, ti, cv,
+        predio: S.predios[pi]?.nombre||'?',
+        tabla: S.predios[pi]?.tablas[ti]?.nombre||'?',
+        cultivo: CULTIVOS[cv]?.label||cv
+      });
+    }
+  });
+  return malos;
+}
+
+function mostrarLimpiezaModal() {
+  const malos = detectarGastosMalAsignados();
+  if(!malos.length) { toast('✓ No hay gastos mal asignados'); return; }
+  const rows = malos.map(m=>`
+    <tr style="border-bottom:1px solid #f1f5f9;font-size:12px">
+      <td style="padding:6px 10px">${m.g.fecha||'—'}</td>
+      <td style="padding:6px 10px;font-weight:600">${m.g.equipo||'—'}</td>
+      <td style="padding:6px 10px">${m.predio} · ${m.tabla}</td>
+      <td style="padding:6px 10px;color:#c0392b">${m.cultivo}</td>
+      <td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(m.g.monto)}</td>
+    </tr>`).join('');
+
+  const modal = document.createElement('div');
+  modal.id = 'limpieza-modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:10px;padding:24px;max-width:700px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+      <div style="font-size:16px;font-weight:700;margin-bottom:6px">⚠️ Gastos mal asignados</div>
+      <div style="font-size:13px;color:#374151;margin-bottom:16px">Estos ${malos.length} gasto(s) de Materiales de Ensilada están asignados a tablas con cultivo de empaque:</div>
+      <div style="overflow-x:auto;margin-bottom:16px">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#0c4a6e;color:#fff">
+            <th style="padding:6px 10px;text-align:left">Fecha</th>
+            <th style="padding:6px 10px;text-align:left">Artículo</th>
+            <th style="padding:6px 10px;text-align:left">Tabla</th>
+            <th style="padding:6px 10px;text-align:left">Cultivo</th>
+            <th style="padding:6px 10px;text-align:right">Monto</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn" onclick="document.getElementById('limpieza-modal').remove()" style="padding:8px 16px">Cancelar</button>
+        <button class="btn btn-d" onclick="eliminarGastosMalos();document.getElementById('limpieza-modal').remove()" style="padding:8px 16px;background:#dc2626;color:#fff;border-color:#dc2626">🗑 Eliminar todos (${malos.length})</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function eliminarGastosMalos() {
+  const malos = detectarGastosMalAsignados();
+  const indices = malos.map(m=>m.gi).sort((a,b)=>b-a);
+  indices.forEach(i=>S.gastosGenerales.splice(i,1));
+  save(); renderGastos();
+  toast(`✓ ${indices.length} gasto(s) eliminados`);
 }
 
 
