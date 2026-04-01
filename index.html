@@ -264,7 +264,7 @@ tr:hover td { background:var(--cream); }
     </div>
     <div id="art-content-catalogo">
     <div class="card">
-      <div class="card-head">➕ Nuevo artículo / Actualizar precio</div>
+      <div class="card-head">➕ Nuevo artículo</div>
       <div class="fg4">
         <div class="field">
           <label>Nombre</label>
@@ -274,15 +274,7 @@ tr:hover td { background:var(--cream); }
           <label>Categoría</label>
           <select id="art-cat" onchange="document.getElementById('art-subcat-wrap').style.display=this.value==='Material de cultivo'?'':'none'">
             <option>Material de cultivo</option>
-            <option>Maquinaria</option>
-            <option>Reparaciones Riego</option>
-            <option>Luz</option>
-            <option>Ensilada</option>
             <option>Materiales de ensilada</option>
-            <option>Nómina y gastos admin</option>
-            <option>Diesel</option>
-            <option>Sirre y Desmonte</option>
-            <option>Otro</option>
           </select>
           <div id="art-subcat-wrap" style="margin-top:6px">
             <label style="font-size:11px;color:var(--muted)">Subcategoría</label>
@@ -296,15 +288,11 @@ tr:hover td { background:var(--cream); }
           </div>
         </div>
         <div class="field">
-          <label>Precio actual</label>
-          <input type="number" id="art-precio" placeholder="0.00"/>
-        </div>
-        <div class="field">
           <label>Unidad</label>
           <input type="text" id="art-unidad" placeholder="kg, L, hr..."/>
         </div>
       </div>
-      <div id="art-anio-ciclo-bar" style="display:flex;align-items:center;gap:8px;margin:8px 0"></div>
+      <div id="art-anio-ciclo-bar" style="display:none"></div>
       <input type="hidden" id="art-ciclo" value="1"/>
       <div class="btn-row">
         <button class="btn btn-p" onclick="addArticulo()">Guardar artículo</button>
@@ -1987,7 +1975,9 @@ function renderRegContent() {
     });
     const tablaHeaders = p.tablas.map((t,ti2)=>`<th style="text-align:center;min-width:90px">${t.nombre}<br><span style="font-weight:400;font-size:9px">${t.ha} ha</span></th>`).join('');
     const gridRows = artsFiltered.map(art=>{
-      const precio = getCurrentPrice(art.id);
+      const pepsPrice = getPepsPrecio(art.id, 1, pi);
+      const precio = pepsPrice || getCurrentPrice(art.id);
+      const pepsLabel = pepsPrice ? `PEPS: ${fmt(pepsPrice)}` : `Cat: ${fmt(getCurrentPrice(art.id))}`;
       const cells = p.tablas.map((t,ti2)=>{
         return `<td style="padding:4px"><input type="number" min="0" step="0.01" placeholder="—"
           style="width:80px;padding:5px;text-align:center;border:1px solid var(--border);font-family:'DM Mono',monospace;font-size:12px"
@@ -1996,7 +1986,7 @@ function renderRegContent() {
       }).join('');
       return `<tr>
         <td style="white-space:nowrap;padding:8px 12px"><strong>${art.nombre}</strong><br>
-          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${fmt(precio)}/${art.unidad}</span>
+          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--amber)">${pepsLabel}/${art.unidad}</span>
         </td>${cells}
       </tr>`;
     }).join('');
@@ -5750,38 +5740,24 @@ function renderInv() {
   if(!S.inventario) S.inventario = [];
   const CATS_INV = ['Semillas','Fertilizantes','Herbicidas','Fungicidas','Insecticidas','Material de cultivo','Materiales de ensilada'];
   const artsInv = (S.articulos||[]).filter(a=>CATS_INV.includes(a.categoria));
-  const artOpts = artsInv.map(a=>`<option value="${a.id}">${a.nombre} (${a.categoria})</option>`).join('');
-  const predioTabs = S.predios.map((p,pi)=>
-    `<button class="ptab ${pi===curInvPredi?'active':''}" onclick="curInvPredi=${pi};renderInv()">${p.emoji} ${p.nombre}</button>`
-  ).join('');
-  const anioOpts = Array.from({length:13},(_,i)=>2020+i).map(y=>`<option value="${y}"${y===curInvAnio?' selected':''}>${y}</option>`).join('');
-  const cnBtns = [1,2,3].map(c=>`<button class="ctab${c===curInvCn?' active':''}" style="padding:3px 10px;font-size:12px" onclick="curInvCn=${c};renderInv()">C${c}</button>`).join('');
-  const selectorBar = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-    <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Año:</span>
-    <select style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid var(--border)" onchange="curInvAnio=parseInt(this.value);renderInv()">${anioOpts}</select>
-    ${cnBtns}
-    <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--green);font-weight:700;margin-left:8px">${curInvAnio} · C${curInvCn}</span>
-  </div>`;
 
-  // Stock calculation per article for this predio
+  // Stock global — sin filtros de ciclo/año/predio
   const stockPorArt = {};
   artsInv.forEach(a=>{ stockPorArt[a.id]={entradas:0,salidasAuto:0,salidasMan:0,art:a}; });
 
-  // Entradas — filtrar por ciclo (entradas sin cn/anio se muestran en todos)
-  (S.inventario||[]).filter(m=>m.tipo==='entrada'&&m.predioIdx===curInvPredi&&(!m.cn||m.cn===curInvCn)&&(!m.anio||m.anio===curInvAnio)).forEach(m=>{
+  // Todas las entradas
+  (S.inventario||[]).filter(m=>m.tipo==='entrada').forEach(m=>{
     if(stockPorArt[m.articuloId]) stockPorArt[m.articuloId].entradas += parseFloat(m.cantidad)||0;
   });
 
-  // Salidas automáticas — solo del ciclo seleccionado
-  S.predios[curInvPredi].tablas.forEach((_,ti)=>{
-    const td = getTablaData(curInvPredi,curInvCn,ti);
-      (td.consumos||[]).filter(c=>!c.anio||c.anio===curInvAnio).forEach(c=>{
-        if(stockPorArt[c.articuloId]) stockPorArt[c.articuloId].salidasAuto += parseFloat(c.cantidad)||0;
-    });
-  });
+  // Todas las salidas automáticas (consumos de registro)
+  S.predios.forEach((p,pi)=>{ p.tablas.forEach((_,ti)=>{ [1,2,3].forEach(cn=>{
+    const td = getTablaData(pi,cn,ti);
+    (td.consumos||[]).forEach(c=>{ if(stockPorArt[c.articuloId]) stockPorArt[c.articuloId].salidasAuto += parseFloat(c.cantidad)||0; });
+  }); }); });
 
-  // Salidas manuales — filtrar por ciclo (sin cn/anio se muestran en todos)
-  (S.inventario||[]).filter(m=>m.tipo==='salida'&&m.predioIdx===curInvPredi&&(!m.cn||m.cn===curInvCn)&&(!m.anio||m.anio===curInvAnio)).forEach(m=>{
+  // Todas las salidas manuales
+  (S.inventario||[]).filter(m=>m.tipo==='salida').forEach(m=>{
     if(stockPorArt[m.articuloId]) stockPorArt[m.articuloId].salidasMan += parseFloat(m.cantidad)||0;
   });
 
@@ -5818,9 +5794,6 @@ function renderInv() {
   }).join('');
 
   document.getElementById('art-content-inventario').innerHTML = `
-    <div style="display:flex;gap:4px;margin-bottom:12px">${predioTabs}</div>
-    ${selectorBar}
-
     <!-- STOCK -->
     <div class="card" style="margin-bottom:16px">
       <div class="card-head">📊 Stock Actual — ${S.predios[curInvPredi].emoji} ${S.predios[curInvPredi].nombre}</div>
