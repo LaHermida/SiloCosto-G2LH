@@ -850,13 +850,17 @@ function calcDepTabla(pi, cn, ti, anio) {
 
     // Tablas activas de las que aplican
     const tablasActivas = tablasAplica.filter(t => !getTablaData(pi,cn,t).sinSiembra);
-    if(tablasActivas.length === 0) continue; // Todas vacantes: costo = 0 este ciclo
+    if(tablasActivas.length === 0) continue;
+    if(!tablasActivas.includes(ti)) continue;
 
-    if(!tablasActivas.includes(ti)) continue; // Esta tabla vacante: no recibe
-
-    // Distribuir proporcional a ha FIJAS entre tablas activas
-    const haActivasTotal = tablasActivas.reduce((s,t) => s + (predio.tablas[t]?.ha||0), 0);
-    const frac = haActivasTotal > 0 ? tablaHaFija / haActivasTotal : 1 / tablasActivas.length;
+    // Distribuir proporcional a ha ACTIVAS (haSembradas) entre tablas activas
+    const haActivasTotal = tablasActivas.reduce((s,t) => {
+      const tdx = getTablaData(pi,cn,t);
+      return s + (parseFloat(tdx.haSembradas) || predio.tablas[t]?.ha || 0);
+    }, 0);
+    const tdThis = getTablaData(pi,cn,ti);
+    const haEstaTabla = parseFloat(tdThis.haSembradas) || tablaHaFija;
+    const frac = haActivasTotal > 0 ? haEstaTabla / haActivasTotal : 1 / tablasActivas.length;
     total += montoPredio * frac;
   }
   return total;
@@ -2866,12 +2870,21 @@ const CATS_POR_TABLA = ['Ensilada','Maquila Corte','Maquila Aplicaciones','Empac
 function getGastoParaTabla(gasto, pi, ti) {
   const prediosIdx = gasto.prediosIdx || [];
   if(!prediosIdx.includes(pi)) return 0;
-  // Gastos con tabla específica (maquila): solo aplica si el equipo coincide con el nombre de esta tabla
+
+  // Gastos con tabla específica por nombre (maquila corte, empacado, pizca, camiones)
   if(CATS_POR_TABLA.includes(gasto.categoria)) {
     const tablaNombre = S.predios[pi].tablas[ti]?.nombre;
     return gasto.equipo === tablaNombre ? (parseFloat(gasto.monto)||0) : 0;
   }
-  // Gastos con tablasIdx (diesel/maquinaria de ensilada/corte): prorratear solo entre tablas seleccionadas
+
+  // Gastos con tablaIdx (entero): asignación directa a tabla específica
+  // Ej: Materiales de ensilada, Maquila Aplicaciones, Aplicaciones, Derechos de Agua
+  if(gasto.tablaIdx !== undefined && gasto.tablaIdx !== null) {
+    return gasto.tablaIdx === ti ? (parseFloat(gasto.monto)||0) : 0;
+  }
+
+  // Gastos con tablasIdx (array de {pi,ti}): prorratear solo entre tablas seleccionadas
+  // Ej: Diesel Ensilada, Maquinaria Ensilada, Diesel Corte, Maquinaria Corte
   if(gasto.tablasIdx && gasto.tablasIdx.length) {
     const enEstePreTabla = gasto.tablasIdx.find(x => x.pi === pi && x.ti === ti);
     if(!enEstePreTabla) return 0;
@@ -2882,17 +2895,18 @@ function getGastoParaTabla(gasto, pi, ti) {
     }, 0);
     const td = getTablaData(pi, cn, ti);
     const tablaHa = parseFloat(td.haSembradas) || S.predios[pi].tablas[ti]?.ha || 0;
-    const montoPredio = getGastoParaPredio(gasto, pi);
     if(!totalHaSel) return 0;
     return (parseFloat(gasto.monto)||0) * (tablaHa / totalHaSel);
   }
-  // Gastos generales del predio: prorratear por ha entre todas las tablas activas
+
+  // Gastos generales del predio: prorratear por ha activas entre tablas activas
   const montoPredio = getGastoParaPredio(gasto, pi);
   if(!montoPredio) return 0;
   const cn = getGastoCosecha(gasto);
   const p = S.predios[pi];
   const totalHaPredio = getHaSembradasPredio(pi, cn);
   const td = getTablaData(pi, cn, ti);
+  if(td.sinSiembra) return 0;
   const tablaHa = parseFloat(td.haSembradas) || p.tablas[ti]?.ha || 0;
   if(!totalHaPredio) return 0;
   return montoPredio * (tablaHa / totalHaPredio);
