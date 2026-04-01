@@ -3909,8 +3909,10 @@ function renderGastos() {
           let html='';
           S.predios.forEach((p,pi)=>{
             const tablasEnsilaje = p.tablas.map((t,ti)=>{
-              const cv=getTablaData(pi,selectedCn,ti).cultivo||'maiz';
               const td2=getTablaData(pi,selectedCn,ti);
+              // Buscar cultivo en cualquier ciclo si no está en el actual
+              const cvActual = td2.cultivo;
+              const cv = cvActual || [1,2,3].map(c=>getTablaData(pi,c,ti).cultivo).find(Boolean) || 'maiz';
               if(!CULTIVOS_ENSILADA.includes(cv)||td2.sinSiembra) return '';
               const key='me_tab_'+pi+'_'+ti;
               const isChk=gastosGridDraft[key]!=='0'&&gastosGridDraft[key]!==false;
@@ -5305,7 +5307,8 @@ function capturarGastos() {
       const tablasChecked = [];
       S.predios.forEach((p,pi)=>{
         p.tablas.forEach((t,ti)=>{
-          const cv = getTablaData(pi,cn,ti).cultivo||'maiz';
+          const _cvA=getTablaData(pi,cn,ti).cultivo;
+          const cv=_cvA||[1,2,3].map(c=>getTablaData(pi,c,ti).cultivo).find(Boolean)||'maiz';
           if(!CULTIVOS_ENSILADA.includes(cv)) return;
           const chkKey = `me_chk_${art.id}_${pi}_${ti}`;
           if(gastosGridDraft[chkKey]==='0'||gastosGridDraft[chkKey]===false||gastosGridDraft[chkKey]===undefined) return;
@@ -5331,7 +5334,8 @@ function capturarGastos() {
     const tablasSelMe = [];
     S.predios.forEach((p,pi)=>{
       p.tablas.forEach((t,ti)=>{
-        const cv = getTablaData(pi,cn,ti).cultivo||'maiz';
+        const _cvB=getTablaData(pi,cn,ti).cultivo;
+        const cv=_cvB||[1,2,3].map(c=>getTablaData(pi,c,ti).cultivo).find(Boolean)||'maiz';
         if(!CULTIVOS_ENSILADA.includes(cv)) return;
         const chkKey = `me_tab_${pi}_${ti}`;
         if(gastosGridDraft[chkKey]==='0'||gastosGridDraft[chkKey]===false) return;
