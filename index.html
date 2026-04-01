@@ -718,14 +718,15 @@ function getCurrentPrice(artId, anio) {
 function getPepsPrecio(artId, cantidadNecesaria, predioIdx) {
   if(!S.inventario) return getCurrentPrice(artId);
   // Obtener entradas ordenadas por fecha (más antigua primero = PEPS)
+  // Si predioIdx es null/undefined, buscar en todos los predios
   const entradas = (S.inventario||[])
-    .filter(m => m.tipo === 'entrada' && m.articuloId === artId && m.predioIdx === predioIdx)
+    .filter(m => m.tipo === 'entrada' && m.articuloId === artId && (predioIdx == null || m.predioIdx === predioIdx))
     .sort((a,b) => a.fecha.localeCompare(b.fecha))
     .map(m => ({ cantidad: parseFloat(m.cantidad)||0, precio: parseFloat(m.precio)||0 }));
   if(!entradas.length) return getCurrentPrice(artId);
   // Calcular salidas ya consumidas para saber qué queda de cada entrada
   const salidasYa = (S.inventario||[])
-    .filter(m => m.tipo === 'salida' && m.articuloId === artId && m.predioIdx === predioIdx)
+    .filter(m => m.tipo === 'salida' && m.articuloId === artId && (predioIdx == null || m.predioIdx === predioIdx))
     .reduce((s,m) => s + (parseFloat(m.cantidad)||0), 0);
   // También salidas automáticas de consumos
   let salidasAuto = 0;
@@ -3852,7 +3853,7 @@ function renderGastos() {
             onchange="gastosGridDraft['me_cant_${art.id}_${mesActual_me}']=this.value"/>
         </td>
         <td style="padding:6px 8px;text-align:right">
-          <input type="number" min="0" step="0.01" placeholder="$ unitario" value="${val||getPepsPrecio(art.id,1,0).toFixed(2)}"
+          <input type="number" min="0" step="0.01" placeholder="$ unitario" value="${val||(getPepsPrecio(art.id,1,null)||0).toFixed(2)}"
             style="width:120px;padding:5px;text-align:right;border:1px solid var(--border);font-size:13px;font-family:'DM Mono',monospace;background:#fffbe8"
             onchange="gastosGridDraft['me_${art.id}_${mesActual_me}']=this.value"/>
         </td>
@@ -5256,8 +5257,7 @@ function capturarGastos() {
     // Mat ensilada — cantidad total prorrateada por superficie entre tablas marcadas
     S.articulos.filter(a=>a.categoria==='Materiales de ensilada').forEach(art=>{
       const cantTotal = parseFloat(gastosGridDraft[`me_cant_${art.id}`]);
-      const piME = prediosIdx[0] ?? 0;
-      const precio = getPepsPrecio(art.id, cantTotal||0, piME) || getCurrentPrice(art.id) || 0;
+      const precio = getPepsPrecio(art.id, cantTotal||0, null) || getCurrentPrice(art.id) || 0;
       if(!cantTotal||cantTotal<=0) return;
       // Collect checked tablas and their ha
       const tablasChecked = [];
@@ -5288,8 +5288,7 @@ function capturarGastos() {
     artsMeCap.forEach(art=>{
       const cant = parseFloat(gastosGridDraft['me_cant_'+art.id+'_'+mesMe]);
       if(!cant||cant<=0) return;
-      const piME = prediosIdx[0] ?? 0;
-      const precio = getPepsPrecio(art.id, cant, piME) || parseFloat(gastosGridDraft['me_'+art.id+'_'+mesMe]) || getCurrentPrice(art.id) || 0;
+      const precio = getPepsPrecio(art.id, cant, null) || parseFloat(gastosGridDraft['me_'+art.id+'_'+mesMe]) || getCurrentPrice(art.id) || 0;
       if(!precio) return;
       const monto = cant * precio;
       S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Materiales de ensilada',equipo:art.nombre,monto,litros:cant,precioPorLitro:precio,prediosIdx:S.predios.map((_,pi)=>pi),mes:mesMe,fecha:today()});
