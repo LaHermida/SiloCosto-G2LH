@@ -5816,7 +5816,8 @@ function renderMovimientos() {
     });
   });
 
-  // Salidas automáticas de mat ensilada (gastosGenerales cat Materiales de ensilada)
+  // Salidas automáticas de mat ensilada — agrupar por fecha+artículo para evitar duplicados
+  const meGrupos = {};
   (S.gastosGenerales||[]).filter(g=>
     g.categoria==='Materiales de ensilada' &&
     getGastoCosecha(g)===curInvCn &&
@@ -5825,12 +5826,11 @@ function renderMovimientos() {
   ).forEach(g=>{
     const art2 = artsInv.find(a=>a.nombre===g.equipo);
     if(!art2) return;
-    salidasAuto.push({
-      tipo:'salida-auto', articuloId:art2.id, cantidad:g.litros||0,
-      fecha:g.fecha||'', motivo:'Mat. Ensilada', predioIdx:curInvPredi,
-      cn:curInvCn, anio:curInvAnio
-    });
+    const key = (g.fecha||'')+'__'+art2.id;
+    if(!meGrupos[key]) meGrupos[key]={tipo:'salida-auto',articuloId:art2.id,cantidad:0,fecha:g.fecha||'',motivo:'Mat. Ensilada',predioIdx:curInvPredi,cn:curInvCn,anio:curInvAnio};
+    meGrupos[key].cantidad += parseFloat(g.litros)||0;
   });
+  Object.values(meGrupos).forEach(m=>salidasAuto.push(m));
 
   const movs = [...movsInv, ...salidasAuto]
     .sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
