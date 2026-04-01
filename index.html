@@ -563,6 +563,18 @@ async function loadState() {
   });
   // Ensilada stays empty — independent list
   // (don't auto-populate equiposEnsilada)
+  // 0. Migrar S.matEnsilada a S.articulos con categoria Materiales de ensilada
+  if(S.matEnsilada && S.matEnsilada.length) {
+    S.matEnsilada.forEach(me => {
+      const existe = (S.articulos||[]).find(a => a.nombre === me.nombre && a.categoria === 'Materiales de ensilada');
+      if(!existe) {
+        if(!S.articulos) S.articulos = [];
+        S.articulos.push({id: me.id||uid(), nombre: me.nombre, categoria: 'Materiales de ensilada', unidad: me.unidad||'Rollo', precios: []});
+      }
+    });
+    S.matEnsilada = [];
+  }
+
   // 1. Primero migrar cultivos viejos a los nuevos nombres correctos
   const CULTIVO_MAP = {
     'trigo': 'triticale',
@@ -3813,7 +3825,8 @@ function renderGastos() {
       })() }`;
 
   } else if(gastosTab === 'mat_ensilada') {
-    if(!S.matEnsilada) S.matEnsilada = [];
+    if(!S.articulos) S.articulos = [];
+    const artsMe = S.articulos.filter(a=>a.categoria==='Materiales de ensilada');
     const mesActual_me = parseInt(gastosGridDraft['me_mes'] || getMesesCn(selectedCn)[0]);
     const mesOpts_me = [1,2,3,4,5,6,7,8,9,10,11,12].map(m=>
       `<option value="${m}" ${m===mesActual_me?'selected':''}>${MESES_G[m-1]}</option>`).join('');
@@ -3822,10 +3835,11 @@ function renderGastos() {
       <div style="padding:8px 12px;background:var(--cream);border:1px solid var(--border);margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase">➕ Agregar artículo:</span>
         <input type="text" id="me-nombre" placeholder="Ej: Silostop, Barrera Oxygeno..." style="padding:5px;width:220px;font-size:13px"/>
-        <button class="btn btn-s" onclick="addMatEnsilada()">+ Agregar</button>
+        <input type="text" id="me-unidad" placeholder="Unidad (Rollo, Lt...)" style="padding:5px;width:140px;font-size:13px"/>
+        <button class="btn btn-s" onclick="addMatEnsiladaArt()">+ Agregar</button>
       </div>` : '';
 
-    const meRows = S.matEnsilada.map(art=>{
+    const meRows = artsMe.map(art=>{
       const val = gastosGridDraft['me_'+art.id+'_'+mesActual_me]||'';
       const cant = gastosGridDraft['me_cant_'+art.id+'_'+mesActual_me]||'';
       const histMes=(S.gastosGenerales||[]).filter(g=>g.equipo===art.nombre&&g.categoria==='Materiales de ensilada'&&getGastoMes(g)===mesActual_me&&(getGastoCosecha(g)===selectedCn)&&g.anio===gastosGridAnio);
@@ -3838,8 +3852,8 @@ function renderGastos() {
             onchange="gastosGridDraft['me_cant_${art.id}_${mesActual_me}']=this.value"/>
         </td>
         <td style="padding:6px 8px;text-align:right">
-          <input type="number" min="0" step="0.01" placeholder="$ unitario" value="${val}"
-            style="width:120px;padding:5px;text-align:right;border:1px solid var(--border);font-size:13px;font-family:'DM Mono',monospace"
+          <input type="number" min="0" step="0.01" placeholder="$ unitario" value="${val||getPepsPrecio(art.id,1,0).toFixed(2)}"
+            style="width:120px;padding:5px;text-align:right;border:1px solid var(--border);font-size:13px;font-family:'DM Mono',monospace;background:#fffbe8"
             onchange="gastosGridDraft['me_${art.id}_${mesActual_me}']=this.value"/>
         </td>
         <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:12px;color:var(--amber)">
@@ -3854,7 +3868,7 @@ function renderGastos() {
     const histME = (S.gastosGenerales||[]).filter(g=>g.categoria==='Materiales de ensilada'&&(getGastoCosecha(g)===selectedCn)&&g.anio===gastosGridAnio);
     const mesesHist_me = getMesesCn(selectedCn);
     const mesesHdr_me = mesesHist_me.map(m=>`<th style="padding:6px 10px;text-align:right;min-width:90px">${MESES_G[m-1].slice(0,3)}</th>`).join('');
-    const meHistRows = S.matEnsilada.map(art=>{
+    const meHistRows = artsMe.map(art=>{
       const celdas = mesesHist_me.map(m=>{
         const h=(S.gastosGenerales||[]).filter(g=>g.equipo===art.nombre&&g.categoria==='Materiales de ensilada'&&getGastoMes(g)===m&&(getGastoCosecha(g)===selectedCn)&&g.anio===gastosGridAnio);
         const tot=h.reduce((s,g)=>s+parseFloat(g.monto||0),0);
@@ -3872,7 +3886,7 @@ function renderGastos() {
         <span style="font-size:11px;color:var(--muted);margin-left:auto">C${selectedCn} · ${gastosGridAnio}</span>
       </div>
       ${configME}
-      ${S.matEnsilada.length ? `<div style="overflow-x:auto;margin-bottom:24px"><table style="border-collapse:collapse;font-size:13px;width:100%">
+      ${artsMe.length ? `<div style="overflow-x:auto;margin-bottom:24px"><table style="border-collapse:collapse;font-size:13px;width:100%">
         <thead><tr style="background:var(--earth);color:#fff">
           <th style="padding:7px 12px;text-align:left">Artículo</th>
           <th style="padding:7px 10px;text-align:right">Cantidad</th>
@@ -4778,19 +4792,20 @@ function delSistemaRiego(id) {
   save(); renderGastos(); toast('✓ Eliminado');
 }
 
-function addMatEnsilada() {
+function addMatEnsiladaArt() {
   const nombre = document.getElementById('me-nombre')?.value.trim();
+  const unidad = document.getElementById('me-unidad')?.value.trim() || 'Rollo';
   if(!nombre) { toast('⚠️ Ingresa el nombre',true); return; }
-  if(!S.matEnsilada) S.matEnsilada = [];
-  if(S.matEnsilada.find(a=>a.nombre===nombre)) { toast('⚠️ Ya existe',true); return; }
-  S.matEnsilada.push({id:uid(), nombre});
+  if(!S.articulos) S.articulos = [];
+  if(S.articulos.find(a=>a.nombre===nombre&&a.categoria==='Materiales de ensilada')) { toast('⚠️ Ya existe',true); return; }
+  S.articulos.push({id:uid(), nombre, categoria:'Materiales de ensilada', unidad, precios:[]});
   document.getElementById('me-nombre').value='';
   save(); renderGastos(); toast('✓ Artículo agregado');
 }
 
 function delMatEnsilada(id) {
   if(!confirm('¿Eliminar?')) return;
-  S.matEnsilada = (S.matEnsilada||[]).filter(a=>a.id!==id);
+  S.articulos = (S.articulos||[]).filter(a=>a.id!==id);
   save(); renderGastos(); toast('✓ Eliminado');
 }
 
@@ -5269,7 +5284,8 @@ function capturarGastos() {
 
   } else if(gastosTab === 'mat_ensilada') {
     const mesMe = parseInt(gastosGridDraft['me_mes'] || getMesesCn(cn)[0]);
-    (S.matEnsilada||[]).forEach(art=>{
+    const artsMeCap = (S.articulos||[]).filter(a=>a.categoria==='Materiales de ensilada');
+    artsMeCap.forEach(art=>{
       const cant = parseFloat(gastosGridDraft['me_cant_'+art.id+'_'+mesMe]);
       if(!cant||cant<=0) return;
       const piME = prediosIdx[0] ?? 0;
