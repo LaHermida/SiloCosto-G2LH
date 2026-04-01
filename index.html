@@ -4604,10 +4604,11 @@ function renderGastos() {
       const c1p = (parseFloat(gastosGridDraft['emp_nom_c1pct'])||0)/100;
       const c2p = (parseFloat(gastosGridDraft['emp_nom_c2pct'])||0)/100;
       const c3p = (parseFloat(gastosGridDraft['emp_nom_c3pct'])||0)/100;
-      if(c1p>0) { S.gastosGenerales.push({id:uid(),cosecha:1,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap*c1p,prediosIdx:[nomPiEmp],fecha:today()}); total++; }
-      if(c2p>0) { S.gastosGenerales.push({id:uid(),cosecha:2,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap*c2p,prediosIdx:[nomPiEmp],fecha:today()}); total++; }
-      if(c3p>0) { S.gastosGenerales.push({id:uid(),cosecha:3,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap*c3p,prediosIdx:[nomPiEmp],fecha:today()}); total++; }
-      if(!c1p&&!c2p&&!c3p) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap,prediosIdx:[nomPiEmp],fecha:today()}); total++; }
+      const _tblEmp=(piE,cnE)=>{const r=[];S.predios[piE]?.tablas.forEach((_,tiE)=>{const cv=getTablaData(piE,cnE,tiE).cultivo||'maiz';if(CULTIVOS_EMPAQUE.includes(cv)&&!getTablaData(piE,cnE,tiE).sinSiembra)r.push({pi:piE,ti:tiE});});return r.length?r:undefined;};
+      if(c1p>0) { S.gastosGenerales.push({id:uid(),cosecha:1,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap*c1p,prediosIdx:[nomPiEmp],tablasIdx:_tblEmp(nomPiEmp,1),fecha:today()}); total++; }
+      if(c2p>0) { S.gastosGenerales.push({id:uid(),cosecha:2,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap*c2p,prediosIdx:[nomPiEmp],tablasIdx:_tblEmp(nomPiEmp,2),fecha:today()}); total++; }
+      if(c3p>0) { S.gastosGenerales.push({id:uid(),cosecha:3,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap*c3p,prediosIdx:[nomPiEmp],tablasIdx:_tblEmp(nomPiEmp,3),fecha:today()}); total++; }
+      if(!c1p&&!c2p&&!c3p) { S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap,prediosIdx:[nomPiEmp],tablasIdx:_tblEmp(nomPiEmp,cn),fecha:today()}); total++; }
     }
 
   } else if(gastosTab === 'derechos') {
@@ -5487,7 +5488,8 @@ function capturarGastos() {
     if(montoNomEmpCap>0) {
       const nomPiEmp = parseInt(gastosGridDraft['emp_nom_pi']||0);
       const mesEmp = parseInt(gastosGridDraft['emp_nom_mes']||getMesesCn(cn)[0]);
-      S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap,prediosIdx:[nomPiEmp],fecha:today()}); total++;
+      const _tblEmpS=[];S.predios[nomPiEmp]?.tablas.forEach((_,tiE)=>{const cv=getTablaData(nomPiEmp,cn,tiE).cultivo||'maiz';if(CULTIVOS_EMPAQUE.includes(cv)&&!getTablaData(nomPiEmp,cn,tiE).sinSiembra)_tblEmpS.push({pi:nomPiEmp,ti:tiE});});
+      S.gastosGenerales.push({id:uid(),cosecha:cn,anio,categoria:'Nómina Empaque',mes:mesEmp,monto:montoNomEmpCap,prediosIdx:[nomPiEmp],tablasIdx:_tblEmpS.length?_tblEmpS:undefined,fecha:today()}); total++;
     }
 
   } else if(gastosTab === 'nomina') {
