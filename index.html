@@ -2484,7 +2484,7 @@ function renderRepContent() {
     const tablaGrid = p.tablas.map((t,ti)=>`
       <div class="tabla-card ${ti===curTablaRep?'active-reg':''}" onclick="curTablaRep=${ti};renderRepContent()">
         <div class="tabla-name">${t.nombre}</div>
-        <div class="tabla-ha">${(()=>{const _td=getTablaData(curPredioReg||0,curCosechaReg||1,ti);return (_td.sinSiembra?"vacante":(_td.haSembradas||t.ha)+" ha")})()}</div>
+        <div class="tabla-ha">${(()=>{const _tdR=getTablaData(pi,cn,ti);return (_tdR.sinSiembra?"vacante":(_tdR.haSembradas||t.ha)+" ha")})()}</div>
       </div>`).join('');
 
     const ti = curTablaRep>=0?curTablaRep:0;
@@ -2542,11 +2542,14 @@ function renderRepContent() {
     let catRows = cats.map(cat=>`<tr>
       <td>${cat}</td>
       <td><span style="background:#eff6ff;color:#1a3563;padding:2px 6px;font-size:10px">Variable</span></td>
-      <td class="mono tr">${catTotals[cat]?fmt(catTotals[cat]/p.tablas[ti].ha):'$ —'}</td>
+      <td class="mono tr">${catTotals[cat]&&haTabla?fmt(catTotals[cat]/haTabla):'$ —'}</td>
+      <td class="mono tr">${catTotals[cat]&&kilos?fmt(catTotals[cat]/kilos):'$ —'}</td>
       <td class="mono tr">${catTotals[cat]?fmt(catTotals[cat]):'$ —'}</td>
     </tr>`).join('');
     catRows+=`<tr><td>Depreciación</td><td><span style="background:#fef3e2;color:#000000;padding:2px 6px;font-size:10px">Constante</span></td>
-      <td class="mono tr">${fmt(haTotalActivas>0?depPredio/haTotalActivas:0)}</td><td class="mono tr">${fmt(dep)}</td></tr>`;
+      <td class="mono tr">${fmt(haTotalActivas>0?depPredio/haTotalActivas:0)}</td>
+      <td class="mono tr">${dep&&kilos?fmt(dep/kilos):'$ —'}</td>
+      <td class="mono tr">${fmt(dep)}</td></tr>`;
 
     document.getElementById('rep-content').innerHTML = `
       <div class="card">
@@ -2562,11 +2565,12 @@ function renderRepContent() {
           ${td.fechaCorte?`<div><span style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px">✂️ Corte:</span> <strong>${td.fechaCorte}</strong></div>`:''}
         </div>`:'' }
         <div class="tbl-wrap"><table>
-          <thead><tr><th>Categoría</th><th>Tipo</th><th>$/Ha</th><th>Gasto Total</th></tr></thead>
+          <thead><tr><th>Categoría</th><th>Tipo</th><th>$/Ha</th><th>$/Kg</th><th>Gasto Total</th></tr></thead>
           <tbody>${catRows}
             <tr style="background:#0c4a6e;color:#ffffff">
               <td colspan="2"><strong>TOTAL</strong></td>
               <td class="mono tr"><strong>${fmt(haTabla?total/haTabla:0)}</strong></td>
+              <td class="mono tr"><strong>${kilos?fmt(total/kilos):'$ —'}</strong></td>
               <td class="mono tr"><strong>${fmt(total)}</strong></td>
             </tr>
           </tbody>
@@ -2702,9 +2706,9 @@ function printReporteTabla(pi, cn, ti) {
   <h1>GASTOS TOTALES — ${t.nombre}</h1>
   <h2>${p.nombre} · Cosecha ${cn} · ${parseFloat(td.haSembradas)||t.ha} ha · ${today()}</h2>
   <table><thead><tr><th>Categoría</th><th>Tipo</th><th class="tr">$/Ha</th><th class="tr">Gasto Total</th></tr></thead><tbody>
-  ${cats.map(cat=>`<tr><td>${cat}</td><td>Variable</td><td class="tr">${catTotals[cat]?fmtPDF(catTotals[cat]/(parseFloat(td.haSembradas)||t.ha)):'$ —'}</td><td class="tr">${catTotals[cat]?fmtPDF(catTotals[cat]):'$ —'}</td></tr>`).join('')}
-  <tr><td>Depreciación</td><td>Constante</td><td class="tr">${fmtPDF(dep/(parseFloat(td.haSembradas)||t.ha))}</td><td class="tr">${fmtPDF(dep)}</td></tr>
-  <tr class="tot"><td colspan="2">TOTAL</td><td class="tr">${fmtPDF(total/(parseFloat(td.haSembradas)||t.ha))}</td><td class="tr">${fmtPDF(total)}</td></tr>
+  ${cats.map(cat=>`<tr><td>${cat}</td><td>Variable</td><td class="tr">${catTotals[cat]?fmtPDF(catTotals[cat]/(parseFloat(td.haSembradas)||t.ha)):'$ —'}</td><td class="tr">${catTotals[cat]&&kilos?fmtPDF(catTotals[cat]/kilos):'$ —'}</td><td class="tr">${catTotals[cat]?fmtPDF(catTotals[cat]):'$ —'}</td></tr>`).join('')}
+  <tr><td>Depreciación</td><td>Constante</td><td class="tr">${fmtPDF(dep/(parseFloat(td.haSembradas)||t.ha))}</td><td class="tr">${dep&&kilos?fmtPDF(dep/kilos):'$ —'}</td><td class="tr">${fmtPDF(dep)}</td></tr>
+  <tr class="tot"><td colspan="2">TOTAL</td><td class="tr">${fmtPDF(total/(parseFloat(td.haSembradas)||t.ha))}</td><td class="tr">${kilos?fmtPDF(total/kilos):'$ —'}</td><td class="tr">${fmtPDF(total)}</td></tr>
   </tbody></table>
   <div class="sec">COSTO POR KILO</div>
   <table><thead><tr><th>Kilos silo</th><th>Kg MS</th><th>% MS</th><th>Total</th><th>$/ha</th><th>$/kg silo</th><th>$/kg MS</th></tr></thead>
