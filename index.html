@@ -12,12 +12,12 @@
   --soil: #0c4a6e;
   --earth: #0ea5e9;
   --clay: #38bdf8;
-  --amber: #0369a1;
-  --gold: #7dd3fc;
-  --straw: #f0f9ff;
-  --cream: #f0f9ff;
-  --green: #0369a1;
-  --green-l: #38bdf8;
+  --amber: #000000;
+  --gold: #000000;
+  --straw: #ffffff;
+  --cream: #ffffff;
+  --green: #000000;
+  --green-l: #000000;
   --blue: #0c4a6e;
   --purple: #0c4a6e;
   --red: #dc2626;
@@ -37,23 +37,23 @@ header {
   border-bottom:1px solid #bae6fd; position:sticky; top:0; z-index:100;
 }
 .logo { font-family:'Fraunces',serif; font-size:20px; font-weight:900; color:#000000; }
-.logo em { color:#0c4a6e; font-style:normal; }
-.logo-tag { font-family:'DM Mono',monospace; font-size:10px; color:#93c5fd; margin-left:10px; }
+.logo em { color:#000000; font-style:normal; }
+.logo-tag { font-family:'DM Mono',monospace; font-size:10px; color:#000000; margin-left:10px; }
 .header-nav { display:flex; gap:2px; }
-.hnav { padding:8px 14px; background:transparent; border:none; color:#93c5fd; font-family:'Epilogue',sans-serif; font-size:12px; font-weight:600; cursor:pointer; text-transform:uppercase; letter-spacing:1px; transition:all 0.15s; border-bottom:2px solid transparent; }
-.hnav:hover { color:#0c4a6e; }
-.hnav.active { color:#0c4a6e; border-bottom-color:#000000; }
+.hnav { padding:8px 14px; background:transparent; border:none; color:#000000; font-family:'Epilogue',sans-serif; font-size:12px; font-weight:600; cursor:pointer; text-transform:uppercase; letter-spacing:1px; transition:all 0.15s; border-bottom:2px solid transparent; }
+.hnav:hover { color:#000000; }
+.hnav.active { color:#000000; border-bottom-color:#000000; }
 .body { display:flex; flex:1; }
 
 /* SIDEBAR */
 .sidebar { width:210px; background:#ffffff; padding:16px 0; flex-shrink:0; border-right:1px solid #bae6fd; }
-.sb-label { font-family:'DM Mono',monospace; font-size:9px; color:#93c5fd; letter-spacing:3px; text-transform:uppercase; padding:8px 16px 4px; display:block; }
-.sb-item { display:flex; align-items:center; gap:8px; padding:8px 16px; cursor:pointer; color:#b0e8c0; font-size:13px; font-weight:500; transition:all 0.12s; border-left:3px solid transparent; }
-.sb-item:hover { color:#ffffff; background:rgba(255,255,255,0.08); }
-.sb-item.active { color:#ffffff; border-left-color:#000000; background:rgba(232,192,72,0.15); }
+.sb-label { font-family:'DM Mono',monospace; font-size:9px; color:#000000; letter-spacing:3px; text-transform:uppercase; padding:8px 16px 4px; display:block; }
+.sb-item { display:flex; align-items:center; gap:8px; padding:8px 16px; cursor:pointer; color:#000000; font-size:13px; font-weight:500; transition:all 0.12s; border-left:3px solid transparent; }
+.sb-item:hover { color:#000000; background:#f0f9ff; }
+.sb-item.active { color:#000000; border-left-color:#000000; background:#f0f9ff; }
 .sb-icon { font-size:14px; width:18px; text-align:center; }
-.sb-ha { font-family:'DM Mono',monospace; font-size:9px; color:#93c5fd; margin-left:auto; }
-.sb-div { height:1px; background:var(--clay); margin:8px 16px; }
+.sb-ha { font-family:'DM Mono',monospace; font-size:9px; color:#000000; margin-left:auto; }
+.sb-div { height:1px; background:#f0f9ff; margin:8px 16px; }
 
 /* CONTENT */
 .content { flex:1; padding:26px 34px; overflow-y:auto; max-height:calc(100vh - 58px); }
@@ -71,9 +71,9 @@ header {
 .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
 .stat { background:var(--surface); border:1px solid #bae6fd; padding:16px; box-shadow:var(--shadow); position:relative; overflow:hidden; }
 .stat::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; }
-.stat.c1::after { background:var(--gold); }
-.stat.c2::after { background:var(--green); }
-.stat.c3::after { background:var(--blue); }
+.stat.c1::after { background:#f0f9ff; }
+.stat.c2::after { background:#f0f9ff; }
+.stat.c3::after { background:#f0f9ff; }
 .stat-lbl { font-family:'DM Mono',monospace; font-size:9px; color:#000000; text-transform:uppercase; letter-spacing:2px; margin-bottom:5px; }
 .stat-val { font-family:'Fraunces',serif; font-size:26px; font-weight:700; color:#000000; line-height:1; }
 .stat-unit { font-size:11px; color:#000000; font-family:'DM Mono',monospace; margin-top:4px; }
@@ -84,21 +84,21 @@ header {
 .fg4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; }
 .field { display:flex; flex-direction:column; gap:5px; }
 .field.full { grid-column:1/-1; }
-label { font-family:'DM Mono',monospace; font-size:10px; color:#0369a1; text-transform:uppercase; letter-spacing:1px; font-weight:600; }
-input,select,textarea { padding:9px 12px; border:1.5px solid #93c5fd; background:#f8fdf6; color:#111827; font-family:'Epilogue',sans-serif; font-size:13px; outline:none; transition:border-color 0.15s; }
+label { font-family:'DM Mono',monospace; font-size:10px; color:#000000; text-transform:uppercase; letter-spacing:1px; font-weight:600; }
+input,select,textarea { padding:9px 12px; border:1.5px solid #93c5fd; background:#ffffff; color:#000000; font-family:'Epilogue',sans-serif; font-size:13px; outline:none; transition:border-color 0.15s; }
 input:focus,select:focus { border-color:#000000; background:white; }
 input:disabled { opacity:0.6; cursor:not-allowed; }
 
 /* BUTTONS */
 .btn { padding:9px 18px; border:none; cursor:pointer; font-family:'Epilogue',sans-serif; font-weight:600; font-size:12px; transition:all 0.15s; }
-.btn-p { background:var(--gold); color:white; }
-.btn-p:hover { background:var(--amber); }
+.btn-p { background:#f0f9ff; color:white; }
+.btn-p:hover { background:#f0f9ff; }
 .btn-s { background:transparent; color:#000000; border:1px solid #bae6fd; }
 .btn-s:hover { border-color:#000000; color:#000000; }
 .btn-d { background:transparent; color:var(--red); border:1px solid var(--red); padding:5px 11px; font-size:11px; }
 .btn-d:hover { background:var(--red); color:white; }
-.btn-g { background:var(--green); color:white; }
-.btn-g:hover { background:var(--green-l); }
+.btn-g { background:#f0f9ff; color:white; }
+.btn-g:hover { background:#f0f9ff; }
 .btn-row { display:flex; gap:10px; margin-top:16px; align-items:center; flex-wrap:wrap; }
 
 /* TABLES */
@@ -111,7 +111,7 @@ tr:hover td { background:#ffffff; }
 .mono { font-family:'DM Mono',monospace; }
 .tr { text-align:right; }
 .amber { color:#000000; font-weight:700; }
-.green { color:#0369a1; font-weight:700; }
+.green { color:#000000; font-weight:700; }
 
 /* TABS */
 .ptabs { display:flex; gap:0; margin-bottom:18px; border-bottom:2px solid var(--border); }
@@ -122,24 +122,24 @@ tr:hover td { background:#ffffff; }
 .ctabs { display:flex; gap:4px; margin-bottom:14px; flex-wrap:wrap; }
 .ctab { padding:6px 16px; background:#ffffff; border:1px solid #bae6fd; cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; color:#000000; transition:all 0.15s; }
 .ctab:hover { border-color:#000000; }
-.ctab.active { background:#0ea5e9; color:#000000; border-color:#0284c7; }
+.ctab.active { background:#0ea5e9; color:#000000; border-color:#000000; }
 
 /* TABLA SELECTOR */
 .tabla-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px; margin:12px 0; }
 .tabla-card { border:2px solid #bfdbfe; padding:10px 14px; cursor:pointer; transition:all 0.15s; text-align:center; background:#f0f9ff; }
-.tabla-card:hover { border-color:#0369a1; background:#f0f9ff; }
+.tabla-card:hover { border-color:#000000; background:#f0f9ff; }
 .tabla-card.selected { border:3px solid #1e3a8a; background:#fff; box-shadow: 0 0 0 3px rgba(26,53,99,0.2); }
 .tabla-card.active-reg { border:2px solid #1a3563; }
 .tabla-card.sin-siembra { opacity:0.55; border-style:dashed; }
-.tabla-name { font-weight:700; font-size:13px; color:#111827; }
+.tabla-name { font-weight:700; font-size:13px; color:#000000; }
 .tabla-ha { font-family:'DM Mono',monospace; font-size:10px; color:#000000; margin-top:2px; }
 
 .tabla-cultivo { font-size:10px; margin-top:4px; padding:2px 6px; display:inline-block; }
-.cultivo-maiz { background:#f0f9ff; color:#0369a1; }
+.cultivo-maiz { background:#f0f9ff; color:#000000; }
 .cultivo-trigo { background:#fef3e2; color:#000000; }
-.cultivo-sorgo { background:#f0e8f8; color:var(--purple); }
-.cultivo-alfalfa { background:#e0f0e8; color:#0369a1; }
-.cultivo-otro { background:#f0f0f0; color:#000000; }
+.cultivo-sorgo { background:#ffffff; color:#000000; }
+.cultivo-alfalfa { background:#ffffff; color:#000000; }
+.cultivo-otro { background:#f0f9ff; color:#000000; }
 
 /* RESULT BOX */
 .result { background:#0ea5e9; color:#000000; padding:18px 22px; display:flex; align-items:center; justify-content:space-between; margin-top:14px; flex-wrap:wrap; gap:14px; }
@@ -149,7 +149,7 @@ tr:hover td { background:#ffffff; }
 
 /* DEPRECIATION TYPE BADGE */
 .dep-badge { display:inline-block; padding:3px 8px; font-family:'DM Mono',monospace; font-size:9px; font-weight:600; }
-.dep-general { background:#f0f9ff; color:#0369a1; }
+.dep-general { background:#f0f9ff; color:#000000; }
 .dep-tabla { background:#fef3e2; color:#000000; }
 
 /* EMPTY */
@@ -157,7 +157,7 @@ tr:hover td { background:#ffffff; }
 .empty-icon { font-size:34px; margin-bottom:10px; }
 
 /* TOAST */
-.toast { position:fixed; bottom:24px; right:24px; background:var(--green); color:white; padding:11px 18px; font-size:13px; font-weight:600; z-index:999; box-shadow:0 4px 20px rgba(0,0,0,0.2); animation:slideIn 0.3s ease; }
+.toast { position:fixed; bottom:24px; right:24px; background:#f0f9ff; color:white; padding:11px 18px; font-size:13px; font-weight:600; z-index:999; box-shadow:0 4px 20px rgba(0,0,0,0.2); animation:slideIn 0.3s ease; }
 @keyframes slideIn { from{transform:translateX(80px);opacity:0} to{transform:translateX(0);opacity:1} }
 
 /* LOGIN */
@@ -166,7 +166,7 @@ tr:hover td { background:#ffffff; }
 .login-title { font-family:'Fraunces',serif; font-size:32px; font-weight:900; color:#000000; margin-bottom:6px; }
 .login-sub { font-family:'DM Mono',monospace; font-size:11px; color:#000000; margin-bottom:32px; }
 .login-field { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; text-align:left; }
-.login-error { background:#fde8e8; color:#1e3a8a; padding:10px; font-size:13px; font-weight:600; margin-bottom:16px; display:none; }
+.login-error { background:#fff8f8; color:#000000; padding:10px; font-size:13px; font-weight:600; margin-bottom:16px; display:none; }
 
 /* PDF */
 .pdf-btn { background:var(--red); color:white; padding:8px 18px; border:none; cursor:pointer; font-family:'Epilogue',sans-serif; font-weight:700; font-size:12px; transition:opacity 0.15s; }
@@ -184,7 +184,7 @@ tr:hover td { background:#ffffff; }
   <div>
     <span class="logo">Silo<em>Costo</em> LH</span>
     <span class="logo-tag">LH</span>
-  <span id="save-indicator" style="font-family:'DM Mono',monospace;font-size:10px;color:#93c5fd;margin-left:14px">☁️ Nube</span>
+  <span id="save-indicator" style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;margin-left:14px">☁️ Nube</span>
   <span id="user-tag" style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;margin-left:14px"></span>
   </div>
   <nav class="header-nav">
@@ -1443,7 +1443,7 @@ function renderDepContent() {
           ${S.predios.filter(p=>(p.ciclos||3)===3).map(p=>`<th style="padding:7px 10px;text-align:center">${p.emoji} ${p.nombre}</th>`).join('')}
           ${S.predios.filter(p=>(p.ciclos||3)===3).map(p=>`<th style="padding:7px 10px;text-align:right;border-left:1px solid rgba(255,255,255,0.2)">$ ${p.nombre}</th>`).join('')}
         </tr>
-        <tr style="background:#1d4ed8;color:#dbeafe;font-size:11px;font-weight:400">
+        <tr style="background:#0ea5e9;color:#dbeafe;font-size:11px;font-weight:400">
           <td colspan="3"></td>
           ${S.predios.filter(p=>(p.ciclos||3)===3).map(p=>{
             const pi = S.predios.indexOf(p);
@@ -1952,9 +1952,9 @@ function renderRegContent() {
   </tr>`).join('');
 
   document.getElementById('reg-content').innerHTML = `
-    ${isClosed ? `<div style="background:#1e3a8a;color:white;padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+    ${isClosed ? `<div style="background:#0ea5e9;color:white;padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
       <span>🔒 <strong>Cosecha cerrada</strong> — Archivada el ${meta.closedDate} · Año ${meta.year}</span>
-      <button class="btn" style="background:white;color:#1e3a8a;font-size:12px" onclick="toggleCosechaClosed(${pi},${cn})">🔓 Reabrir</button>
+      <button class="btn" style="background:white;color:#000000;font-size:12px" onclick="toggleCosechaClosed(${pi},${cn})">🔓 Reabrir</button>
     </div>` : ''}
     <div class="card">
       <div class="card-head" style="justify-content:space-between">
@@ -2339,7 +2339,7 @@ function renderRepContent() {
     function buildCatRows(d) {
       let rows = cats.filter(cat=>(d.catT[cat]||0)>0).map(cat=>{
         const tot=d.catT[cat]||0;
-        return `<tr><td>${cat}</td><td><span style="background:#f0f9ff;color:#0369a1;padding:2px 6px;font-size:10px">Variable</span></td>
+        return `<tr><td>${cat}</td><td><span style="background:#f0f9ff;color:#000000;padding:2px 6px;font-size:10px">Variable</span></td>
           <td class="mono tr">${fmt(tot/d.ha)}</td><td class="mono tr">${fmt(tot)}</td><td class="mono tr" style="color:#000000">—</td></tr>`;
       }).join('');
       if(d.dep>0) rows += `<tr><td>Depreciación</td><td><span style="background:#fef3e2;color:#000000;padding:2px 6px;font-size:10px">Constante</span></td>
@@ -2546,7 +2546,7 @@ function renderRepContent() {
 
     let catRows = cats.map(cat=>`<tr>
       <td style="padding:8px 12px">${cat}</td>
-      <td style="padding:8px 10px"><span style="background:#f0f9ff;color:#0369a1;padding:2px 6px;font-size:10px">Variable</span></td>
+      <td style="padding:8px 10px"><span style="background:#f0f9ff;color:#000000;padding:2px 6px;font-size:10px">Variable</span></td>
       <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace">${catTotals[cat]&&haTabla?fmt(catTotals[cat]/haTabla):'$ —'}</td>
       <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace">${catTotals[cat]&&kilos?fmt(catTotals[cat]/kilos):'$ —'}</td>
       <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace">${catTotals[cat]?fmt(catTotals[cat]):'$ —'}</td>
@@ -2673,7 +2673,7 @@ function printReportePredio(pi, cn) {
 
   const win=window.open('','_blank');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte ${p.nombre} C${cn}</title>
-  <style>body{font-family:Arial,sans-serif;font-size:12px;margin:30px}h1{font-size:18px;text-align:center}h2{font-size:12px;text-align:center;color:#000000;font-weight:normal;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#1a3563;color:#eff6ff;padding:8px;font-size:10px;text-align:left}td{padding:8px;border-bottom:1px solid #ddd}.tr{text-align:right}.tot{background:#1a3563;color:#eff6ff;font-weight:bold}.sec{background:#2563eb;color:#faf6ed;text-align:center;padding:8px;font-weight:bold;margin:14px 0 6px}.zero{color:#000000}@media print{button{display:none}}</style>
+  <style>body{font-family:Arial,sans-serif;font-size:12px;margin:30px}h1{font-size:18px;text-align:center}h2{font-size:12px;text-align:center;color:#000000;font-weight:normal;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#1a3563;color:#eff6ff;padding:8px;font-size:10px;text-align:left}td{padding:8px;border-bottom:1px solid #ddd}.tr{text-align:right}.tot{background:#1a3563;color:#eff6ff;font-weight:bold}.sec{background:#0ea5e9;color:#faf6ed;text-align:center;padding:8px;font-weight:bold;margin:14px 0 6px}.zero{color:#000000}@media print{button{display:none}}</style>
   </head><body>
   <h1>GASTOS TOTALES — ${p.nombre}</h1>
   <h2>Cosecha ${cn} · ${p.tablas.length} tablas · ${fmtN(totalHa,2)} ha · ${today()}</h2>
@@ -2715,7 +2715,7 @@ function printReporteTabla(pi, cn, ti) {
   const fmtPDF=n=>n?'$ '+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'$ —';
   const win=window.open('','_blank');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte ${t.nombre}</title>
-  <style>body{font-family:Arial,sans-serif;font-size:12px;margin:30px}h1{font-size:18px;text-align:center}h2{font-size:12px;text-align:center;color:#000000;font-weight:normal;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#1a3563;color:#eff6ff;padding:8px;font-size:10px;text-align:left}td{padding:8px;border-bottom:1px solid #ddd}.tr{text-align:right}.tot{background:#1a3563;color:#eff6ff;font-weight:bold}.sec{background:#2563eb;color:#faf6ed;text-align:center;padding:8px;font-weight:bold;margin:14px 0 6px}@media print{button{display:none}}</style>
+  <style>body{font-family:Arial,sans-serif;font-size:12px;margin:30px}h1{font-size:18px;text-align:center}h2{font-size:12px;text-align:center;color:#000000;font-weight:normal;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#1a3563;color:#eff6ff;padding:8px;font-size:10px;text-align:left}td{padding:8px;border-bottom:1px solid #ddd}.tr{text-align:right}.tot{background:#1a3563;color:#eff6ff;font-weight:bold}.sec{background:#0ea5e9;color:#faf6ed;text-align:center;padding:8px;font-weight:bold;margin:14px 0 6px}@media print{button{display:none}}</style>
   </head><body>
   <h1>GASTOS TOTALES — ${t.nombre}</h1>
   <h2>${p.nombre} · Cosecha ${cn} · ${parseFloat(td.haSembradas)||t.ha} ha · ${today()}</h2>
@@ -3316,7 +3316,7 @@ function renderGastos() {
         <div style="overflow-x:auto;margin-bottom:20px"><table style="border-collapse:collapse;font-size:13px;width:100%">
           <thead><tr style="background:#0ea5e9;color:#000000"><th style="padding:6px 12px;text-align:left">Equipo</th>${mesesHistHdr}<th style="padding:6px 10px;text-align:right">Total Lts</th><th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
           <tbody>${dieselHistRows||'<tr><td colspan="99" style="padding:12px;text-align:center;color:#000000">Sin registros</td></tr>'}</tbody>
-          <tfoot><tr style="background:#1a3563;color:#fff;font-weight:700">
+          <tfoot><tr style="background:#1a3563;color:#000000;font-weight:700">
             <td style="padding:6px 12px">TOTAL</td>
             ${mesesHist.map(m=>{
               const lts=(S.tractores||[]).filter(t=>t.tipo!=='implemento').reduce((s,eq)=>{
@@ -3337,7 +3337,7 @@ function renderGastos() {
         <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
           <thead><tr style="background:#0ea5e9;color:#000000"><th style="padding:6px 12px;text-align:left">Equipo</th>${mesesHistHdr}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
           <tbody>${repHistRows||'<tr><td colspan="99" style="padding:12px;text-align:center;color:#000000">Sin registros</td></tr>'}</tbody>
-          <tfoot><tr style="background:#1a3563;color:#fff;font-weight:700">
+          <tfoot><tr style="background:#1a3563;color:#000000;font-weight:700">
             <td style="padding:6px 12px">TOTAL</td>
             ${mesesHist.map(m=>{
               const monto=(S.tractores||[]).reduce((s,eq)=>{
@@ -3444,7 +3444,7 @@ function renderGastos() {
         <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
           <thead><tr style="background:#0ea5e9;color:#000000"><th style="padding:6px 12px;text-align:left">Noria / Sistema</th>${mesesHdr}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
           <tbody>${histRows}</tbody>
-          <tfoot><tr style="background:#1a3563;color:#fff;font-weight:700">
+          <tfoot><tr style="background:#1a3563;color:#000000;font-weight:700">
             <td style="padding:6px 12px">TOTAL</td>
             ${mesesHist.map(m=>{const t=(S.gastosGenerales||[]).filter(g=>g.categoria==='Luz'&&getGastoMes(g)===m&&getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio).reduce((s,g)=>s+parseFloat(g.monto||0),0);return '<td style="padding:6px 10px;text-align:right;font-family:\'DM Mono\',monospace;font-size:11px">'+(t?fmt(t):'—')+'</td>';}).join('')}
             <td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;color:#000000">${fmt((S.gastosGenerales||[]).filter(g=>g.categoria==='Luz'&&getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio).reduce((s,g)=>s+parseFloat(g.monto||0),0))}</td>
@@ -4267,7 +4267,7 @@ function renderGastos() {
           return `<tr style="font-size:12px">
             <td style="padding:5px 10px">${g.categoria}${g.equipo?' · '+g.equipo:''}${g.actividad?' · '+g.actividad:''}</td>
             <td style="padding:5px 10px;color:#000000">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
-            <td style="padding:5px 10px;text-align:center"><span style="background:#f0f9ff;color:#0369a1;padding:2px 6px;font-size:10px">C${getGastoCosecha(g)}</span></td>
+            <td style="padding:5px 10px;text-align:center"><span style="background:#f0f9ff;color:#000000;padding:2px 6px;font-size:10px">C${getGastoCosecha(g)}</span></td>
             <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
             <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${gi})">✕</button>`:''}</td>
           </tr>`;
@@ -4412,7 +4412,7 @@ function renderGastos() {
     // ── Config sistemas de riego ──
     const tablaChecksRiego = S.predios.map((p,pi)=>
       p.tablas.map((t,ti)=>`<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer">
-        <input type="checkbox" id="new-riego-t-${pi}_${ti}" style="accent-color:#0369a1"/> ${p.emoji}${t.nombre}
+        <input type="checkbox" id="new-riego-t-${pi}_${ti}" style="accent-color:#000000"/> ${p.emoji}${t.nombre}
       </label>`).join('')
     ).join('<span style="margin:0 6px;color:#ccc">|</span>');
     const configRiego = isAdmin ? `
@@ -4739,7 +4739,7 @@ function renderGastos() {
     const descLabel = g.descripcion ? ` — ${g.descripcion}` : '';
     const litrosLabel = g.litros ? ` (${fmtN(g.litros,1)} × $${g.precioPorLitro||'?'})` : '';
     return `<tr>
-      <td><span style="font-family:'DM Mono',monospace;font-size:10px;background:#f0f9ff;color:#0369a1;padding:2px 6px">C${cn} ${g.anio||''}</span></td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:10px;background:#f0f9ff;color:#000000;padding:2px 6px">C${cn} ${g.anio||''}</span></td>
       <td>${g.categoria}${actLabel}${equipLabel}${litrosLabel}<span style="color:#000000;font-size:11px">${descLabel}</span></td>
       <td style="font-size:12px;color:#000000">${predNombres}</td>
       <td class="mono tr amber">${fmt(g.monto)}</td>
@@ -4830,7 +4830,7 @@ function buildTablasRiegoSelector(eqId, asig) {
       var key = pi+'_'+ti;
       var chk = asig.includes(key);
       rows.push('<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer">'
-        +'<input type="checkbox"'+(chk?' checked':'')+' style="accent-color:#0369a1"'
+        +'<input type="checkbox"'+(chk?' checked':'')+' style="accent-color:#000000"'
         +' onchange="toggleTablaRiego(\'' + eqId + '\',\'' + key + '\',this.checked)"/> '
         +p.emoji+t.nombre+'</label>');
     });
@@ -5988,7 +5988,7 @@ function renderInv() {
     const stockColor = stock<0?'#c0392b':'#000000';
     return `<tr style="border-bottom:1px solid var(--border)">
       <td style="padding:7px 12px;font-weight:600">${a.nombre}</td>
-      <td style="padding:7px 10px;font-size:11px"><span style="background:#f0f9ff;color:#0369a1;padding:2px 6px;border-radius:3px">${a.categoria}</span></td>
+      <td style="padding:7px 10px;font-size:11px"><span style="background:#f0f9ff;color:#000000;padding:2px 6px;border-radius:3px">${a.categoria}</span></td>
       <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace">${fmtN(s.entradas,2)} ${a.unidad||''}</td>
       <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:#000000">${fmtN(s.salidasAuto,2)} ${a.unidad||''}</td>
       <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:#000000">${fmtN(s.salidasMan,2)} ${a.unidad||''}</td>
