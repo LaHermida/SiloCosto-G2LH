@@ -10,39 +10,39 @@
   --bg: #ffffff;
   --surface: #ffffff;
   --soil: #0c4a6e;
-  --earth: #0c4a6e;
+  --earth: #0ea5e9;
   --clay: #38bdf8;
-  --amber: #0284c7;
+  --amber: #0369a1;
   --gold: #7dd3fc;
-  --straw: #f1f5f9;
-  --cream: #ffffff;
-  --green: #0284c7;
+  --straw: #f0f9ff;
+  --cream: #f0f9ff;
+  --green: #0369a1;
   --green-l: #38bdf8;
-  --blue: #1e3a5f;
-  --purple: #1e3a5f;
+  --blue: #0c4a6e;
+  --purple: #0c4a6e;
   --red: #dc2626;
-  --border: #e2e8f0;
+  --border: #bae6fd;
   --text: #000000;
   --muted: #374151;
   --shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
 * { margin:0; padding:0; box-sizing:border-box; }
-body { background:#f8fafc; color:#000000; font-family:'Epilogue',sans-serif; min-height:100vh; font-size:14px; }
+body { background:#f0f9ff; color:#000000; font-family:'Epilogue',sans-serif; min-height:100vh; font-size:14px; }
 
 /* LAYOUT */
 .shell { display:flex; flex-direction:column; min-height:100vh; }
 header {
-  background:#1e3a5f; height:58px; display:flex; align-items:center;
+  background:#0ea5e9; height:58px; display:flex; align-items:center;
   justify-content:space-between; padding:0 28px;
-  border-bottom:2px solid var(--amber); position:sticky; top:0; z-index:100;
+  border-bottom:1px solid #bae6fd; position:sticky; top:0; z-index:100;
 }
-.logo { font-family:'Fraunces',serif; font-size:20px; font-weight:900; color:#ffffff; }
-.logo em { color:var(--straw); font-style:normal; }
+.logo { font-family:'Fraunces',serif; font-size:20px; font-weight:900; color:#000000; }
+.logo em { color:#0c4a6e; font-style:normal; }
 .logo-tag { font-family:'DM Mono',monospace; font-size:10px; color:#93c5fd; margin-left:10px; }
 .header-nav { display:flex; gap:2px; }
 .hnav { padding:8px 14px; background:transparent; border:none; color:#93c5fd; font-family:'Epilogue',sans-serif; font-size:12px; font-weight:600; cursor:pointer; text-transform:uppercase; letter-spacing:1px; transition:all 0.15s; border-bottom:2px solid transparent; }
-.hnav:hover { color:#ffffff; }
-.hnav.active { color:#ffffff; border-bottom-color:var(--straw); }
+.hnav:hover { color:#0c4a6e; }
+.hnav.active { color:#0c4a6e; border-bottom-color:var(--straw); }
 .body { display:flex; flex:1; }
 
 /* SIDEBAR */
@@ -64,12 +64,12 @@ header {
 .pg-sub { font-family:'DM Mono',monospace; font-size:11px; color:#000000; margin-top:4px; margin-bottom:24px; }
 
 /* CARDS */
-.card { background:#ffffff; border:1px solid #e2e8f0; padding:20px; margin-bottom:16px; box-shadow:var(--shadow); }
+.card { background:#ffffff; border:1px solid #bae6fd; padding:20px; margin-bottom:16px; box-shadow:var(--shadow); }
 .card-head { font-family:'Fraunces',serif; font-size:15px; font-weight:700; color:#000000; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:8px; }
 
 /* STATS */
 .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
-.stat { background:var(--surface); border:1px solid #e2e8f0; padding:16px; box-shadow:var(--shadow); position:relative; overflow:hidden; }
+.stat { background:var(--surface); border:1px solid #bae6fd; padding:16px; box-shadow:var(--shadow); position:relative; overflow:hidden; }
 .stat::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; }
 .stat.c1::after { background:var(--gold); }
 .stat.c2::after { background:var(--green); }
@@ -84,7 +84,7 @@ header {
 .fg4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; }
 .field { display:flex; flex-direction:column; gap:5px; }
 .field.full { grid-column:1/-1; }
-label { font-family:'DM Mono',monospace; font-size:10px; color:#2563eb; text-transform:uppercase; letter-spacing:1px; font-weight:600; }
+label { font-family:'DM Mono',monospace; font-size:10px; color:#0369a1; text-transform:uppercase; letter-spacing:1px; font-weight:600; }
 input,select,textarea { padding:9px 12px; border:1.5px solid #93c5fd; background:#f8fdf6; color:#111827; font-family:'Epilogue',sans-serif; font-size:13px; outline:none; transition:border-color 0.15s; }
 input:focus,select:focus { border-color:#000000; background:white; }
 input:disabled { opacity:0.6; cursor:not-allowed; }
@@ -93,7 +93,7 @@ input:disabled { opacity:0.6; cursor:not-allowed; }
 .btn { padding:9px 18px; border:none; cursor:pointer; font-family:'Epilogue',sans-serif; font-weight:600; font-size:12px; transition:all 0.15s; }
 .btn-p { background:var(--gold); color:white; }
 .btn-p:hover { background:var(--amber); }
-.btn-s { background:transparent; color:#000000; border:1px solid #e2e8f0; }
+.btn-s { background:transparent; color:#000000; border:1px solid #bae6fd; }
 .btn-s:hover { border-color:var(--gold); color:var(--gold); }
 .btn-d { background:transparent; color:var(--red); border:1px solid var(--red); padding:5px 11px; font-size:11px; }
 .btn-d:hover { background:var(--red); color:white; }
@@ -104,14 +104,14 @@ input:disabled { opacity:0.6; cursor:not-allowed; }
 /* TABLES */
 .tbl-wrap { overflow-x:auto; }
 table { width:100%; border-collapse:collapse; font-size:13px; }
-th { background:var(--soil); color:var(--straw); padding:8px 12px; text-align:left; font-family:'DM Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:1px; }
+th { background:#0ea5e9; color:#000000; padding:8px 12px; text-align:left; font-family:'DM Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:1px; }
 td { padding:9px 12px; border-bottom:1px solid #ece0cc; vertical-align:middle; }
 tr:last-child td { border-bottom:none; }
 tr:hover td { background:#ffffff; }
 .mono { font-family:'DM Mono',monospace; }
 .tr { text-align:right; }
 .amber { color:#000000; font-weight:700; }
-.green { color:#1a3563; font-weight:700; }
+.green { color:#0369a1; font-weight:700; }
 
 /* TABS */
 .ptabs { display:flex; gap:0; margin-bottom:18px; border-bottom:2px solid var(--border); }
@@ -120,14 +120,14 @@ tr:hover td { background:#ffffff; }
 .ptab.active { color:#000000; border-bottom-color:var(--gold); }
 
 .ctabs { display:flex; gap:4px; margin-bottom:14px; flex-wrap:wrap; }
-.ctab { padding:6px 16px; background:#ffffff; border:1px solid #e2e8f0; cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; color:#000000; transition:all 0.15s; }
+.ctab { padding:6px 16px; background:#ffffff; border:1px solid #bae6fd; cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; color:#000000; transition:all 0.15s; }
 .ctab:hover { border-color:var(--gold); }
-.ctab.active { background:var(--soil); color:var(--straw); border-color:#000000; }
+.ctab.active { background:#0ea5e9; color:#000000; border-color:#0284c7; }
 
 /* TABLA SELECTOR */
 .tabla-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px; margin:12px 0; }
-.tabla-card { border:2px solid #bfdbfe; padding:10px 14px; cursor:pointer; transition:all 0.15s; text-align:center; background:#f0f7ff; }
-.tabla-card:hover { border-color:#2563eb; background:#eff6ff; }
+.tabla-card { border:2px solid #bfdbfe; padding:10px 14px; cursor:pointer; transition:all 0.15s; text-align:center; background:#f0f9ff; }
+.tabla-card:hover { border-color:#0369a1; background:#f0f9ff; }
 .tabla-card.selected { border:3px solid #1e3a8a; background:#fff; box-shadow: 0 0 0 3px rgba(26,53,99,0.2); }
 .tabla-card.active-reg { border:2px solid #1a3563; }
 .tabla-card.sin-siembra { opacity:0.55; border-style:dashed; }
@@ -135,21 +135,21 @@ tr:hover td { background:#ffffff; }
 .tabla-ha { font-family:'DM Mono',monospace; font-size:10px; color:#000000; margin-top:2px; }
 
 .tabla-cultivo { font-size:10px; margin-top:4px; padding:2px 6px; display:inline-block; }
-.cultivo-maiz { background:#eff6ff; color:#1a3563; }
+.cultivo-maiz { background:#f0f9ff; color:#0369a1; }
 .cultivo-trigo { background:#fef3e2; color:#000000; }
 .cultivo-sorgo { background:#f0e8f8; color:var(--purple); }
-.cultivo-alfalfa { background:#e0f0e8; color:#1a3563; }
+.cultivo-alfalfa { background:#e0f0e8; color:#0369a1; }
 .cultivo-otro { background:#f0f0f0; color:#000000; }
 
 /* RESULT BOX */
-.result { background:var(--soil); color:var(--cream); padding:18px 22px; display:flex; align-items:center; justify-content:space-between; margin-top:14px; flex-wrap:wrap; gap:14px; }
+.result { background:#0ea5e9; color:#000000; padding:18px 22px; display:flex; align-items:center; justify-content:space-between; margin-top:14px; flex-wrap:wrap; gap:14px; }
 .res-lbl { font-family:'DM Mono',monospace; font-size:9px; color:#000000; text-transform:uppercase; letter-spacing:2px; margin-bottom:4px; }
 .res-val { font-family:'Fraunces',serif; font-size:28px; font-weight:700; color:var(--straw); }
 .res-sub { font-size:11px; color:var(--gold); margin-top:3px; font-family:'DM Mono',monospace; }
 
 /* DEPRECIATION TYPE BADGE */
 .dep-badge { display:inline-block; padding:3px 8px; font-family:'DM Mono',monospace; font-size:9px; font-weight:600; }
-.dep-general { background:#eff6ff; color:#1a3563; }
+.dep-general { background:#f0f9ff; color:#0369a1; }
 .dep-tabla { background:#fef3e2; color:#000000; }
 
 /* EMPTY */
@@ -161,7 +161,7 @@ tr:hover td { background:#ffffff; }
 @keyframes slideIn { from{transform:translateX(80px);opacity:0} to{transform:translateX(0);opacity:1} }
 
 /* LOGIN */
-.login-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:var(--soil); z-index:9999; display:flex; align-items:center; justify-content:center; }
+.login-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:#0ea5e9; z-index:9999; display:flex; align-items:center; justify-content:center; }
 .login-box { background:#ffffff; padding:48px; width:360px; text-align:center; }
 .login-title { font-family:'Fraunces',serif; font-size:32px; font-weight:900; color:#000000; margin-bottom:6px; }
 .login-sub { font-family:'DM Mono',monospace; font-size:11px; color:#000000; margin-bottom:32px; }
@@ -226,7 +226,7 @@ tr:hover td { background:#ffffff; }
     <div class="pg-title">Dashboard</div>
     <div class="pg-sub">// Rendimiento · Costo húmedo y seco · Por predio y cultivo</div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-      <select id="dash-anio" style="padding:5px 10px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid #e2e8f0"
+      <select id="dash-anio" style="padding:5px 10px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid #bae6fd"
         onchange="renderDash()">
         <option value="2020">2020</option><option value="2021">2021</option><option value="2022">2022</option>
         <option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option>
@@ -788,9 +788,8 @@ function getPredioFraccion(dep, pi, cn, anio) {
     .filter(pc => (pc.cosechas||[]).includes(cn))
     .map(pc => pc.pi);
   if(prediosAsig.length <= 1) return 1;
-  const haTotal = prediosAsig.reduce((s,pIdx) =>
-    s + S.predios[pIdx].tablas.reduce((sh,t) => sh + (t.ha||0), 0), 0);
-  const miHa = S.predios[pi].tablas.reduce((s,t) => s + (t.ha||0), 0);
+  const haTotal = prediosAsig.reduce((s,pIdx) => s + getHaSembradasPredio(pIdx, cn), 0);
+  const miHa = getHaSembradasPredio(pi, cn);
   return haTotal > 0 ? miHa / haTotal : 1 / prediosAsig.length;
 }
 
@@ -880,20 +879,22 @@ function calcTotalTabla(pi, cn, ti, anio) {
   return calcDepTabla(pi,cn,ti,yr) + calcConsumosTabla(pi,cn,ti) + calcGastosGeneralesTabla(pi,cn,ti,yr);
 }
 
-function calcCPK(pi, cn, ti) {
+function calcCPK(pi, cn, ti, anio) {
   const td = getTablaData(pi,cn,ti);
   const kilos = parseFloat(td.kilos)||0;
   if(!kilos) return null;
-  return calcTotalTabla(pi,cn,ti,curAnioRep)/kilos;
+  const yr = anio || curAnioRep || curAnioReg || new Date().getFullYear();
+  return calcTotalTabla(pi,cn,ti,yr)/kilos;
 }
 
-function calcCPKMS(pi, cn, ti) {
+function calcCPKMS(pi, cn, ti, anio) {
   const td = getTablaData(pi,cn,ti);
   const kilos = parseFloat(td.kilos)||0;
   const pct = parseFloat(td.pctMS)||0;
   if(!kilos||!pct) return null;
+  const yr = anio || curAnioRep || curAnioReg || new Date().getFullYear();
   const kgMS = kilos*(pct/100);
-  return calcTotalTabla(pi,cn,ti,curAnioRep)/kgMS;
+  return calcTotalTabla(pi,cn,ti,yr)/kgMS;
 }
 
 function calcDepAnualTotal(pi) {
@@ -984,7 +985,7 @@ function renderDash() {
     const cpkmsD=d.kgMS?d.costo/d.kgMS:null;
     const gasHaD=d.ha?d.costo/d.ha:null;
     const bubble = (label, val, color) => `
-      <div style="background:#ffffff;border:1px solid #93c5fd;border-radius:8px;padding:10px 14px;text-align:center;min-width:80px">
+      <div style="background:#ffffff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;text-align:center;min-width:80px">
         <div style="font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${label}</div>
         <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:700;color:${color}">${val}</div>
       </div>`;
@@ -1065,7 +1066,7 @@ function renderDash() {
         </div>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed">
-        <thead><tr style="background:#0c4a6e;color:#fff;font-size:10px">
+        <thead><tr style="background:#0ea5e9;color:#000000;font-size:10px">
           <th style="padding:5px 8px;text-align:left;width:35%">Cultivo</th>
           <th style="padding:5px 6px;text-align:right;width:16%">kg/ha</th>
           <th style="padding:5px 6px;text-align:right;width:16%">$/kg</th>
@@ -1268,7 +1269,7 @@ function renderArticulos() {
     const curCn = parseInt(document.getElementById('art-ciclo')?.value) || 1;
     const anioOpts = Array.from({length:13},(_,i)=>2020+i).map(y=>`<option value="${y}"${y===curAnio?' selected':''}>${y}</option>`).join('');
     const cnBtns = [1,2,3].map(c=>`<button type="button" id="art-ciclo-btn-${c}" class="ctab${c===curCn?' active':''}" style="padding:3px 10px;font-size:12px" onclick="setArtCiclo(${c})">C${c}</button>`).join('');
-    bar.innerHTML = `<span style="font-size:11px;color:#000000;text-transform:uppercase;letter-spacing:1px">Año:</span><select id="art-anio" style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid #e2e8f0" onchange="renderArticulos()">${anioOpts}</select>${cnBtns}`;
+    bar.innerHTML = `<span style="font-size:11px;color:#000000;text-transform:uppercase;letter-spacing:1px">Año:</span><select id="art-anio" style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid #bae6fd" onchange="renderArticulos()">${anioOpts}</select>${cnBtns}`;
   }
   const el = document.getElementById('art-list');
   if(!S.articulos.length) {
@@ -1425,7 +1426,7 @@ function renderDepContent() {
       <div class="card-head" style="justify-content:space-between">
         <span>📅 Asignación por predio</span>
         <div style="display:flex;align-items:center;gap:8px">
-          <select style="padding:3px 8px;font-family:'DM Mono',monospace;font-size:12px;border:1px solid #e2e8f0"
+          <select style="padding:3px 8px;font-family:'DM Mono',monospace;font-size:12px;border:1px solid #bae6fd"
             onchange="curAnioDep=parseInt(this.value);renderDepContent()">
             ${Array.from({length:13},(_,i)=>2020+i).map(y=>`<option value="${y}" ${y===curAnioDep?'selected':''}>${y}</option>`).join('')}
           </select>
@@ -1435,7 +1436,7 @@ function renderDepContent() {
       </div>
       <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:#0c4a6e;color:#fff">
+        <thead><tr style="background:#0ea5e9;color:#000000">
           <th style="padding:7px 12px;text-align:left">Activo</th>
           <th style="padding:7px 10px;text-align:left">Predio origen</th>
           <th style="padding:7px 10px;text-align:right">$/año</th>
@@ -1598,7 +1599,7 @@ function renderDepContent() {
       return `<div class="card" style="margin-top:0">
         <div class="card-head">📅 Asignación predios 1 ciclo — ${curAnioDep}</div>
         <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
-          <thead><tr style="background:#0c4a6e;color:#fff">
+          <thead><tr style="background:#0ea5e9;color:#000000">
             <th style="padding:7px 12px;text-align:left">Activo</th>
             <th style="padding:7px 10px;text-align:left">Predio origen</th>
             <th style="padding:7px 10px;text-align:right">$/año</th>
@@ -1663,7 +1664,7 @@ function renderDepContent() {
           </select>
         </div>
       </div>
-      <div id="dep-tablas-sel" style="display:none;margin-top:12px;padding:14px;background:#ffffff;border:1px solid #e2e8f0">
+      <div id="dep-tablas-sel" style="display:none;margin-top:12px;padding:14px;background:#ffffff;border:1px solid #bae6fd">
         <label style="margin-bottom:8px;display:block">Selecciona las tablas donde aplica esta depreciación:</label>
         ${tablaCheckboxes}
       </div>
@@ -1748,7 +1749,7 @@ function editarDep(depId, pi) {
         </select>
       </div>
     </div>
-    <div id="edit-dep-tablas" style="display:${dep.alcance==='tablas'?'block':'none'};margin:10px 0;padding:12px;background:#ffffff;border:1px solid #e2e8f0">${tablaChecks}</div>
+    <div id="edit-dep-tablas" style="display:${dep.alcance==='tablas'?'block':'none'};margin:10px 0;padding:12px;background:#ffffff;border:1px solid #bae6fd">${tablaChecks}</div>
     <div class="btn-row">
       <button class="btn btn-p" onclick="guardarEditDep('${depId}',${pi})">💾 Guardar</button>
       <button class="btn btn-s" onclick="document.getElementById('card-editar-dep').style.display='none'">Cancelar</button>
@@ -1840,7 +1841,7 @@ function renderReg() {
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:4px 0">
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px">Año:</span>
-        <select style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid #e2e8f0"
+        <select style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid #bae6fd"
           onchange="curAnioReg=parseInt(this.value);renderReg()">${anioOptsReg}</select>
       </div>
       <div style="display:flex;gap:0">
@@ -1861,8 +1862,8 @@ function renderRegContent() {
   const total = dep+vars;
   const kilos = parseFloat(td.kilos)||0;
   const kgMS = kilos*((parseFloat(td.pctMS)||0)/100);
-  const cpk = calcCPK(pi,cn,ti);
-  const cpkms = calcCPKMS(pi,cn,ti);
+  const cpk = calcCPK(pi,cn,ti,curAnioRep);
+  const cpkms = calcCPKMS(pi,cn,ti,curAnioRep);
 
   const meta = getCosechaMeta(pi,cn);
   const isClosed = meta.closed;
@@ -1890,14 +1891,14 @@ function renderRegContent() {
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Ha</div>
           <input type="number" value="${d.haSembradas||''}" placeholder="${t.ha}"
             step="0.01" min="0" max="${t.ha}"
-            style="width:100%;padding:2px 4px;font-size:11px;border:1px solid #93c5fd;background:white;text-align:center"
+            style="width:100%;padding:2px 4px;font-size:11px;border:1px solid #bae6fd;background:white;text-align:center"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'haSembradas',this.value)"/>
         </div>
         <div>
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Kilos</div>
           <input type="number" value="${d.kilos||''}" placeholder="0"
-            style="width:100%;padding:2px 4px;font-size:12px;font-weight:600;border:1px solid #93c5fd;background:white;color:#000000;text-align:center"
+            style="width:100%;padding:2px 4px;font-size:12px;font-weight:600;border:1px solid #bae6fd;background:white;color:#000000;text-align:center"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'kilos',this.value)"/>
         ${d.kilos ? `<div style="font-size:9px;text-align:center;opacity:0.7;margin-top:1px">${fmtN(parseFloat(d.kilos),0)} kg</div>` : ''}
@@ -1906,13 +1907,13 @@ function renderRegContent() {
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">% MS</div>
           <input type="number" value="${d.pctMS||''}" placeholder="40"
             step="0.01"
-            style="width:100%;padding:2px 4px;font-size:11px;border:1px solid #93c5fd;background:white;text-align:center"
+            style="width:100%;padding:2px 4px;font-size:11px;border:1px solid #bae6fd;background:white;text-align:center"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'pctMS',this.value)"/>
         </div>
         <div>
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Cultivo</div>
-          <select style="width:100%;padding:2px 2px;font-size:10px;border:1px solid #93c5fd;background:white;color:inherit"
+          <select style="width:100%;padding:2px 2px;font-size:10px;border:1px solid #bae6fd;background:white;color:inherit"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'cultivo',this.value)">
             ${Object.entries(CULTIVOS).map(([k,v])=>`<option value="${k}" ${(d.cultivo||'maiz')===k?'selected':''}>${v.icon} ${v.label}</option>`).join('')}
@@ -1921,14 +1922,14 @@ function renderRegContent() {
         <div style="grid-column:span 2">
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Siembra</div>
           <input type="date" value="${d.fechaSiembra||''}"
-            style="width:100%;padding:2px 4px;font-size:10px;border:1px solid #93c5fd;background:white;color:inherit"
+            style="width:100%;padding:2px 4px;font-size:10px;border:1px solid #bae6fd;background:white;color:inherit"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'fechaSiembra',this.value)"/>
         </div>
         <div style="grid-column:span 2">
           <div style="font-size:9px;opacity:0.6;text-transform:uppercase;letter-spacing:0.5px">Corte</div>
           <input type="date" value="${d.fechaCorte||''}"
-            style="width:100%;padding:2px 4px;font-size:10px;border:1px solid #93c5fd;background:white;color:inherit"
+            style="width:100%;padding:2px 4px;font-size:10px;border:1px solid #bae6fd;background:white;color:inherit"
             onclick="event.stopPropagation()"
             onchange="event.stopPropagation();saveTablaFieldFor(${i},'fechaCorte',this.value)"/>
         </div>
@@ -1985,7 +1986,7 @@ function renderRegContent() {
       const pepsPrice = getPepsPrecio(art.id, 1, null);
       const cells = p.tablas.map((t,ti2)=>{
         return `<td style="padding:4px"><input type="number" min="0" step="0.01" placeholder="—"
-          style="width:80px;padding:5px;text-align:center;border:1px solid #e2e8f0;font-family:'DM Mono',monospace;font-size:12px"
+          style="width:80px;padding:5px;text-align:center;border:1px solid #bae6fd;font-family:'DM Mono',monospace;font-size:12px"
           data-ti="${ti2}" data-art="${art.id}"
           /></td>`;
       }).join('');
@@ -2006,7 +2007,7 @@ function renderRegContent() {
       <div class="card-head" style="justify-content:space-between">
         <span>🌱 Grid — Material de Cultivo · ${p.nombre} · C${cn} ${curAnioReg}</span>
         <div style="display:flex;align-items:center;gap:10px">
-          <select id="reg-grid-cat" style="padding:3px 8px;font-size:12px;border:1px solid #e2e8f0" onchange="renderRegContent()">
+          <select id="reg-grid-cat" style="padding:3px 8px;font-size:12px;border:1px solid #bae6fd" onchange="renderRegContent()">
             <option value="todos">Todos</option>
             <option value="Semillas">🌱 Semillas</option>
             <option value="Fertilizantes">🧪 Fertilizantes</option>
@@ -2021,10 +2022,10 @@ function renderRegContent() {
           </label>
         </div>
       </div>
-      <div style="padding:8px 12px;background:#f0f7ff;border:1px solid #e2e8f0;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="padding:8px 12px;background:#f0f9ff;border:1px solid #bae6fd;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase">📅 Fecha del registro:</span>
         <input type="date" id="reg-grid-fecha" value="${new Date().toISOString().slice(0,10)}"
-          style="padding:4px 8px;border:1px solid #e2e8f0;font-size:13px;color:#000000"/>
+          style="padding:4px 8px;border:1px solid #bae6fd;font-size:13px;color:#000000"/>
       </div>
       <div style="overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
@@ -2129,7 +2130,7 @@ function renderRegContent() {
     histEl.innerHTML = `
       <div class="card-head">📋 Consumos registrados — ${p.nombre} · C${cn} ${curAnioReg}</div>
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:#0c4a6e;color:#fff">
+        <thead><tr style="background:#0ea5e9;color:#000000">
           <th style="padding:5px 10px;text-align:left">Artículo</th>
           ${tabHdrs}
           <th style="padding:5px 10px;text-align:right;border-left:2px solid rgba(255,255,255,0.3)">Total $</th>
@@ -2338,7 +2339,7 @@ function renderRepContent() {
     function buildCatRows(d) {
       let rows = cats.filter(cat=>(d.catT[cat]||0)>0).map(cat=>{
         const tot=d.catT[cat]||0;
-        return `<tr><td>${cat}</td><td><span style="background:#eff6ff;color:#1a3563;padding:2px 6px;font-size:10px">Variable</span></td>
+        return `<tr><td>${cat}</td><td><span style="background:#f0f9ff;color:#0369a1;padding:2px 6px;font-size:10px">Variable</span></td>
           <td class="mono tr">${fmt(tot/d.ha)}</td><td class="mono tr">${fmt(tot)}</td><td class="mono tr" style="color:#000000">—</td></tr>`;
       }).join('');
       if(d.dep>0) rows += `<tr><td>Depreciación</td><td><span style="background:#fef3e2;color:#000000;padding:2px 6px;font-size:10px">Constante</span></td>
@@ -2366,9 +2367,9 @@ function renderRepContent() {
               <td style="padding:5px 12px;font-family:'DM Mono',monospace;font-size:12px">${td.fechaCorte||'—'}</td></tr>`;
           }).filter(Boolean).join('');
           if(!tablasFechas) return '';
-          return `<div style="margin-bottom:12px;border:1px solid #e2e8f0">
+          return `<div style="margin-bottom:12px;border:1px solid #bae6fd">
             <table style="width:100%;border-collapse:collapse;font-size:13px">
-              <thead><tr style="background:#0c4a6e;color:#fff">
+              <thead><tr style="background:#0ea5e9;color:#000000">
                 <th style="padding:6px 12px;text-align:left">Tabla</th>
                 <th style="padding:6px 12px;text-align:left">🌱 Siembra</th>
                 <th style="padding:6px 12px;text-align:left">✂️ Corte</th>
@@ -2381,7 +2382,7 @@ function renderRepContent() {
           <colgroup><col style="width:220px"/><col style="width:100px"/><col style="width:160px"/><col style="width:160px"/><col style="width:160px"/></colgroup>
           <thead><tr><th style="text-align:left">Categoría</th><th style="text-align:left">Tipo</th><th class="tr">$/Ha</th><th class="tr">Gasto Total</th><th class="tr">kg/ha</th></tr></thead>
           <tbody>${catRows}
-            <tr style="background:#0c4a6e;color:#ffffff">
+            <tr style="background:#0ea5e9;color:#000000fff">
               <td colspan="2"><strong>TOTAL</strong></td>
               <td class="mono tr"><strong>${fmt(totCost/totalHa)}</strong></td>
               <td class="mono tr"><strong>${fmt(totCost)}</strong></td>
@@ -2435,12 +2436,12 @@ function renderRepContent() {
         const cvCpkms = d.kgMS?d.cost/d.kgMS:null;
         const cvCatRows = buildCatRows(d);
         return `<div class="card" style="margin-top:8px">
-          <div class="card-head" style="background:#0c4a6e;color:#ffffff">${cvInfo.icon} ${cvInfo.label} — ${fmtN(d.ha,2)} ha · ${d.kilos?fmtN(d.kilos,0)+' kg':''}</div>
+          <div class="card-head" style="background:#0ea5e9;color:#000000fff">${cvInfo.icon} ${cvInfo.label} — ${fmtN(d.ha,2)} ha · ${d.kilos?fmtN(d.kilos,0)+' kg':''}</div>
           <div class="tbl-wrap"><table style="table-layout:fixed;width:100%">
             <colgroup><col style="width:220px"/><col style="width:100px"/><col style="width:160px"/><col style="width:160px"/><col style="width:160px"/></colgroup>
             <thead><tr><th style="text-align:left">Categoría</th><th style="text-align:left">Tipo</th><th class="tr">$/Ha</th><th class="tr">Gasto Total</th><th class="tr">kg/ha</th></tr></thead>
             <tbody>${cvCatRows}
-              <tr style="background:#0c4a6e;color:#ffffff">
+              <tr style="background:#0ea5e9;color:#000000fff">
                 <td colspan="2"><strong>TOTAL</strong></td>
                 <td class="mono tr"><strong>${fmt(d.cost/d.ha)}</strong></td>
                 <td class="mono tr"><strong>${fmt(d.cost)}</strong></td>
@@ -2515,8 +2516,8 @@ function renderRepContent() {
     const total = calcTotalTabla(pi,cn,ti,curAnioRep);
     const kilos = parseFloat(td.kilos)||0;
     const kgMS = kilos*((parseFloat(td.pctMS)||0)/100);
-    const cpk = calcCPK(pi,cn,ti);
-    const cpkms = calcCPKMS(pi,cn,ti);
+    const cpk = calcCPK(pi,cn,ti,curAnioReg);
+    const cpkms = calcCPKMS(pi,cn,ti,curAnioReg);
 
     // Build cats list based on cultivos present in this predio/cosecha
     const todosCultivosRep = p.tablas.map((_,ti)=>getTablaData(pi,cn,ti).cultivo||'maiz');
@@ -2545,7 +2546,7 @@ function renderRepContent() {
 
     let catRows = cats.map(cat=>`<tr>
       <td style="padding:8px 12px">${cat}</td>
-      <td style="padding:8px 10px"><span style="background:#eff6ff;color:#1a3563;padding:2px 6px;font-size:10px">Variable</span></td>
+      <td style="padding:8px 10px"><span style="background:#f0f9ff;color:#0369a1;padding:2px 6px;font-size:10px">Variable</span></td>
       <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace">${catTotals[cat]&&haTabla?fmt(catTotals[cat]/haTabla):'$ —'}</td>
       <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace">${catTotals[cat]&&kilos?fmt(catTotals[cat]/kilos):'$ —'}</td>
       <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace">${catTotals[cat]?fmt(catTotals[cat]):'$ —'}</td>
@@ -2580,7 +2581,7 @@ function renderRepContent() {
             <th style="text-align:right;width:16%">Gasto Total</th>
           </tr></thead>
           <tbody>${catRows}
-            <tr style="background:#0c4a6e;color:#ffffff">
+            <tr style="background:#0ea5e9;color:#000000fff">
               <td colspan="2" style="padding:8px 12px"><strong>TOTAL</strong></td>
               <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace"><strong>${fmt(haTabla?total/haTabla:0)}</strong></td>
               <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace"><strong>${kilos?fmt(total/kilos):'$ —'}</strong></td>
@@ -2796,7 +2797,7 @@ function getHaSembradasPredio(pi, cn) {
 // Get cosecha from gasto (supports both new cosecha field and legacy mes field)
 function gastosDelCiclo(cn, anio) {
   // Retorna gastos filtrados por ciclo Y año — siempre usar esto, nunca solo por ciclo
-  return (S.gastosGenerales||[]).filter(g => getGastoCosecha(g)===cn && (g.anio===anio||(!g.anio&&anio===new Date().getFullYear())));
+  return (S.gastosGenerales||[]).filter(g => getGastoCosecha(g)===cn && g.anio===anio);
 }
 
 function getGastoCosecha(gasto) {
@@ -2941,12 +2942,12 @@ function buildGridTable(prediosList, prefix, headerColor='#1a3563') {
   ).join('');
   const headerRow2 = prediosList.map(({p,pi})=>{
     const ppt = gastosGridDraft[`${prefix}_ppt_${pi}`] || '';
-    return `<th style="padding:4px 6px;background:#f0f7ff;border-left:2px solid var(--border);text-align:center">
+    return `<th style="padding:4px 6px;background:#f0f9ff;border-left:2px solid var(--border);text-align:center">
         <input type="number" min="0" step="0.01" placeholder="${priceLabel}" value="${ppt}"
-          style="width:85px;padding:3px 6px;text-align:center;border:1px solid #93c5fd;font-size:12px;background:#f0f9ff"
+          style="width:85px;padding:3px 6px;text-align:center;border:1px solid #bae6fd;font-size:12px;background:#f0f9ff"
           onchange="gastosGridDraft['${prefix}_ppt_${pi}']=this.value;renderGastos()"/>
       </th>
-      <th style="padding:4px 8px;background:#f0f7ff;font-size:10px;color:#000000;text-align:center;white-space:nowrap">$ Total</th>`;
+      <th style="padding:4px 8px;background:#f0f9ff;font-size:10px;color:#000000;text-align:center;white-space:nowrap">$ Total</th>`;
   }).join('');
   const tablaRows = Array.from({length:tiMax},(_,ti)=>{
     const cells = prediosList.map(({p,pi})=>{
@@ -3004,12 +3005,12 @@ function buildGridTableFiltered(prediosList, prefix, headerColor, cultivoFilter,
   ).join('');
   const headerRow2 = filteredList.map(({p,pi})=>{
     const ppt = gastosGridDraft[`${prefix}_ppt_${pi}`] || '';
-    return `<th style="padding:4px 6px;background:#f0f7ff;border-left:2px solid var(--border);text-align:center">
+    return `<th style="padding:4px 6px;background:#f0f9ff;border-left:2px solid var(--border);text-align:center">
         <input type="number" min="0" step="0.01" placeholder="${priceLabel}" value="${ppt}"
-          style="width:85px;padding:3px 6px;text-align:center;border:1px solid #93c5fd;font-size:12px;background:#f0f9ff"
+          style="width:85px;padding:3px 6px;text-align:center;border:1px solid #bae6fd;font-size:12px;background:#f0f9ff"
           onchange="gastosGridDraft['${prefix}_ppt_${pi}']=this.value;renderGastos()"/>
       </th>
-      <th style="padding:4px 8px;background:#f0f7ff;font-size:10px;color:#000000;text-align:center;white-space:nowrap">$ Total</th>`;
+      <th style="padding:4px 8px;background:#f0f9ff;font-size:10px;color:#000000;text-align:center;white-space:nowrap">$ Total</th>`;
   }).join('');
   const tablaRows = Array.from({length:tiMax},(_,rowIdx)=>{
     const cells = filteredList.map(({p,pi,origTablaIdx})=>{
@@ -3132,7 +3133,7 @@ function renderGastos() {
     }).join('');
     return `<div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px">📊 ${titulo}</div>
     <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;min-width:400px">
-      <thead><tr style="background:#0c4a6e;color:#fff"><th style="padding:5px 10px;text-align:left">Concepto</th>${th}<th style="padding:5px 8px;text-align:right">TOTAL</th><th></th></tr></thead>
+      <thead><tr style="background:#0ea5e9;color:#000000"><th style="padding:5px 10px;text-align:left">Concepto</th>${th}<th style="padding:5px 8px;text-align:right">TOTAL</th><th></th></tr></thead>
       <tbody>${bodyRows}</tbody>
       <tfoot><tr style="background:#ffffff;font-weight:700"><td style="padding:5px 10px">TOTAL</td>${footCells}<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;color:#000000">${fmt(grandTotal)}</td><td></td></tr></tfoot>
     </table></div>`;
@@ -3170,35 +3171,35 @@ function renderGastos() {
       `<option value="${m}" ${m===mesActual?'selected':''}>${MESES_G[m-1]}</option>`).join('');
     const cicloOpts = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
     const configEq = isAdmin ? `
-      <div style="padding:10px 14px;background:#ffffff;border:1px solid #e2e8f0;margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <div style="padding:10px 14px;background:#ffffff;border:1px solid #bae6fd;margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase">⚙️ Agregar equipo:</span>
         <input type="text" id="eq-nombre" placeholder="Ej: Tractor 3..." style="padding:5px;width:180px;font-size:13px"/>
         <select id="eq-tipo" style="padding:5px"><option value="tractor">Tractor</option><option value="implemento">Implementos</option><option value="camioneta">Camioneta</option></select>
         <button class="btn btn-s" onclick="addTractorGlobal()">+ Agregar</button>
       </div>` : '';
     const sharedBar = `
-      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0f7ff;border:1px solid #93c5fd;margin-bottom:14px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;margin-bottom:14px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:12px;color:#000000">📅 Mes:</span>
-          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #93c5fd"
+          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #bae6fd"
             onchange="gastosGridDraft['trac_mes']=this.value;renderGastos()">${mesOpts}</select>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:12px;color:#000000">💧 $/Lt:</span>
           <input type="number" min="0" step="0.01" placeholder="$/Lt" value="${precioDieselGlobal||''}"
-            style="width:85px;padding:4px 8px;border:1px solid #93c5fd;font-size:13px;font-family:'DM Mono',monospace;text-align:right"
+            style="width:85px;padding:4px 8px;border:1px solid #bae6fd;font-size:13px;font-family:'DM Mono',monospace;text-align:right"
             onchange="gastosGridDraft['trac_precio']=this.value;if(!S.precioDiesel)S.precioDiesel={};S.precioDiesel[${mesActual}]=parseFloat(this.value)||0;save();renderGastos()"/>
         </div>
         <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #93c5fd;padding-left:14px">
           <span style="font-size:12px;color:#000000">Split:</span>
           <input type="number" min="0" max="100" step="1" value="${pct1Global}"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #93c5fd"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #bae6fd"
             onchange="gastosGridDraft['trac_pct1']=this.value;renderGastos()"/>
           <span style="font-size:11px;color:#000000">%C${selectedCn}</span>
           <input type="number" min="0" max="100" step="1" value="${pct2Global||''}" placeholder="0"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #93c5fd"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #bae6fd"
             onchange="gastosGridDraft['trac_pct2']=this.value"/>
-          <select style="font-size:12px;padding:3px;border:1px solid #93c5fd"
+          <select style="font-size:12px;padding:3px;border:1px solid #bae6fd"
             onchange="gastosGridDraft['trac_cn2']=this.value">
             <option value="">C?</option>${cicloOpts}
           </select>
@@ -3230,7 +3231,7 @@ function renderGastos() {
           <td style="padding:6px 8px"><div style="display:flex;flex-wrap:wrap">${predioChecks}</div></td>
           <td style="padding:6px 8px;text-align:center">
             <input type="number" min="0" step="0.1" placeholder="Lts" value="${lts}"
-              style="width:80px;padding:5px;text-align:center;border:1px solid #e2e8f0;font-size:13px;font-family:'DM Mono',monospace"
+              style="width:80px;padding:5px;text-align:center;border:1px solid #bae6fd;font-size:13px;font-family:'DM Mono',monospace"
               onchange="gastosGridDraft['d_${eq.id}_${mesActual}']=this.value;renderGastos()"/>
           </td>
           <td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:#000000">${montoCalc}</td>
@@ -3257,12 +3258,12 @@ function renderGastos() {
           <td style="padding:6px 8px"><div style="display:flex;flex-wrap:wrap">${predioChecks}</div></td>
           <td style="padding:6px 8px;text-align:right">
             <input type="number" min="0" step="1" placeholder="$" value="${val}"
-              style="width:100px;padding:5px;text-align:right;border:1px solid #e2e8f0;font-size:13px;font-family:'DM Mono',monospace;display:block;margin-bottom:3px"
+              style="width:100px;padding:5px;text-align:right;border:1px solid #bae6fd;font-size:13px;font-family:'DM Mono',monospace;display:block;margin-bottom:3px"
               onchange="gastosGridDraft['r_${eq.id}_${mesActual}']=this.value"/>
           </td>
           <td style="padding:6px 8px">
             <input type="text" placeholder="Descripción..." value="${desc}"
-              style="width:200px;padding:5px 6px;border:1px solid #e2e8f0;font-size:12px"
+              style="width:200px;padding:5px 6px;border:1px solid #bae6fd;font-size:12px"
               onchange="gastosGridDraft['r_desc_${eq.id}_${mesActual}']=this.value"/>
           </td>
           <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:#000000;text-align:right">${acum?fmt(acum)+' acum':'—'}</td>
@@ -3299,21 +3300,21 @@ function renderGastos() {
       tabContent = `${configEq}${sharedBar}
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🛢 Diesel — ${MESES_G[mesActual-1]}</div>
         <div style="overflow-x:auto;margin-bottom:20px"><table style="border-collapse:collapse;font-size:13px;width:100%">
-          <thead><tr style="background:#0c4a6e;color:#fff">
+          <thead><tr style="background:#0ea5e9;color:#000000">
             <th style="padding:7px 12px;text-align:left">Equipo</th><th style="padding:7px 8px;text-align:left">Predios</th>
             <th style="padding:7px 8px;text-align:center">Litros</th><th style="padding:7px 8px;text-align:right">Monto</th>
             <th style="padding:7px 8px;text-align:right">Acum mes</th><th></th>
           </tr></thead><tbody>${dieselRows}</tbody></table></div>
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🔧 Reparaciones — ${MESES_G[mesActual-1]}</div>
         <div style="overflow-x:auto;margin-bottom:24px"><table style="border-collapse:collapse;font-size:13px;width:100%">
-          <thead><tr style="background:#0c4a6e;color:#fff">
+          <thead><tr style="background:#0ea5e9;color:#000000">
             <th style="padding:7px 12px;text-align:left">Equipo</th><th style="padding:7px 8px;text-align:left">Predios</th>
             <th style="padding:7px 8px;text-align:right">Monto</th><th style="padding:7px 8px;text-align:left">Descripción</th>
             <th style="padding:7px 8px;text-align:right">Acum mes</th><th></th>
           </tr></thead><tbody>${repRows}</tbody></table></div>
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Historial Diesel — C${selectedCn} ${gastosGridAnio}</div>
         <div style="overflow-x:auto;margin-bottom:20px"><table style="border-collapse:collapse;font-size:13px;width:100%">
-          <thead><tr style="background:#1e3a8a;color:#fff"><th style="padding:6px 12px;text-align:left">Equipo</th>${mesesHistHdr}<th style="padding:6px 10px;text-align:right">Total Lts</th><th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
+          <thead><tr style="background:#0ea5e9;color:#000000"><th style="padding:6px 12px;text-align:left">Equipo</th>${mesesHistHdr}<th style="padding:6px 10px;text-align:right">Total Lts</th><th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
           <tbody>${dieselHistRows||'<tr><td colspan="99" style="padding:12px;text-align:center;color:#000000">Sin registros</td></tr>'}</tbody>
           <tfoot><tr style="background:#1a3563;color:#fff;font-weight:700">
             <td style="padding:6px 12px">TOTAL</td>
@@ -3334,7 +3335,7 @@ function renderGastos() {
           </table></div>
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Historial Reparaciones — C${selectedCn} ${gastosGridAnio}</div>
         <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
-          <thead><tr style="background:#1e3a8a;color:#fff"><th style="padding:6px 12px;text-align:left">Equipo</th>${mesesHistHdr}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
+          <thead><tr style="background:#0ea5e9;color:#000000"><th style="padding:6px 12px;text-align:left">Equipo</th>${mesesHistHdr}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
           <tbody>${repHistRows||'<tr><td colspan="99" style="padding:12px;text-align:center;color:#000000">Sin registros</td></tr>'}</tbody>
           <tfoot><tr style="background:#1a3563;color:#fff;font-weight:700">
             <td style="padding:6px 12px">TOTAL</td>
@@ -3359,28 +3360,28 @@ function renderGastos() {
     const cn2G  = parseInt(gastosGridDraft['luz_cn2'] || 0);
     const cicloOpts = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
     const configEq = isAdmin ? `
-      <div style="padding:10px 14px;background:#ffffff;border:1px solid #e2e8f0;margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <div style="padding:10px 14px;background:#ffffff;border:1px solid #bae6fd;margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase">⚙️ Agregar noria/sistema:</span>
         <input type="text" id="luz-nombre" placeholder="Ej: Noria 212, Sistema LG..." style="padding:5px;width:200px;font-size:13px"/>
         <button class="btn btn-s" onclick="addSistemaLuz()">+ Agregar</button>
       </div>` : '';
     const sharedBar = `
-      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0f7ff;border:1px solid #93c5fd;margin-bottom:14px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;margin-bottom:14px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:12px;color:#000000">📅 Mes:</span>
-          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #93c5fd"
+          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #bae6fd"
             onchange="gastosGridDraft['luz_mes']=this.value;renderGastos()">${mesOpts}</select>
         </div>
         <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #93c5fd;padding-left:14px">
           <span style="font-size:12px;color:#000000">Split:</span>
           <input type="number" min="0" max="100" step="1" value="${pct1G}"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #93c5fd"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #bae6fd"
             onchange="gastosGridDraft['luz_pct1']=this.value;renderGastos()"/>
           <span style="font-size:11px;color:#000000">%C${selectedCn}</span>
           <input type="number" min="0" max="100" step="1" value="${pct2G||''}" placeholder="0"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #93c5fd"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #bae6fd"
             onchange="gastosGridDraft['luz_pct2']=this.value"/>
-          <select style="font-size:12px;padding:3px;border:1px solid #93c5fd"
+          <select style="font-size:12px;padding:3px;border:1px solid #bae6fd"
             onchange="gastosGridDraft['luz_cn2']=this.value">
             <option value="">C?</option>${cicloOpts}
           </select>
@@ -3409,7 +3410,7 @@ function renderGastos() {
           <td style="padding:6px 10px"><div style="display:flex;flex-wrap:wrap">${predioChecks}</div></td>
           <td style="padding:6px 8px;text-align:right">
             <input type="number" min="0" step="1" placeholder="$" value="${val}"
-              style="width:130px;padding:5px;text-align:right;border:1px solid #e2e8f0;font-size:13px;font-family:'DM Mono',monospace"
+              style="width:130px;padding:5px;text-align:right;border:1px solid #bae6fd;font-size:13px;font-family:'DM Mono',monospace"
               onchange="gastosGridDraft['luz_${eq.id}_${mesActual}']=this.value"/>
           </td>
           <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:#000000;text-align:right">${acum?fmt(acum)+' acum':'—'}</td>
@@ -3432,7 +3433,7 @@ function renderGastos() {
       tabContent = `${configEq}${sharedBar}
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">💡 Luz — ${MESES_G[mesActual-1]}</div>
         <div style="overflow-x:auto;margin-bottom:24px"><table style="border-collapse:collapse;font-size:13px;width:100%">
-          <thead><tr style="background:#0c4a6e;color:#fff">
+          <thead><tr style="background:#0ea5e9;color:#000000">
             <th style="padding:7px 12px;text-align:left">Noria / Sistema</th>
             <th style="padding:7px 10px;text-align:left">Predios (prorrateo)</th>
             <th style="padding:7px 10px;text-align:right">$ Luz</th>
@@ -3441,7 +3442,7 @@ function renderGastos() {
           </tr></thead><tbody>${luzRows}</tbody></table></div>
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Historial Luz — C${selectedCn} ${gastosGridAnio}</div>
         <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
-          <thead><tr style="background:#1e3a8a;color:#fff"><th style="padding:6px 12px;text-align:left">Noria / Sistema</th>${mesesHdr}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
+          <thead><tr style="background:#0ea5e9;color:#000000"><th style="padding:6px 12px;text-align:left">Noria / Sistema</th>${mesesHdr}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
           <tbody>${histRows}</tbody>
           <tfoot><tr style="background:#1a3563;color:#fff;font-weight:700">
             <td style="padding:6px 12px">TOTAL</td>
@@ -3461,28 +3462,28 @@ function renderGastos() {
       `<option value="${m}" ${m===mesActual_aplic?'selected':''}>${MESES_G[m-1]}</option>`).join('');
     const cicloOpts_aplic = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
     const sharedBar_aplic = `
-      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0f7ff;border:1px solid #93c5fd;margin-bottom:14px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;margin-bottom:14px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:12px;color:#000000">📅 Mes:</span>
-          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #93c5fd"
+          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #bae6fd"
             onchange="gastosGridDraft['aplic_mes']=this.value;renderGastos()">${mesOpts_aplic}</select>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:12px;color:#000000">💧 $/Lt:</span>
           <input type="number" min="0" step="0.01" placeholder="$/Lt" value="${precioDiesel_aplic||''}"
-            style="width:85px;padding:4px 8px;border:1px solid #93c5fd;font-size:13px;text-align:right"
+            style="width:85px;padding:4px 8px;border:1px solid #bae6fd;font-size:13px;text-align:right"
             onchange="gastosGridDraft['aplic_diesel']=this.value;if(!S.precioDiesel)S.precioDiesel={};S.precioDiesel[${selectedCn}]=parseFloat(this.value)||0;save();renderGastos()"/>
         </div>
         <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #93c5fd;padding-left:14px">
           <span style="font-size:12px;color:#000000">Split:</span>
           <input type="number" min="0" max="100" step="1" value="${pct1_aplic}"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #93c5fd"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #bae6fd"
             onchange="gastosGridDraft['aplic_pct1']=this.value;renderGastos()"/>
           <span style="font-size:11px;color:#000000">%C${selectedCn}</span>
           <input type="number" min="0" max="100" step="1" value="${pct2_aplic||''}" placeholder="0"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #93c5fd"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #bae6fd"
             onchange="gastosGridDraft['aplic_pct2']=this.value"/>
-          <select style="font-size:12px;padding:3px;border:1px solid #93c5fd"
+          <select style="font-size:12px;padding:3px;border:1px solid #bae6fd"
             onchange="gastosGridDraft['aplic_cn2']=this.value">
             <option value="">C?</option>${cicloOpts_aplic}
           </select>
@@ -3491,12 +3492,12 @@ function renderGastos() {
       </div>`;
     const precioDieselAplic = precioDiesel_aplic;
     const precioDieselBadgeAplic = precioDieselAplic
-      ? `<span style="font-size:11px;color:#000000;background:#f0f7ff;padding:3px 8px;border:1px solid #93c5fd">💧 $${precioDieselAplic}/L</span>`
+      ? `<span style="font-size:11px;color:#000000;background:#f0f9ff;padding:3px 8px;border:1px solid #bae6fd">💧 $${precioDieselAplic}/L</span>`
       : `<span style="font-size:11px;color:#000000;font-style:italic">💧 precio diesel pendiente</span>`;
 
     // ── Config equipos ──
     const configEqAplic = isAdmin ? `
-      <div style="padding:8px 12px;background:#ffffff;border:1px solid #e2e8f0;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div style="padding:8px 12px;background:#ffffff;border:1px solid #bae6fd;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase">⚙️ Agregar equipo aplicaciones:</span>
         <input type="text" id="aplic-eq-nombre" placeholder="Ej: Dron, Aspersora..." style="padding:5px;width:200px;font-size:13px"/>
         <select id="aplic-eq-tipo" style="padding:5px">
@@ -3519,13 +3520,13 @@ function renderGastos() {
         <td style="padding:7px 12px;font-weight:600">${eq.nombre}</td>
         <td style="padding:7px 10px;font-size:11px;color:#000000">${eq.tipo}</td>
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="0.1" placeholder="—" value="${dDiesel}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #93c5fd;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #bae6fd;font-size:13px"
           onchange="gastosGridDraft['aplcd_${eq.id}']=this.value"/></td>
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dServ}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #93c5fd;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #bae6fd;font-size:13px"
           onchange="gastosGridDraft['aplcs_${eq.id}']=this.value"/></td>
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dRep}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #93c5fd;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #bae6fd;font-size:13px"
           onchange="gastosGridDraft['aplcr_${eq.id}']=this.value"/></td>
         <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:#000000;font-size:12px">${totEq?fmt(totEq):'—'}</td>
         <td style="padding:4px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delEquipoAplic('${eq.id}')">✕</button>`:''}</td>
@@ -3538,7 +3539,7 @@ function renderGastos() {
       <div style="margin-bottom:16px">
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina aplicaciones</div>
         <input type="number" min="0" step="1" placeholder="$ nómina" value="${nomVal_aplic}"
-          style="width:200px;padding:8px;border:1px solid #93c5fd;font-size:14px;text-align:right"
+          style="width:200px;padding:8px;border:1px solid #bae6fd;font-size:14px;text-align:right"
           onchange="gastosGridDraft['aplic_nom']=this.value"/>
       </div>`;
 
@@ -3555,7 +3556,7 @@ function renderGastos() {
           <td style="padding:5px 10px;font-size:12px">${t.nombre} <span style="color:#000000;font-size:10px">(${t.ha} ha)</span></td>
           <td style="padding:4px 8px;text-align:right">
             <input type="number" min="0" step="0.01" placeholder="0 ha" value="${haVal}"
-              style="width:90px;padding:4px 7px;text-align:right;border:1px solid #93c5fd;font-size:13px"
+              style="width:90px;padding:4px 7px;text-align:right;border:1px solid #bae6fd;font-size:13px"
               onchange="gastosGridDraft['${key}']=this.value;renderGastos()"/>
           </td>
           <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:#000000">${monto}</td>
@@ -3568,11 +3569,11 @@ function renderGastos() {
           <span style="font-weight:600;color:${col}">${p.emoji} ${p.nombre}</span>
           <label style="font-size:12px;color:#000000">$/ha:</label>
           <input type="number" min="0" step="1" placeholder="—" value="${ppt}"
-            style="width:120px;padding:4px 8px;border:1px solid #93c5fd;font-size:13px;text-align:right"
+            style="width:120px;padding:4px 8px;border:1px solid #bae6fd;font-size:13px;text-align:right"
             onchange="gastosGridDraft['aplic_maq_ppt_${pi}']=this.value;renderGastos()"/>
         </div>
         <table style="border-collapse:collapse;font-size:13px;width:100%;max-width:400px">
-          <thead><tr style="background:#0c4a6e;color:#fff;font-size:11px">
+          <thead><tr style="background:#0ea5e9;color:#000000;font-size:11px">
             <th style="padding:5px 10px;text-align:left">Tabla</th>
             <th style="padding:5px 8px;text-align:right">Ha aplicadas</th>
             <th style="padding:5px 10px;text-align:right">Monto</th>
@@ -3605,7 +3606,7 @@ function renderGastos() {
       ${configEqAplic}
       ${(S.equiposAplic||[]).length ? `<div style="overflow-x:auto;margin-bottom:20px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:#0c4a6e;color:#ffffff">
+        <thead><tr style="background:#0ea5e9;color:#000000fff">
           <th style="padding:7px 12px;text-align:left">Equipo</th>
           <th style="padding:7px 10px;text-align:left">Tipo</th>
           <th style="padding:7px 12px;text-align:right">Diesel (L)</th>
@@ -3645,28 +3646,28 @@ function renderGastos() {
       `<option value="${m}" ${m===mesActual_ens?'selected':''}>${MESES_G[m-1]}</option>`).join('');
     const cicloOpts_ens = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
     const sharedBar_ens = `
-      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0f7ff;border:1px solid #93c5fd;margin-bottom:14px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;margin-bottom:14px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:12px;color:#000000">📅 Mes:</span>
-          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #93c5fd"
+          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #bae6fd"
             onchange="gastosGridDraft['ens_mes']=this.value;renderGastos()">${mesOpts_ens}</select>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:12px;color:#000000">💧 $/Lt:</span>
           <input type="number" min="0" step="0.01" placeholder="$/Lt" value="${precioDiesel_ens||''}"
-            style="width:85px;padding:4px 8px;border:1px solid #93c5fd;font-size:13px;font-family:'DM Mono',monospace;text-align:right"
+            style="width:85px;padding:4px 8px;border:1px solid #bae6fd;font-size:13px;font-family:'DM Mono',monospace;text-align:right"
             onchange="gastosGridDraft['ens_diesel']=this.value;if(!S.precioDiesel)S.precioDiesel={};S.precioDiesel[${selectedCn}]=parseFloat(this.value)||0;save();renderGastos()"/>
         </div>
         <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #93c5fd;padding-left:14px">
           <span style="font-size:12px;color:#000000">Split:</span>
           <input type="number" min="0" max="100" step="1" value="${pct1_ens}"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #93c5fd"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #bae6fd"
             onchange="gastosGridDraft['ens_pct1']=this.value;renderGastos()"/>
           <span style="font-size:11px;color:#000000">%C${selectedCn}</span>
           <input type="number" min="0" max="100" step="1" value="${pct2_ens||''}" placeholder="0"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #93c5fd"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #bae6fd"
             onchange="gastosGridDraft['ens_pct2']=this.value"/>
-          <select style="font-size:12px;padding:3px;border:1px solid #93c5fd"
+          <select style="font-size:12px;padding:3px;border:1px solid #bae6fd"
             onchange="gastosGridDraft['ens_cn2']=this.value">
             <option value="">C?</option>${cicloOpts_ens}
           </select>
@@ -3747,7 +3748,7 @@ function renderGastos() {
         </td>
         <td style="padding:4px 8px;white-space:nowrap">
           <input type="number" min="0" step="0.01" placeholder="Cantidad total" value="${cant}"
-            style="width:130px;padding:4px 8px;text-align:right;border:1px solid #e2e8f0;font-family:'DM Mono',monospace;font-size:13px"
+            style="width:130px;padding:4px 8px;text-align:right;border:1px solid #bae6fd;font-family:'DM Mono',monospace;font-size:13px"
             onchange="gastosGridDraft['${cantKey}']=this.value"/>
           <span style="font-size:11px;color:#000000"> ${art.unidad}</span>
         </td>
@@ -3781,7 +3782,7 @@ function renderGastos() {
 
     // Config para agregar equipos de ensilada
     const configEqEns = isAdmin ? `
-      <div style="padding:8px 12px;background:#ffffff;border:1px solid #e2e8f0;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div style="padding:8px 12px;background:#ffffff;border:1px solid #bae6fd;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase">⚙️ Agregar equipo:</span>
         <input type="text" id="ens-eq-nombre" placeholder="Ej: Cosechadora 1, Tractor 3..." style="padding:5px;width:180px;font-size:13px"/>
         <select id="ens-eq-tipo" style="padding:5px"><option value="tractor">Tractor</option><option value="cosechadora">Cosechadora</option></select>
@@ -3790,7 +3791,7 @@ function renderGastos() {
 
     const precioDieselEns = S.precioDiesel?.[selectedCn] || '';
     const precioDieselBadge = precioDieselEns
-      ? `<span style="font-size:11px;color:#000000;background:#f0f7ff;padding:3px 8px;border:1px solid #93c5fd">💧 $${precioDieselEns}/L</span>`
+      ? `<span style="font-size:11px;color:#000000;background:#f0f9ff;padding:3px 8px;border:1px solid #bae6fd">💧 $${precioDieselEns}/L</span>`
       : `<span style="font-size:11px;color:#000000;font-style:italic">💧 precio diesel pendiente</span>`;
 
     const maqEqRows = equiposEnsilada.map(({eq})=>{
@@ -3803,13 +3804,13 @@ function renderGastos() {
         <td style="padding:7px 12px;font-weight:600">${eq.nombre}</td>
         <td style="padding:7px 10px;font-size:11px;color:#000000">${eq.tipo}</td>
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="0.1" placeholder="—" value="${dDiesel}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #93c5fd;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #bae6fd;font-size:13px"
           onchange="gastosGridDraft['ens_d_${eq.id}']=this.value"/></td>
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dServ}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #93c5fd;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #bae6fd;font-size:13px"
           onchange="gastosGridDraft['ens_s_${eq.id}']=this.value"/></td>
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dRep}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #93c5fd;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #bae6fd;font-size:13px"
           onchange="gastosGridDraft['ens_r_${eq.id}']=this.value"/></td>
         <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:#000000;font-size:12px">${totEq?fmt(totEq):'—'}</td>
         <td style="padding:4px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delEquipoEnsilada('${eq.id}')">✕</button>`:''}</td>
@@ -3820,14 +3821,14 @@ function renderGastos() {
       <div style="margin-bottom:16px">
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina ensilada</div>
         <input type="number" min="0" step="1" placeholder="$ nómina" value="${nomEnsiladaVal}"
-          style="width:200px;padding:8px;border:1px solid #93c5fd;font-size:14px;text-align:right"
+          style="width:200px;padding:8px;border:1px solid #bae6fd;font-size:14px;text-align:right"
           onchange="gastosGridDraft['nom_ensilada']=this.value"/>
       </div>
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🚜 Maquinaria propia ensilada ${precioDieselBadge}</div>
       ${configEqEns}
       ${equiposEnsilada.length ? `<div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:#0c4a6e;color:#ffffff">
+        <thead><tr style="background:#0ea5e9;color:#000000fff">
           <th style="padding:7px 12px;text-align:left">Equipo</th>
           <th style="padding:7px 10px;text-align:left">Predio</th>
           <th style="padding:7px 12px;text-align:right">Diesel (L)</th>
@@ -3848,7 +3849,7 @@ function renderGastos() {
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;margin-top:16px">🧪 Materiales de ensilada</div>
       <div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:#0c4a6e;color:#ffffff">
+        <thead><tr style="background:#0ea5e9;color:#000000fff">
           <th style="padding:7px 12px;text-align:left;min-width:150px">Artículo</th>
           <th style="padding:7px 12px;text-align:left">Tablas</th>
           <th style="padding:7px 12px;text-align:right">Cantidad Total</th>
@@ -3875,7 +3876,7 @@ function renderGastos() {
       `<option value="${m}" ${m===mesActual_me?'selected':''}>${MESES_G[m-1]}</option>`).join('');
 
     const configME = isAdmin ? `
-      <div style="padding:8px 12px;background:#ffffff;border:1px solid #e2e8f0;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div style="padding:8px 12px;background:#ffffff;border:1px solid #bae6fd;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase">➕ Agregar artículo:</span>
         <input type="text" id="me-nombre" placeholder="Ej: Silostop, Barrera Oxygeno..." style="padding:5px;width:220px;font-size:13px"/>
         <input type="text" id="me-unidad" placeholder="Unidad (Rollo, Lt...)" style="padding:5px;width:140px;font-size:13px"/>
@@ -3900,7 +3901,7 @@ function renderGastos() {
         <td style="padding:8px 12px;font-weight:600">${art.nombre}</td>
         <td style="padding:6px 8px;text-align:right">
           <input type="number" min="0" step="1" placeholder="Cant." value="${cant}"
-            style="width:90px;padding:5px;text-align:right;border:1px solid #e2e8f0;font-size:13px;font-family:'DM Mono',monospace"
+            style="width:90px;padding:5px;text-align:right;border:1px solid #bae6fd;font-size:13px;font-family:'DM Mono',monospace"
             onchange="gastosGridDraft['me_cant_${art.id}_${mesActual_me}']=this.value"/>
         </td>
         <td style="padding:6px 8px;text-align:right">
@@ -3914,9 +3915,9 @@ function renderGastos() {
     }).join('');
 
     tabContent = `
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f0f7ff;border:1px solid #93c5fd;margin-bottom:14px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f0f9ff;border:1px solid #bae6fd;margin-bottom:14px;flex-wrap:wrap">
         <span style="font-size:12px;color:#000000">📅 Mes:</span>
-        <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #93c5fd"
+        <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #bae6fd"
           onchange="gastosGridDraft['me_mes']=this.value;renderGastos()">${mesOpts_me}</select>
         <span style="font-size:11px;color:#000000;margin-left:auto">C${selectedCn} · ${gastosGridAnio}</span>
       </div>
@@ -3948,7 +3949,7 @@ function renderGastos() {
         })()}
       </div>
       ${artsMe.length ? `<div style="overflow-x:auto;margin-bottom:24px"><table style="border-collapse:collapse;font-size:13px;width:100%">
-        <thead><tr style="background:#0c4a6e;color:#fff">
+        <thead><tr style="background:#0ea5e9;color:#000000">
           <th style="padding:7px 12px;text-align:left">Artículo</th>
           <th style="padding:7px 10px;text-align:right">Cant. ${MESES_G[mesActual_me-1].slice(0,3)}</th>
           <th style="padding:7px 10px;text-align:right">$ Unit.</th>
@@ -3960,7 +3961,7 @@ function renderGastos() {
         <div style="margin-top:12px">
           <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Movimientos — C${selectedCn} ${gastosGridAnio}</div>
           <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
-            <thead><tr style="background:#0c4a6e;color:#fff">
+            <thead><tr style="background:#0ea5e9;color:#000000">
               <th style="padding:7px 12px;text-align:left">Fecha</th>
               <th style="padding:7px 10px;text-align:left">Artículo</th>
               <th style="padding:7px 10px;text-align:right">Cantidad</th>
@@ -4011,28 +4012,28 @@ function renderGastos() {
       `<option value="${m}" ${m===mesActual_emp2?'selected':''}>${MESES_G[m-1]}</option>`).join('');
     const cicloOpts_emp2 = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
     const sharedBar_emp2 = `
-      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0f7ff;border:1px solid #93c5fd;margin-bottom:14px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;margin-bottom:14px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:12px;color:#000000">📅 Mes:</span>
-          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #93c5fd"
+          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #bae6fd"
             onchange="gastosGridDraft['emp2_mes']=this.value;renderGastos()">${mesOpts_emp2}</select>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:12px;color:#000000">💧 $/Lt:</span>
           <input type="number" min="0" step="0.01" placeholder="$/Lt" value="${precioDiesel_emp2||''}"
-            style="width:85px;padding:4px 8px;border:1px solid #93c5fd;font-size:13px;text-align:right"
+            style="width:85px;padding:4px 8px;border:1px solid #bae6fd;font-size:13px;text-align:right"
             onchange="gastosGridDraft['emp2_diesel']=this.value;if(!S.precioDiesel)S.precioDiesel={};S.precioDiesel[${selectedCn}]=parseFloat(this.value)||0;save();renderGastos()"/>
         </div>
         <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #93c5fd;padding-left:14px">
           <span style="font-size:12px;color:#000000">Split:</span>
           <input type="number" min="0" max="100" step="1" value="${pct1_emp2}"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #93c5fd"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #bae6fd"
             onchange="gastosGridDraft['emp2_pct1']=this.value;renderGastos()"/>
           <span style="font-size:11px;color:#000000">%C${selectedCn}</span>
           <input type="number" min="0" max="100" step="1" value="${pct2_emp2||''}" placeholder="0"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #93c5fd"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #bae6fd"
             onchange="gastosGridDraft['emp2_pct2']=this.value"/>
-          <select style="font-size:12px;padding:3px;border:1px solid #93c5fd"
+          <select style="font-size:12px;padding:3px;border:1px solid #bae6fd"
             onchange="gastosGridDraft['emp2_cn2']=this.value">
             <option value="">C?</option>${cicloOpts_emp2}
           </select>
@@ -4042,7 +4043,7 @@ function renderGastos() {
     // Diesel (tractores), Camiones, Nómina, Empacado
     const precioDieselEmp = S.precioDiesel?.[selectedCn] || '';
     const precioDieselBadgeEmp = precioDieselEmp
-      ? `<span style="font-size:11px;color:#000000;background:#f0f7ff;padding:3px 8px;border:1px solid #93c5fd">💧 $${precioDieselEmp}/L</span>`
+      ? `<span style="font-size:11px;color:#000000;background:#f0f9ff;padding:3px 8px;border:1px solid #bae6fd">💧 $${precioDieselEmp}/L</span>`
       : `<span style="font-size:11px;color:#000000;font-style:italic">💧 precio diesel pendiente</span>`;
 
     // Equipos de empaque — misma lista S.equiposEnsilada (se puede reusar o crear nueva)
@@ -4050,7 +4051,7 @@ function renderGastos() {
   if(!S.equiposCorte) S.equiposCorte = [];
   if(!S.sistemasRiego) S.sistemasRiego = [];
     const configEqEmp = isAdmin ? `
-      <div style="padding:8px 12px;background:#ffffff;border:1px solid #e2e8f0;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div style="padding:8px 12px;background:#ffffff;border:1px solid #bae6fd;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase">⚙️ Agregar equipo:</span>
         <input type="text" id="emp-eq-nombre" placeholder="Ej: Empacadora 1..." style="padding:5px;width:180px;font-size:13px"/>
         <select id="emp-eq-tipo" style="padding:5px"><option value="tractor">Tractor</option><option value="empacadora">Empacadora</option></select>
@@ -4067,13 +4068,13 @@ function renderGastos() {
         <td style="padding:7px 12px;font-weight:600">${eq.nombre}</td>
         <td style="padding:7px 10px;font-size:11px;color:#000000">${eq.tipo}</td>
         ${eq.tipo!=='empacadora'?`<td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="0.1" placeholder="—" value="${dDiesel}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #93c5fd;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #bae6fd;font-size:13px"
           onchange="gastosGridDraft['empdiesel_${eq.id}']=this.value"/></td>`:'<td></td>'}
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dServ}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #93c5fd;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #bae6fd;font-size:13px"
           onchange="gastosGridDraft['empserv_${eq.id}']=this.value"/></td>
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dRep}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #93c5fd;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #bae6fd;font-size:13px"
           onchange="gastosGridDraft['emprep_${eq.id}']=this.value"/></td>
         <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:#000000;font-size:12px">${totEq?fmt(totEq):'—'}</td>
         <td style="padding:4px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delEquipoEmpaque('${eq.id}')">✕</button>`:''}</td>
@@ -4086,7 +4087,7 @@ function renderGastos() {
       <div style="margin-bottom:16px">
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina empaque</div>
         <input type="number" min="0" step="1" placeholder="$ nómina" value="${nomVal_emp}"
-          style="width:200px;padding:8px;border:1px solid #93c5fd;font-size:14px;text-align:right"
+          style="width:200px;padding:8px;border:1px solid #bae6fd;font-size:14px;text-align:right"
           onchange="gastosGridDraft['emp_nom']=this.value"/>
       </div>`;
 
@@ -4115,7 +4116,7 @@ function renderGastos() {
       ${configEqEmp}
       ${S.equiposEmpaque.length ? `<div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:#0c4a6e;color:#ffffff">
+        <thead><tr style="background:#0ea5e9;color:#000000fff">
           <th style="padding:7px 12px;text-align:left">Equipo</th>
           <th style="padding:7px 10px;text-align:left">Tipo</th>
           <th style="padding:7px 12px;text-align:right">Diesel (L)</th>
@@ -4155,28 +4156,28 @@ function renderGastos() {
       `<option value="${m}" ${m===mesActual_cort2?'selected':''}>${MESES_G[m-1]}</option>`).join('');
     const cicloOpts_cort2 = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
     const sharedBar_cort2 = `
-      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0f7ff;border:1px solid #93c5fd;margin-bottom:14px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;margin-bottom:14px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:12px;color:#000000">📅 Mes:</span>
-          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #93c5fd"
+          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #bae6fd"
             onchange="gastosGridDraft['cort2_mes']=this.value;renderGastos()">${mesOpts_cort2}</select>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:12px;color:#000000">💧 $/Lt:</span>
           <input type="number" min="0" step="0.01" placeholder="$/Lt" value="${precioDiesel_cort2||''}"
-            style="width:85px;padding:4px 8px;border:1px solid #93c5fd;font-size:13px;font-family:'DM Mono',monospace;text-align:right"
+            style="width:85px;padding:4px 8px;border:1px solid #bae6fd;font-size:13px;font-family:'DM Mono',monospace;text-align:right"
             onchange="gastosGridDraft['cort2_diesel']=this.value;if(!S.precioDiesel)S.precioDiesel={};S.precioDiesel[${selectedCn}]=parseFloat(this.value)||0;save();renderGastos()"/>
         </div>
         <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #93c5fd;padding-left:14px">
           <span style="font-size:12px;color:#000000">Split:</span>
           <input type="number" min="0" max="100" step="1" value="${pct1_cort2}"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #93c5fd"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #bae6fd"
             onchange="gastosGridDraft['cort2_pct1']=this.value;renderGastos()"/>
           <span style="font-size:11px;color:#000000">%C${selectedCn}</span>
           <input type="number" min="0" max="100" step="1" value="${pct2_cort2||''}" placeholder="0"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #93c5fd"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #bae6fd"
             onchange="gastosGridDraft['cort2_pct2']=this.value"/>
-          <select style="font-size:12px;padding:3px;border:1px solid #93c5fd"
+          <select style="font-size:12px;padding:3px;border:1px solid #bae6fd"
             onchange="gastosGridDraft['cort2_cn2']=this.value">
             <option value="">C?</option>${cicloOpts_cort2}
           </select>
@@ -4187,7 +4188,7 @@ function renderGastos() {
   if(!S.sistemasRiego) S.sistemasRiego = [];
     const precioDieselCorte = S.precioDiesel?.[selectedCn] || '';
     const precioDieselBadgeCorte = precioDieselCorte
-      ? `<span style="font-size:11px;color:#000000;background:#f0f7ff;padding:3px 8px;border:1px solid #93c5fd">💧 $${precioDieselCorte}/L</span>`
+      ? `<span style="font-size:11px;color:#000000;background:#f0f9ff;padding:3px 8px;border:1px solid #bae6fd">💧 $${precioDieselCorte}/L</span>`
       : `<span style="font-size:11px;color:#000000;font-style:italic">💧 precio diesel pendiente</span>`;
 
     // Maquila de corte: $/ha por predio, tablas de CULTIVOS_CORTE
@@ -4195,7 +4196,7 @@ function renderGastos() {
 
     // Maquinaria de corte
     const configEqCorte = isAdmin ? `
-      <div style="padding:8px 12px;background:#ffffff;border:1px solid #e2e8f0;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div style="padding:8px 12px;background:#ffffff;border:1px solid #bae6fd;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase">⚙️ Agregar equipo de corte:</span>
         <input type="text" id="cort-eq-nombre" placeholder="Ej: Segadora, Rastrillo..." style="padding:5px;width:180px;font-size:13px"/>
         <select id="cort-eq-tipo" style="padding:5px"><option value="tractor">Tractor</option><option value="segadora">Segadora</option><option value="rastrillo">Rastrillo</option></select>
@@ -4212,13 +4213,13 @@ function renderGastos() {
         <td style="padding:7px 12px;font-weight:600">${eq.nombre}</td>
         <td style="padding:7px 10px;font-size:11px;color:#000000">${eq.tipo}</td>
         ${eq.tipo!=='rastrillo'?`<td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="0.1" placeholder="—" value="${dDiesel}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #93c5fd;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #bae6fd;font-size:13px"
           onchange="gastosGridDraft['cortd_${eq.id}']=this.value"/></td>`:'<td></td>'}
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dServ}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #93c5fd;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #bae6fd;font-size:13px"
           onchange="gastosGridDraft['corts_${eq.id}']=this.value"/></td>
         <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${dRep}"
-          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #93c5fd;font-size:13px"
+          style="width:110px;padding:4px 7px;text-align:right;border:1px solid #bae6fd;font-size:13px"
           onchange="gastosGridDraft['cortr_${eq.id}']=this.value"/></td>
         <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:#000000;font-size:12px">${totEq?fmt(totEq):'—'}</td>
         <td style="padding:4px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delEquipoCorte('${eq.id}')">✕</button>`:''}</td>
@@ -4231,7 +4232,7 @@ function renderGastos() {
       <div style="margin-bottom:16px">
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">👷 Nómina corte</div>
         <input type="number" min="0" step="1" placeholder="$ nómina" value="${nomVal_cort}"
-          style="width:200px;padding:8px;border:1px solid #93c5fd;font-size:14px;text-align:right"
+          style="width:200px;padding:8px;border:1px solid #bae6fd;font-size:14px;text-align:right"
           onchange="gastosGridDraft['cort_nom']=this.value"/>
       </div>`;
 
@@ -4241,7 +4242,7 @@ function renderGastos() {
       ${configEqCorte}
       ${S.equiposCorte.length ? `<div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:#0c4a6e;color:#ffffff">
+        <thead><tr style="background:#0ea5e9;color:#000000fff">
           <th style="padding:7px 12px;text-align:left">Equipo</th>
           <th style="padding:7px 10px;text-align:left">Tipo</th>
           <th style="padding:7px 12px;text-align:right">Diesel (L)</th>
@@ -4266,7 +4267,7 @@ function renderGastos() {
           return `<tr style="font-size:12px">
             <td style="padding:5px 10px">${g.categoria}${g.equipo?' · '+g.equipo:''}${g.actividad?' · '+g.actividad:''}</td>
             <td style="padding:5px 10px;color:#000000">${(g.prediosIdx||[]).map(pi=>S.predios[pi]?.nombre).join(', ')}</td>
-            <td style="padding:5px 10px;text-align:center"><span style="background:#eff6ff;color:#1a3563;padding:2px 6px;font-size:10px">C${getGastoCosecha(g)}</span></td>
+            <td style="padding:5px 10px;text-align:center"><span style="background:#f0f9ff;color:#0369a1;padding:2px 6px;font-size:10px">C${getGastoCosecha(g)}</span></td>
             <td style="padding:5px 10px;text-align:right;font-family:'DM Mono',monospace">${fmt(g.monto)}</td>
             <td style="padding:3px 6px">${isAdmin?`<button class="btn btn-d" style="font-size:10px;padding:2px 6px" onclick="delGasto(${gi})">✕</button>`:''}</td>
           </tr>`;
@@ -4290,22 +4291,22 @@ function renderGastos() {
       `<option value="${m}" ${m===mesActual?'selected':''}>${MESES_G[m-1]}</option>`).join('');
     const cicloOpts = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
     const sharedBar = `
-      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0f7ff;border:1px solid #93c5fd;margin-bottom:14px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;margin-bottom:14px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:12px;color:#000000">📅 Mes:</span>
-          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #93c5fd"
+          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #bae6fd"
             onchange="gastosGridDraft['nom_mes']=this.value;renderGastos()">${mesOpts}</select>
         </div>
         <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #93c5fd;padding-left:14px">
           <span style="font-size:12px;color:#000000">Split:</span>
           <input type="number" min="0" max="100" step="1" value="${pct1G}"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #93c5fd"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #bae6fd"
             onchange="gastosGridDraft['nom_pct1']=this.value;renderGastos()"/>
           <span style="font-size:11px;color:#000000">%C${selectedCn}</span>
           <input type="number" min="0" max="100" step="1" value="${pct2G||''}" placeholder="0"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #93c5fd"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #bae6fd"
             onchange="gastosGridDraft['nom_pct2']=this.value"/>
-          <select style="font-size:12px;padding:3px;border:1px solid #93c5fd"
+          <select style="font-size:12px;padding:3px;border:1px solid #bae6fd"
             onchange="gastosGridDraft['nom_cn2']=this.value">
             <option value="">C?</option>${cicloOpts}
           </select>
@@ -4322,12 +4323,12 @@ function renderGastos() {
         <td style="padding:8px 12px;font-weight:600;color:${col}">${p.emoji} ${p.nombre}</td>
         <td style="padding:6px 8px;text-align:right">
           <input type="number" min="0" step="1" placeholder="$" value="${labor}"
-            style="width:120px;padding:5px;text-align:right;border:1px solid #e2e8f0;font-size:13px;font-family:'DM Mono',monospace"
+            style="width:120px;padding:5px;text-align:right;border:1px solid #bae6fd;font-size:13px;font-family:'DM Mono',monospace"
             onchange="gastosGridDraft['nom_labor_${pi}_${mesActual}']=this.value"/>
         </td>
         <td style="padding:6px 8px;text-align:right">
           <input type="number" min="0" step="1" placeholder="$" value="${admin}"
-            style="width:120px;padding:5px;text-align:right;border:1px solid #e2e8f0;font-size:13px;font-family:'DM Mono',monospace"
+            style="width:120px;padding:5px;text-align:right;border:1px solid #bae6fd;font-size:13px;font-family:'DM Mono',monospace"
             onchange="gastosGridDraft['nom_admin_${pi}_${mesActual}']=this.value"/>
         </td>
         <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:#000000;text-align:right;white-space:nowrap">${acum?fmt(acum)+' acum':'—'}</td>
@@ -4354,7 +4355,7 @@ function renderGastos() {
     tabContent = `${sharedBar}
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">👷 Nómina — ${MESES_G[mesActual-1]}</div>
       <div style="overflow-x:auto;margin-bottom:24px"><table style="border-collapse:collapse;font-size:13px;width:100%">
-        <thead><tr style="background:#0c4a6e;color:#fff">
+        <thead><tr style="background:#0ea5e9;color:#000000">
           <th style="padding:7px 12px;text-align:left">Predio</th>
           <th style="padding:7px 10px;text-align:right">👨‍🌾 Labor</th>
           <th style="padding:7px 10px;text-align:right">🏢 Administración</th>
@@ -4362,7 +4363,7 @@ function renderGastos() {
         </tr></thead><tbody>${nomRows}</tbody></table></div>
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Historial Nómina — C${selectedCn} ${gastosGridAnio}</div>
       <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
-        <thead><tr style="background:#1e3a8a;color:#fff">
+        <thead><tr style="background:#0ea5e9;color:#000000">
           <th style="padding:6px 12px;text-align:left">Predio</th>${mesesHdr}
           <th style="padding:6px 10px;text-align:right">Total $</th>
         </tr></thead><tbody>${histRows}</tbody></table></div>`
@@ -4377,22 +4378,22 @@ function renderGastos() {
     const cn2G  = parseInt(gastosGridDraft['rep_cn2'] || 0);
     const cicloOpts = [1,2,3].map(c=>`<option value="${c}" ${c===selectedCn?'selected':''}>C${c}</option>`).join('');
     const sharedBar = `
-      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0f7ff;border:1px solid #93c5fd;margin-bottom:14px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;margin-bottom:14px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:12px;color:#000000">📅 Mes:</span>
-          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #93c5fd"
+          <select style="padding:5px 8px;font-size:13px;font-family:'DM Mono',monospace;border:1px solid #bae6fd"
             onchange="gastosGridDraft['rep_mes']=this.value;renderGastos()">${mesOpts}</select>
         </div>
         <div style="display:flex;align-items:center;gap:6px;border-left:1px solid #93c5fd;padding-left:14px">
           <span style="font-size:12px;color:#000000">Split:</span>
           <input type="number" min="0" max="100" step="1" value="${pct1G}"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #93c5fd"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #bae6fd"
             onchange="gastosGridDraft['rep_pct1']=this.value;renderGastos()"/>
           <span style="font-size:11px;color:#000000">%C${selectedCn}</span>
           <input type="number" min="0" max="100" step="1" value="${pct2G||''}" placeholder="0"
-            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #93c5fd"
+            style="width:42px;padding:3px 5px;font-size:12px;text-align:center;border:1px solid #bae6fd"
             onchange="gastosGridDraft['rep_pct2']=this.value"/>
-          <select style="font-size:12px;padding:3px;border:1px solid #93c5fd"
+          <select style="font-size:12px;padding:3px;border:1px solid #bae6fd"
             onchange="gastosGridDraft['rep_cn2']=this.value">
             <option value="">C?</option>${cicloOpts}
           </select>
@@ -4402,7 +4403,7 @@ function renderGastos() {
 
     // ── Config norias (shared with Luz) ──
     const configNoria = isAdmin ? `
-      <div style="padding:8px 12px;background:#ffffff;border:1px solid #e2e8f0;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div style="padding:8px 12px;background:#ffffff;border:1px solid #bae6fd;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase">💡 Agregar noria:</span>
         <input type="text" id="luz-nombre" placeholder="Ej: Noria 212..." style="padding:5px;width:180px;font-size:13px"/>
         <button class="btn btn-s" onclick="addSistemaLuz()">+ Agregar</button>
@@ -4411,11 +4412,11 @@ function renderGastos() {
     // ── Config sistemas de riego ──
     const tablaChecksRiego = S.predios.map((p,pi)=>
       p.tablas.map((t,ti)=>`<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer">
-        <input type="checkbox" id="new-riego-t-${pi}_${ti}" style="accent-color:#2563eb"/> ${p.emoji}${t.nombre}
+        <input type="checkbox" id="new-riego-t-${pi}_${ti}" style="accent-color:#0369a1"/> ${p.emoji}${t.nombre}
       </label>`).join('')
     ).join('<span style="margin:0 6px;color:#ccc">|</span>');
     const configRiego = isAdmin ? `
-      <div style="padding:10px 14px;background:#ffffff;border:1px solid #e2e8f0;margin-bottom:12px">
+      <div style="padding:10px 14px;background:#ffffff;border:1px solid #bae6fd;margin-bottom:12px">
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
           <span style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase">💧 Agregar sistema de riego:</span>
           <input type="text" id="rep-riego-nombre" placeholder="Ej: Sistema Goteo T1-T3..." style="padding:5px;width:220px;font-size:13px"/>
@@ -4446,12 +4447,12 @@ function renderGastos() {
         <td style="padding:6px 10px"><div style="display:flex;flex-wrap:wrap">${predioChecks}</div></td>
         <td style="padding:6px 8px;text-align:right">
           <input type="number" min="0" step="1" placeholder="$" value="${val}"
-            style="width:120px;padding:5px;text-align:right;border:1px solid #e2e8f0;font-size:13px;font-family:'DM Mono',monospace;display:block;margin-bottom:3px"
+            style="width:120px;padding:5px;text-align:right;border:1px solid #bae6fd;font-size:13px;font-family:'DM Mono',monospace;display:block;margin-bottom:3px"
             onchange="gastosGridDraft['rep_${eq.id}_${mesActual}']=this.value"/>
         </td>
         <td style="padding:6px 8px">
           <input type="text" placeholder="Descripción..." value="${desc}"
-            style="width:200px;padding:5px 6px;border:1px solid #e2e8f0;font-size:12px"
+            style="width:200px;padding:5px 6px;border:1px solid #bae6fd;font-size:12px"
             onchange="gastosGridDraft['rep_desc_${eq.id}_${mesActual}']=this.value"/>
         </td>
         <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:#000000;text-align:right">${acum?fmt(acum)+' acum':'—'}</td>
@@ -4475,12 +4476,12 @@ function renderGastos() {
         <td style="padding:6px 10px;font-size:11px;color:#000000">${tablasLabel}</td>
         <td style="padding:6px 8px;text-align:right">
           <input type="number" min="0" step="1" placeholder="$" value="${val}"
-            style="width:120px;padding:5px;text-align:right;border:1px solid #e2e8f0;font-size:13px;font-family:'DM Mono',monospace"
+            style="width:120px;padding:5px;text-align:right;border:1px solid #bae6fd;font-size:13px;font-family:'DM Mono',monospace"
             onchange="gastosGridDraft['riego_${eq.id}_${mesActual}']=this.value"/>
         </td>
         <td style="padding:6px 8px">
           <input type="text" placeholder="Descripción..." value="${desc}"
-            style="width:200px;padding:5px 6px;border:1px solid #e2e8f0;font-size:12px"
+            style="width:200px;padding:5px 6px;border:1px solid #bae6fd;font-size:12px"
             onchange="gastosGridDraft['riego_desc_${eq.id}_${mesActual}']=this.value"/>
         </td>
         <td style="padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px;color:#000000;text-align:right">${acum?fmt(acum)+' acum':'—'}</td>
@@ -4518,7 +4519,7 @@ function renderGastos() {
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">💡 Reparaciones Norias — ${MESES_G[mesActual-1]}</div>
       ${configNoria}
       ${S.sistemasLuz.length ? `<div style="overflow-x:auto;margin-bottom:24px"><table style="border-collapse:collapse;font-size:13px;width:100%">
-        <thead><tr style="background:#0c4a6e;color:#fff">
+        <thead><tr style="background:#0ea5e9;color:#000000">
           <th style="padding:7px 12px;text-align:left">Noria</th>
           <th style="padding:7px 10px;text-align:left">Predios</th>
           <th style="padding:7px 10px;text-align:right">Monto</th>
@@ -4531,7 +4532,7 @@ function renderGastos() {
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">💧 Reparaciones Sistemas de Riego — ${MESES_G[mesActual-1]}</div>
       ${configRiego}
       ${S.sistemasRiego.length ? `<div style="overflow-x:auto;margin-bottom:24px"><table style="border-collapse:collapse;font-size:13px;width:100%">
-        <thead><tr style="background:#0c4a6e;color:#fff">
+        <thead><tr style="background:#0ea5e9;color:#000000">
           <th style="padding:7px 12px;text-align:left">Sistema</th>
           <th style="padding:7px 10px;text-align:left">Tablas</th>
           <th style="padding:7px 10px;text-align:right">Monto</th>
@@ -4543,13 +4544,13 @@ function renderGastos() {
 
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Historial Norias — C${selectedCn} ${gastosGridAnio}</div>
       <div style="overflow-x:auto;margin-bottom:20px"><table style="border-collapse:collapse;font-size:13px;width:100%">
-        <thead><tr style="background:#1e3a8a;color:#fff"><th style="padding:6px 12px;text-align:left">Noria</th>${mesesHdr}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
+        <thead><tr style="background:#0ea5e9;color:#000000"><th style="padding:6px 12px;text-align:left">Noria</th>${mesesHdr}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
         <tbody>${noriaHistRows||'<tr><td colspan="99" style="padding:10px;text-align:center;color:#000000">Sin registros</td></tr>'}</tbody>
       </table></div>
 
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📋 Historial Riego — C${selectedCn} ${gastosGridAnio}</div>
       <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;width:100%">
-        <thead><tr style="background:#1e3a8a;color:#fff"><th style="padding:6px 12px;text-align:left">Sistema</th>${mesesHdr}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
+        <thead><tr style="background:#0ea5e9;color:#000000"><th style="padding:6px 12px;text-align:left">Sistema</th>${mesesHdr}<th style="padding:6px 10px;text-align:right">Total $</th></tr></thead>
         <tbody>${riegoHistRows||'<tr><td colspan="99" style="padding:10px;text-align:center;color:#000000">Sin registros</td></tr>'}</tbody>
       </table></div>`;
   } else if(gastosTab === 'empaque') {
@@ -4641,7 +4642,7 @@ function renderGastos() {
         ${prediosCols}
         <td style="padding:8px 14px;vertical-align:top;white-space:nowrap;border-left:1px solid var(--border)">
           <input type="number" min="0" step="1" placeholder="—" value="${monto}"
-            style="width:130px;padding:5px 8px;text-align:right;border:1px solid #93c5fd;font-size:13px"
+            style="width:130px;padding:5px 8px;text-align:right;border:1px solid #bae6fd;font-size:13px"
             onchange="gastosGridDraft['${montoKey}']=this.value"/>
         </td>
         <td style="padding:8px 14px;text-align:right;vertical-align:top;font-family:'DM Mono',monospace;font-size:12px;color:#000000;white-space:nowrap">${acumDa?fmt(acumDa):'—'}</td>
@@ -4664,7 +4665,7 @@ function renderGastos() {
     tabContent = `
       <div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:#0c4a6e;color:#ffffff">
+        <thead><tr style="background:#0ea5e9;color:#000000fff">
           <th style="padding:7px 14px;text-align:left">Cosecha</th>
           ${S.predios.map(p=>`<th style="padding:7px 14px;text-align:left">${p.emoji} ${p.nombre}</th>`).join('')}
           <th style="padding:7px 14px;text-align:right">Monto Total ($)</th>
@@ -4682,7 +4683,7 @@ function renderGastos() {
             <th></th>
           </tr></thead>
           <tbody>${acumDaRows}</tbody>
-          <tfoot><tr style="background:#0c4a6e;color:#ffffff">
+          <tfoot><tr style="background:#0ea5e9;color:#000000fff">
             <td colspan="2" style="padding:8px 12px;font-weight:700">TOTAL</td>
             <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmt(totDa)}</td>
             <td></td>
@@ -4698,8 +4699,8 @@ function renderGastos() {
       return `<tr>
         <td style="padding:8px 12px;font-weight:600;white-space:nowrap">${cat}</td>
         <td style="padding:4px 8px"><select style="padding:5px;font-size:13px" onchange="gastosGridDraft['otro_pi_${ci}']=this.value">${S.predios.map((p,i)=>`<option value="${i}" ${piVal==String(i)?'selected':''}>${p.emoji} ${p.nombre}</option>`).join('')}</select></td>
-        <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:180px;padding:5px 8px;border:1px solid #93c5fd;font-size:13px" onchange="gastosGridDraft['otro_desc_${ci}']=this.value"/></td>
-        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:130px;padding:5px 8px;text-align:right;border:1px solid #93c5fd;font-size:13px" onchange="gastosGridDraft['otro_${ci}']=this.value"/></td>
+        <td style="padding:4px 8px"><input type="text" placeholder="Descripción..." value="${desc}" style="width:180px;padding:5px 8px;border:1px solid #bae6fd;font-size:13px" onchange="gastosGridDraft['otro_desc_${ci}']=this.value"/></td>
+        <td style="padding:4px 8px;text-align:right"><input type="number" min="0" step="1" placeholder="—" value="${val}" style="width:130px;padding:5px 8px;text-align:right;border:1px solid #bae6fd;font-size:13px" onchange="gastosGridDraft['otro_${ci}']=this.value"/></td>
       </tr>`;
     }).join('');
     const histOtro = (S.gastosGenerales||[]).filter(g=>(getGastoCosecha(g)===selectedCn&&g.anio===gastosGridAnio)&&['Sirre y Desmonte','Otro'].includes(g.categoria));
@@ -4712,7 +4713,7 @@ function renderGastos() {
     </tr>`).join('');
     tabContent = `
       <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px">
-        <thead><tr style="background:#0c4a6e;color:#ffffff">
+        <thead><tr style="background:#0ea5e9;color:#000000fff">
           <th style="padding:7px 12px;text-align:left">Categoría</th>
           <th style="padding:7px 12px;text-align:left">Predio</th>
           <th style="padding:7px 12px;text-align:left">Descripción</th>
@@ -4725,7 +4726,7 @@ function renderGastos() {
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead><tr style="font-size:10px;color:#000000"><th style="padding:4px 10px;text-align:left">Concepto</th><th style="padding:4px 10px;text-align:left">Predio</th><th style="padding:4px 10px;text-align:right">Monto</th><th></th></tr></thead>
           <tbody>${acumRowsOtro}</tbody>
-          <tfoot><tr style="background:#0c4a6e;color:#ffffff"><td colspan="2" style="padding:8px 12px;font-weight:700">TOTAL</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmt(totOtro)}</td><td></td></tr></tfoot>
+          <tfoot><tr style="background:#0ea5e9;color:#000000fff"><td colspan="2" style="padding:8px 12px;font-weight:700">TOTAL</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmt(totOtro)}</td><td></td></tr></tfoot>
         </table></div>`:''}`;
   }
 
@@ -4738,7 +4739,7 @@ function renderGastos() {
     const descLabel = g.descripcion ? ` — ${g.descripcion}` : '';
     const litrosLabel = g.litros ? ` (${fmtN(g.litros,1)} × $${g.precioPorLitro||'?'})` : '';
     return `<tr>
-      <td><span style="font-family:'DM Mono',monospace;font-size:10px;background:#eff6ff;color:#1a3563;padding:2px 6px">C${cn} ${g.anio||''}</span></td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:10px;background:#f0f9ff;color:#0369a1;padding:2px 6px">C${cn} ${g.anio||''}</span></td>
       <td>${g.categoria}${actLabel}${equipLabel}${litrosLabel}<span style="color:#000000;font-size:11px">${descLabel}</span></td>
       <td style="font-size:12px;color:#000000">${predNombres}</td>
       <td class="mono tr amber">${fmt(g.monto)}</td>
@@ -4757,7 +4758,7 @@ function renderGastos() {
       <div class="card-head" style="justify-content:space-between">
         <span>💰 Gastos Generales</span>
         <div style="display:flex;align-items:center;gap:8px">
-          <select style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid #e2e8f0"
+          <select style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid #bae6fd"
             onchange="gastosGridAnio=parseInt(this.value);gastosGridDraft={};renderGastos()">
             ${Array.from({length:13},(_,i)=>2020+i).map(y=>`<option value="${y}" ${y===gastosGridAnio?'selected':''}>${y}</option>`).join('')}
           </select>
@@ -4829,12 +4830,12 @@ function buildTablasRiegoSelector(eqId, asig) {
       var key = pi+'_'+ti;
       var chk = asig.includes(key);
       rows.push('<label style="display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer">'
-        +'<input type="checkbox"'+(chk?' checked':'')+' style="accent-color:#2563eb"'
+        +'<input type="checkbox"'+(chk?' checked':'')+' style="accent-color:#0369a1"'
         +' onchange="toggleTablaRiego(\'' + eqId + '\',\'' + key + '\',this.checked)"/> '
         +p.emoji+t.nombre+'</label>');
     });
   });
-  return '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;padding:4px 6px;background:#f0f7ff;border:1px dashed #a8d5b5;border-radius:4px">'+rows.join('')+'</div>';
+  return '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;padding:4px 6px;background:#f0f9ff;border:1px dashed #a8d5b5;border-radius:4px">'+rows.join('')+'</div>';
 }
 
 function toggleTablaRiego(eqId, key, checked) {
@@ -5621,7 +5622,7 @@ function capturarGastos() {
         ${prediosCols}
         <td style="padding:8px 14px;vertical-align:top;white-space:nowrap;border-left:1px solid var(--border)">
           <input type="number" min="0" step="1" placeholder="—" value="${monto}"
-            style="width:130px;padding:5px 8px;text-align:right;border:1px solid #93c5fd;font-size:13px"
+            style="width:130px;padding:5px 8px;text-align:right;border:1px solid #bae6fd;font-size:13px"
             onchange="gastosGridDraft['${montoKey}']=this.value"/>
         </td>
         <td style="padding:8px 14px;text-align:right;vertical-align:top;font-family:'DM Mono',monospace;font-size:12px;color:#000000;white-space:nowrap">${acumDa?fmt(acumDa):'—'}</td>
@@ -5644,7 +5645,7 @@ function capturarGastos() {
     tabContent = `
       <div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:#0c4a6e;color:#ffffff">
+        <thead><tr style="background:#0ea5e9;color:#000000fff">
           <th style="padding:7px 14px;text-align:left">Cosecha</th>
           ${S.predios.map(p=>`<th style="padding:7px 14px;text-align:left">${p.emoji} ${p.nombre}</th>`).join('')}
           <th style="padding:7px 14px;text-align:right">Monto Total ($)</th>
@@ -5662,7 +5663,7 @@ function capturarGastos() {
             <th></th>
           </tr></thead>
           <tbody>${acumDaRows}</tbody>
-          <tfoot><tr style="background:#0c4a6e;color:#ffffff">
+          <tfoot><tr style="background:#0ea5e9;color:#000000fff">
             <td colspan="2" style="padding:8px 12px;font-weight:700">TOTAL</td>
             <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmt(totDa)}</td>
             <td></td>
@@ -5765,7 +5766,7 @@ function mostrarLimpiezaModal() {
       <div style="font-size:13px;color:#374151;margin-bottom:16px">Estos ${malos.length} gasto(s) de Materiales de Ensilada están asignados a tablas con cultivo de empaque:</div>
       <div style="overflow-x:auto;margin-bottom:16px">
         <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead><tr style="background:#0c4a6e;color:#fff">
+          <thead><tr style="background:#0ea5e9;color:#000000">
             <th style="padding:6px 10px;text-align:left">Fecha</th>
             <th style="padding:6px 10px;text-align:left">Artículo</th>
             <th style="padding:6px 10px;text-align:left">Tabla</th>
@@ -5885,7 +5886,7 @@ function renderMovimientos() {
     <div style="display:flex;gap:4px;margin-bottom:12px">${predioTabs}</div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <span style="font-size:11px;color:#000000;text-transform:uppercase;letter-spacing:1px">Año:</span>
-      <select style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid #e2e8f0" onchange="curInvAnio=parseInt(this.value);renderMovimientos()">${anioOpts}</select>
+      <select style="padding:4px 8px;font-family:'DM Mono',monospace;font-size:13px;border:1px solid #bae6fd" onchange="curInvAnio=parseInt(this.value);renderMovimientos()">${anioOpts}</select>
       ${cnBtns}
     </div>
 
@@ -5894,17 +5895,17 @@ function renderMovimientos() {
       <div class="card-head">📥 Registrar Entrada</div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:4px 0">
         <div class="field" style="margin:0"><label>Fecha</label>
-          <input type="date" id="inv-fecha" value="${new Date().toISOString().slice(0,10)}" style="padding:6px;border:1px solid #e2e8f0;font-size:13px"/></div>
+          <input type="date" id="inv-fecha" value="${new Date().toISOString().slice(0,10)}" style="padding:6px;border:1px solid #bae6fd;font-size:13px"/></div>
         <div class="field" style="margin:0"><label>Artículo</label>
           <select id="inv-art" style="padding:6px;font-size:13px;min-width:200px"><option value="">— selecciona —</option>${artOpts}</select></div>
         <div class="field" style="margin:0"><label>Cantidad</label>
-          <input type="number" id="inv-cant" min="0" step="0.01" placeholder="0" style="width:100px;padding:6px;border:1px solid #e2e8f0;font-size:13px;text-align:right"/></div>
+          <input type="number" id="inv-cant" min="0" step="0.01" placeholder="0" style="width:100px;padding:6px;border:1px solid #bae6fd;font-size:13px;text-align:right"/></div>
         <div class="field" style="margin:0"><label>Precio unit.</label>
-          <input type="number" id="inv-precio" min="0" step="0.01" placeholder="0.00" style="width:110px;padding:6px;border:1px solid #e2e8f0;font-size:13px;text-align:right"/></div>
+          <input type="number" id="inv-precio" min="0" step="0.01" placeholder="0.00" style="width:110px;padding:6px;border:1px solid #bae6fd;font-size:13px;text-align:right"/></div>
         <div class="field" style="margin:0"><label>Proveedor</label>
-          <input type="text" id="inv-prov" placeholder="Proveedor..." style="width:160px;padding:6px;border:1px solid #e2e8f0;font-size:13px"/></div>
+          <input type="text" id="inv-prov" placeholder="Proveedor..." style="width:160px;padding:6px;border:1px solid #bae6fd;font-size:13px"/></div>
         <div class="field" style="margin:0"><label># Factura</label>
-          <input type="text" id="inv-factura" placeholder="Factura..." style="width:130px;padding:6px;border:1px solid #e2e8f0;font-size:13px"/></div>
+          <input type="text" id="inv-factura" placeholder="Factura..." style="width:130px;padding:6px;border:1px solid #bae6fd;font-size:13px"/></div>
         <button class="btn btn-p" onclick="addMovInv('entrada');renderMovimientos()">✅ Registrar entrada</button>
       </div>
     </div>
@@ -5914,11 +5915,11 @@ function renderMovimientos() {
       <div class="card-head">📤 Registrar Salida Manual</div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:4px 0">
         <div class="field" style="margin:0"><label>Fecha</label>
-          <input type="date" id="inv-sal-fecha" value="${new Date().toISOString().slice(0,10)}" style="padding:6px;border:1px solid #e2e8f0;font-size:13px"/></div>
+          <input type="date" id="inv-sal-fecha" value="${new Date().toISOString().slice(0,10)}" style="padding:6px;border:1px solid #bae6fd;font-size:13px"/></div>
         <div class="field" style="margin:0"><label>Artículo</label>
           <select id="inv-sal-art" style="padding:6px;font-size:13px;min-width:200px"><option value="">— selecciona —</option>${artOpts}</select></div>
         <div class="field" style="margin:0"><label>Cantidad</label>
-          <input type="number" id="inv-sal-cant" min="0" step="0.01" placeholder="0" style="width:100px;padding:6px;border:1px solid #e2e8f0;font-size:13px;text-align:right"/></div>
+          <input type="number" id="inv-sal-cant" min="0" step="0.01" placeholder="0" style="width:100px;padding:6px;border:1px solid #bae6fd;font-size:13px;text-align:right"/></div>
         <div class="field" style="margin:0"><label>Motivo</label>
           <select id="inv-sal-motivo" style="padding:6px;font-size:13px">
             <option value="Devolución">Devolución</option>
@@ -5927,7 +5928,7 @@ function renderMovimientos() {
             <option value="Otro">Otro</option>
           </select></div>
         <div class="field" style="margin:0"><label># Referencia</label>
-          <input type="text" id="inv-sal-ref" placeholder="Referencia..." style="width:130px;padding:6px;border:1px solid #e2e8f0;font-size:13px"/></div>
+          <input type="text" id="inv-sal-ref" placeholder="Referencia..." style="width:130px;padding:6px;border:1px solid #bae6fd;font-size:13px"/></div>
         <button class="btn btn-d" onclick="addMovInv('salida');renderMovimientos()">📤 Registrar salida</button>
       </div>
     </div>
@@ -5936,7 +5937,7 @@ function renderMovimientos() {
     <div class="card">
       <div class="card-head">📋 Movimientos — ${S.predios[curInvPredi]?.emoji} ${S.predios[curInvPredi]?.nombre} · ${curInvAnio} C${curInvCn}</div>
       ${movs.length ? `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr style="background:#0c4a6e;color:#fff;font-size:10px">
+        <thead><tr style="background:#0ea5e9;color:#000000;font-size:10px">
           <th style="padding:5px 10px;text-align:left">Fecha</th>
           <th style="padding:5px 10px;text-align:left">Tipo</th>
           <th style="padding:5px 10px;text-align:left">Artículo</th>
@@ -5987,7 +5988,7 @@ function renderInv() {
     const stockColor = stock<0?'#c0392b':'#000000';
     return `<tr style="border-bottom:1px solid var(--border)">
       <td style="padding:7px 12px;font-weight:600">${a.nombre}</td>
-      <td style="padding:7px 10px;font-size:11px"><span style="background:#eff6ff;color:#1a3563;padding:2px 6px;border-radius:3px">${a.categoria}</span></td>
+      <td style="padding:7px 10px;font-size:11px"><span style="background:#f0f9ff;color:#0369a1;padding:2px 6px;border-radius:3px">${a.categoria}</span></td>
       <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace">${fmtN(s.entradas,2)} ${a.unidad||''}</td>
       <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:#000000">${fmtN(s.salidasAuto,2)} ${a.unidad||''}</td>
       <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:#000000">${fmtN(s.salidasMan,2)} ${a.unidad||''}</td>
@@ -6029,7 +6030,7 @@ function renderInv() {
     stockContent = `<div class="card">
       <div class="card-head">📊 Stock General — todos los predios</div>
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:#0c4a6e;color:#fff">
+        <thead><tr style="background:#0ea5e9;color:#000000">
           <th style="padding:7px 12px;text-align:left">Artículo</th>
           <th style="padding:7px 10px;text-align:left">Categoría</th>
           <th style="padding:7px 10px;text-align:right">Entradas</th>
@@ -6054,7 +6055,7 @@ function renderInv() {
     stockContent = `<div class="card">
       <div class="card-head">📊 Stock — ${S.predios[curInvPredi].emoji} ${S.predios[curInvPredi].nombre}</div>
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr style="background:#0c4a6e;color:#fff">
+        <thead><tr style="background:#0ea5e9;color:#000000">
           <th style="padding:7px 12px;text-align:left">Artículo</th>
           <th style="padding:7px 10px;text-align:left">Categoría</th>
           <th style="padding:7px 10px;text-align:right">Entradas</th>
@@ -6155,7 +6156,7 @@ function renderGridContent() {
       const draftVal = gridDraft[ti]?.[art.id] || '';
       return `<td style="padding:4px"><input type="number" min="0" step="0.01" placeholder="—"
         value="${draftVal}"
-        style="width:80px;padding:5px;text-align:center;border:1px solid #e2e8f0;font-family:'DM Mono',monospace;font-size:12px"
+        style="width:80px;padding:5px;text-align:center;border:1px solid #bae6fd;font-family:'DM Mono',monospace;font-size:12px"
         onchange="updateGridDraft(${ti},'${art.id}',this.value)"
         /></td>`;
     }).join('');
@@ -6170,10 +6171,10 @@ function renderGridContent() {
   document.getElementById('grid-content').innerHTML = `
     <div class="card">
       <div class="card-head">🌱 ${p.nombre} · Cosecha ${cn} · Material de cultivo</div>
-      <div style="padding:8px 12px;background:#f0f7ff;border:1px solid #93c5fd;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="padding:8px 12px;background:#f0f9ff;border:1px solid #bae6fd;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase">📅 Fecha del registro:</span>
         <input type="date" id="grid-fecha" value="${gridDraft['_fecha']||new Date().toISOString().slice(0,10)}"
-          style="padding:4px 8px;border:1px solid #93c5fd;font-size:13px"
+          style="padding:4px 8px;border:1px solid #bae6fd;font-size:13px"
           onchange="gridDraft['_fecha']=this.value"/>
       </div>
       <div style="overflow-x:auto">
@@ -6219,7 +6220,7 @@ function renderGridContent() {
       },0),0);
       return `<div style="font-family:'DM Mono',monospace;font-size:10px;color:#000000;text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px">📊 Historial C${cn} — Artículo x Tabla</div>
       <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;min-width:400px">
-        <thead><tr style="background:#0c4a6e;color:#fff"><th style="padding:5px 10px;text-align:left">Artículo</th>${tabHdrs}<th style="padding:5px 8px;text-align:right">TOTAL</th></tr></thead>
+        <thead><tr style="background:#0ea5e9;color:#000000"><th style="padding:5px 10px;text-align:left">Artículo</th>${tabHdrs}<th style="padding:5px 8px;text-align:right">TOTAL</th></tr></thead>
         <tbody>${histRowsGrid}</tbody>
         <tfoot><tr style="background:#ffffff;font-weight:700"><td style="padding:5px 10px">TOTAL</td>${footCells}<td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;color:#000000">${fmt(grandTotal)}</td></tr></tfoot>
       </table></div>`;
